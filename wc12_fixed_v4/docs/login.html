@@ -1,0 +1,225 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <link rel="manifest" href="manifest.json"/>
+  <meta name="theme-color" content="#080c14"/>
+  <meta name="apple-mobile-web-app-capable" content="yes"/>
+  <title>World Cup Collector — UES · Login</title>
+  <link rel="stylesheet" href="css/auth.css"/>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Barlow:wght@300;400;600;700&family=Barlow+Condensed:wght@400;700&display=swap" rel="stylesheet">
+</head>
+<body>
+
+  <!-- Splash mientras se verifica sesión -->
+  <div class="splash-loader" id="splash">
+    <span class="splash-ball">⚽</span>
+    <p class="splash-text">Verificando sesión…</p>
+  </div>
+
+  <!-- AUTH SCREEN -->
+  <div class="auth-bg">
+    <div class="auth-orb orb-1"></div>
+    <div class="auth-orb orb-2"></div>
+    <div class="auth-grid"></div>
+  </div>
+
+  <div class="auth-container">
+    <div class="auth-logo">
+      <span class="logo-icon">⚽</span>
+      <h1 class="logo-title">WORLD CUP<br><span>COLLECTOR</span></h1>
+      <p class="logo-sub">Universidad de El Salvador</p>
+    </div>
+
+    <!-- LOGIN FORM -->
+    <div id="form-login" class="auth-form active">
+      <h2>Iniciar Sesión</h2>
+      <div class="form-group">
+        <label>Correo institucional</label>
+        <input type="email" id="login-email" placeholder="usuario@ues.edu.sv" autocomplete="email"/>
+        <span class="input-error" id="login-email-err"></span>
+      </div>
+      <div class="form-group">
+        <label>Contraseña</label>
+        <input type="password" id="login-pass" placeholder="••••••••" autocomplete="current-password"/>
+        <span class="input-error" id="login-pass-err"></span>
+      </div>
+      <button class="btn btn-primary btn-loading" id="btn-login">
+        <span class="btn-text">Entrar al Mundial</span>
+        <span class="btn-spinner" style="display:none">⏳</span>
+      </button>
+      <p class="auth-switch">¿No tienes cuenta? <a href="#" id="go-register">Regístrate</a></p>
+    </div>
+
+    <!-- REGISTER FORM -->
+    <div id="form-register" class="auth-form">
+      <h2>Crear Cuenta</h2>
+      <div class="form-group">
+        <label>Nombre completo</label>
+        <input type="text" id="reg-name" placeholder="Tu nombre"/>
+        <span class="input-error" id="reg-name-err"></span>
+      </div>
+      <div class="form-group">
+        <label>Correo institucional</label>
+        <input type="email" id="reg-email" placeholder="usuario@ues.edu.sv"/>
+        <span class="input-error" id="reg-email-err"></span>
+      </div>
+      <div class="form-group">
+        <label>Contraseña</label>
+        <input type="password" id="reg-pass" placeholder="Mínimo 6 caracteres"/>
+        <span class="input-error" id="reg-pass-err"></span>
+      </div>
+      <button class="btn btn-primary btn-loading" id="btn-register">
+        <span class="btn-text">Crear cuenta</span>
+        <span class="btn-spinner" style="display:none">⏳</span>
+      </button>
+      <p class="auth-switch">¿Ya tienes cuenta? <a href="#" id="go-login">Inicia sesión</a></p>
+    </div>
+  </div>
+
+  <!-- Solo las utilidades que necesita auth -->
+  <script src="js/utils/db.js"></script>
+  <script src="js/utils/auth.js"></script>
+  <script src="js/utils/toast.js"></script>
+
+  <!-- Toast element (necesario para toast.js) -->
+  <div id="toast" class="toast"></div>
+
+  <script>
+    /* ─────────────────────────────────────────
+       login.js — inline
+       Verifica sesión al cargar y redirige a
+       app.html si ya hay sesión activa.
+    ───────────────────────────────────────── */
+    const splash = document.getElementById('splash');
+
+    async function init() {
+      // Timeout de seguridad: si tarda más de 6s, forzar mostrar formulario
+      const safetyTimer = setTimeout(() => {
+        console.warn('Init timeout — mostrando formulario de login');
+        splash.classList.add('hidden');
+        setTimeout(() => { if (splash.parentNode) splash.parentNode.removeChild(splash); }, 450);
+      }, 6000);
+
+      try {
+        await DB.open();
+        const user = await Auth.recoverSession();
+
+        clearTimeout(safetyTimer);
+
+        if (user) {
+          // ✅ Sesión válida → ir directo al dashboard
+          window.location.replace('app.html');
+          return;
+        }
+      } catch(err) {
+        console.error('Error al inicializar DB:', err);
+        clearTimeout(safetyTimer);
+        // Si la BD está corrupta, borrarla y continuar
+        try { indexedDB.deleteDatabase('WCCollectorUES'); } catch(_) {}
+      }
+
+      // Sin sesión (o error) → mostrar el formulario
+      splash.classList.add('hidden');
+      setTimeout(() => { if (splash.parentNode) splash.parentNode.removeChild(splash); }, 450);
+    }
+
+    /* ── Helpers ── */
+    function setBtnLoading(btnId, loading) {
+      const btn = document.getElementById(btnId);
+      if (!btn) return;
+      btn.disabled = loading;
+      const txt = btn.querySelector('.btn-text');
+      const spn = btn.querySelector('.btn-spinner');
+      if (txt) txt.style.opacity = loading ? '0.5' : '1';
+      if (spn) spn.style.display  = loading ? 'inline' : 'none';
+    }
+
+    function clearErrors() {
+      ['login-email-err','login-pass-err','reg-name-err','reg-email-err','reg-pass-err']
+        .forEach(id => { const el = document.getElementById(id); if (el) el.textContent = ''; });
+    }
+
+    /* ── Cambiar formularios ── */
+    document.getElementById('go-register').addEventListener('click', e => {
+      e.preventDefault();
+      clearErrors();
+      document.getElementById('form-login').classList.remove('active');
+      document.getElementById('form-register').classList.add('active');
+    });
+
+    document.getElementById('go-login').addEventListener('click', e => {
+      e.preventDefault();
+      clearErrors();
+      document.getElementById('form-register').classList.remove('active');
+      document.getElementById('form-login').classList.add('active');
+    });
+
+    /* ── LOGIN ── */
+    async function doLogin() {
+      clearErrors();
+      const email = document.getElementById('login-email').value.trim();
+      const pass  = document.getElementById('login-pass').value;
+
+      if (!email) { document.getElementById('login-email-err').textContent = 'Ingresa tu correo'; return; }
+      if (!pass)  { document.getElementById('login-pass-err').textContent  = 'Ingresa tu contraseña'; return; }
+
+      setBtnLoading('btn-login', true);
+      const result = await Auth.login({ email, password: pass });
+      setBtnLoading('btn-login', false);
+
+      if (!result.ok) {
+        if (result.field === 'email') document.getElementById('login-email-err').textContent = result.msg;
+        if (result.field === 'pass')  document.getElementById('login-pass-err').textContent  = result.msg;
+        return;
+      }
+
+      // ✅ Login exitoso → redirigir a app.html
+      Toast.success(`¡Bienvenido, ${result.user.name.split(' ')[0]}! 👋`);
+      setTimeout(() => window.location.replace('app.html'), 600);
+    }
+
+    document.getElementById('btn-login').addEventListener('click', doLogin);
+    ['login-email','login-pass'].forEach(id =>
+      document.getElementById(id).addEventListener('keydown', e => { if (e.key === 'Enter') doLogin(); })
+    );
+
+    /* ── REGISTRO ── */
+    async function doRegister() {
+      clearErrors();
+      const name  = document.getElementById('reg-name').value.trim();
+      const email = document.getElementById('reg-email').value.trim();
+      const pass  = document.getElementById('reg-pass').value;
+
+      setBtnLoading('btn-register', true);
+      const result = await Auth.register({ name, email, password: pass });
+      setBtnLoading('btn-register', false);
+
+      if (!result.ok) {
+        if (result.field === 'name')  document.getElementById('reg-name-err').textContent  = result.msg;
+        if (result.field === 'email') document.getElementById('reg-email-err').textContent = result.msg;
+        if (result.field === 'pass')  document.getElementById('reg-pass-err').textContent  = result.msg;
+        return;
+      }
+
+      Toast.success('¡Cuenta creada! Iniciando sesión…');
+
+      // Auto-login y redirigir
+      const loginResult = await Auth.login({ email, password: pass });
+      if (loginResult.ok) {
+        setTimeout(() => window.location.replace('app.html'), 700);
+      }
+    }
+
+    document.getElementById('btn-register').addEventListener('click', doRegister);
+    ['reg-name','reg-email','reg-pass'].forEach(id =>
+      document.getElementById(id).addEventListener('keydown', e => { if (e.key === 'Enter') doRegister(); })
+    );
+
+    /* Arranque */
+    init();
+  </script>
+</body>
+</html>

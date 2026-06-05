@@ -1,0 +1,340 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover"/>
+  <meta name="theme-color" content="#080c14"/>
+  <meta name="apple-mobile-web-app-capable" content="yes"/>
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent"/>
+  <meta name="apple-mobile-web-app-title" content="WCC UES"/>
+  <meta name="description" content="Colecciona figuritas del Mundial 2026, predice partidos y gana recompensas"/>
+  <title>World Cup Collector — UES</title>
+
+  <!-- PWA Manifest -->
+  <link rel="manifest" href="manifest.json"/>
+  <link rel="apple-touch-icon" href="icons/icon-192.png"/>
+
+  <!-- Estilos -->
+  <link rel="stylesheet" href="css/app.css"/>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Barlow:wght@300;400;600;700&family=Barlow+Condensed:wght@400;700&display=swap" rel="stylesheet">
+</head>
+<body>
+
+  <!-- PWA install banner (se muestra solo si aplica) -->
+  <div id="pwa-install-banner" class="pwa-banner" style="display:none">
+    <span>⚽ Instala WCC UES como app</span>
+    <button class="btn btn-sm btn-primary" id="pwa-install-btn">Instalar</button>
+    <button class="pwa-banner-close" id="pwa-banner-close">✕</button>
+  </div>
+
+  <!-- MAIN APP -->
+  <div id="screen-app" class="screen active">
+
+    <!-- TOP HEADER -->
+    <header class="app-header">
+      <div class="header-left">
+        <span class="header-logo">⚽ WCC</span>
+      </div>
+      <div class="header-center">
+        <span id="header-greeting">Hola, Jugador</span>
+      </div>
+      <div class="header-right">
+        <span class="header-stat" id="hdr-tiradas">🎴 <strong>0</strong></span>
+        <span class="header-stat" id="hdr-monedas">💰 <strong>0</strong></span>
+        <button class="btn-icon" id="btn-logout" title="Cerrar sesión">⏏</button>
+      </div>
+    </header>
+
+    <!-- TOP NAV -->
+    <nav class="app-nav">
+      <button class="nav-btn active" data-tab="dashboard">🏠<span>Inicio</span></button>
+      <button class="nav-btn" data-tab="stats">📊<span>Stats</span></button>
+      <button class="nav-btn" data-tab="gacha">🎴<span>Sobres</span></button>
+      <button class="nav-btn" data-tab="album">📖<span>Álbum</span></button>
+      <button class="nav-btn" data-tab="battle">⚔️<span>Batalla</span></button>
+      <button class="nav-btn" data-tab="exchange">🔄<span>Canje</span></button>
+      <button class="nav-btn" data-tab="predictions">🎯<span>Predicciones</span></button>
+      <button class="nav-btn" data-tab="profile">👤<span>Perfil</span></button>
+    </nav>
+
+    <!-- TAB CONTENT -->
+    <main class="app-main">
+
+      <!-- DASHBOARD -->
+      <section id="tab-dashboard" class="tab-section active">
+        <div class="section-header">
+          <h2>Panel Principal</h2>
+          <button class="btn btn-sm" id="btn-update-stats">🔄 Actualizar</button>
+        </div>
+        <div id="api-status-bar" class="api-status-bar" style="display:none;"></div>
+        <!-- Accesos rápidos -->
+        <div class="quick-actions">
+          <button class="qa-btn" onclick="App.navigateTo('gacha')">🎴<span>Tirar</span></button>
+          <button class="qa-btn" onclick="App.navigateTo('battle')">⚔️<span>Batalla</span></button>
+          <button class="qa-btn" onclick="App.navigateTo('exchange')">🔄<span>Canje</span></button>
+          <button class="qa-btn" onclick="App.navigateTo('predictions')">🎯<span>Predecir</span></button>
+        </div>
+        <div class="dashboard-grid">
+          <div class="dash-card card-live">
+            <h3>⚡ En Vivo</h3>
+            <div id="live-matches" class="match-list">
+              <p class="empty-state">No hay partidos en vivo ahora</p>
+            </div>
+          </div>
+          <div class="dash-card card-upcoming">
+            <h3>📅 Próximos Partidos</h3>
+            <div id="upcoming-matches" class="match-list"></div>
+          </div>
+          <div class="dash-card card-standings">
+            <h3>🏆 Tabla de Posiciones</h3>
+            <div id="standings-preview"></div>
+          </div>
+          <div class="dash-card card-favorites">
+            <h3>⭐ Mis Favoritos</h3>
+            <div id="favorites-preview"></div>
+          </div>
+        </div>
+      </section>
+
+      <!-- STATS -->
+      <section id="tab-stats" class="tab-section">
+        <div class="section-header"><h2>Estadísticas</h2></div>
+        <div class="search-bar">
+          <input type="text" id="search-input" placeholder="Buscar equipo o jugador..."/>
+          <button class="btn btn-sm" id="btn-search">Buscar</button>
+        </div>
+        <div class="stats-tabs">
+          <button class="stab active" data-stab="teams">Equipos</button>
+          <button class="stab" data-stab="players">Jugadores</button>
+          <button class="stab" data-stab="scorers">Goleadores</button>
+        </div>
+        <div id="stats-content" class="stats-content"></div>
+      </section>
+
+      <!-- GACHA -->
+      <section id="tab-gacha" class="tab-section">
+        <div class="section-header"><h2>🎴 Sobres</h2></div>
+        <div class="gacha-center">
+
+          <!-- SOBRE PANINI STYLE -->
+          <div class="sobre-stage">
+            <div class="sobre-wrapper" id="sobre-wrapper">
+              <!-- Sobre cerrado -->
+              <div class="sobre sobre-closed" id="sobre-closed">
+                <div class="sobre-top-flap"></div>
+                <div class="sobre-body">
+                  <div class="sobre-logo">
+                    <div class="sobre-trophy">🏆</div>
+                    <div class="sobre-wc-text">FIFA</div>
+                    <div class="sobre-wc-year">WORLD CUP 2026™</div>
+                    <div class="sobre-panini">OFFICIAL STICKER COLLECTION</div>
+                    <div class="sobre-stars">★ ★ ★ ★ ★</div>
+                    <div class="sobre-countries">🇺🇸 🇨🇦 🇲🇽</div>
+                  </div>
+                  <div class="sobre-bottom-strip"></div>
+                </div>
+                <!-- Brillo/reflejo -->
+                <div class="sobre-shine"></div>
+              </div>
+              <!-- Sobre abierto (animación) -->
+              <div class="sobre-open" id="sobre-open" style="display:none;"></div>
+            </div>
+
+            <div class="sobre-info">
+              <div class="sobre-tiradas-badge">
+                <span class="sobre-tiradas-num" id="gacha-count">0</span>
+                <span class="sobre-tiradas-lbl">sobres disponibles</span>
+              </div>
+              <div class="pity-section">
+                <div class="pity-label">Garantía legendaria <span id="pity-display">0/50</span></div>
+                <div class="pity-bar-track"><div class="pity-bar-fill" id="pity-bar" style="width:0%"></div></div>
+              </div>
+            </div>
+
+            <div class="gacha-btns">
+              <button class="btn btn-sobre-1" id="btn-gacha-1">
+                <span class="sobre-btn-icon">📦</span>
+                <span class="sobre-btn-text">Abrir 1 sobre</span>
+                <span class="sobre-btn-sub">3 figuritas</span>
+              </button>
+              <button class="btn btn-sobre-10" id="btn-gacha-10">
+                <span class="sobre-btn-icon">🗃️</span>
+                <span class="sobre-btn-text">Abrir 10 sobres</span>
+                <span class="sobre-btn-sub">30 figuritas · más probabilidad ★</span>
+              </button>
+            </div>
+          </div>
+
+          <div class="gacha-result" id="gacha-result" style="display:none;"></div>
+
+          <div class="rarity-legend">
+            <span class="rarity common">Común 70%</span>
+            <span class="rarity rare">Rara 20%</span>
+            <span class="rarity epic">Épica 8%</span>
+            <span class="rarity legendary">Legendaria 2%</span>
+          </div>
+        </div>
+      </section>
+
+      <!-- ALBUM -->
+      <section id="tab-album" class="tab-section">
+        <div class="section-header">
+          <h2>📖 Mi Álbum</h2>
+          <span class="album-progress-label" id="album-pct">0% completado</span>
+        </div>
+        <div class="album-filters">
+          <button class="filt active" data-filt="all">Todas</button>
+          <button class="filt" data-filt="common">Común</button>
+          <button class="filt" data-filt="rare">Rara</button>
+          <button class="filt" data-filt="epic">Épica</button>
+          <button class="filt" data-filt="legendary">Legendaria</button>
+        </div>
+        <div class="album-progress-bar">
+          <div class="progress-fill" id="album-bar" style="width:0%"></div>
+        </div>
+        <div id="album-grid" class="album-grid"></div>
+        <div class="section-header" style="margin-top:2rem;">
+          <h2>⚽ Equipo Ideal</h2>
+          <button class="btn btn-sm" id="btn-save-team">💾 Guardar</button>
+        </div>
+        <div id="ideal-team" class="ideal-team">
+          <div class="formation-selector-wrap">
+            <span class="formation-label">Formación:</span>
+            <div id="formation-selector" class="formation-selector"></div>
+          </div>
+          <div class="formation" id="formation-field"></div>
+        </div>
+      </section>
+
+      <!-- BATTLE -->
+      <section id="tab-battle" class="tab-section">
+        <!-- Renderizado dinámico por Battle.render() -->
+      </section>
+
+      <!-- EXCHANGE -->
+      <section id="tab-exchange" class="tab-section">
+        <!-- Renderizado dinámico por Exchange.render() -->
+      </section>
+
+      <!-- PREDICTIONS -->
+      <section id="tab-predictions" class="tab-section">
+        <div class="section-header">
+          <h2>🎯 Predicciones</h2>
+          <span class="badge-info">Acierta y gana tiradas 🎴</span>
+        </div>
+        <div id="predictions-list" class="predictions-list"></div>
+      </section>
+
+      <!-- PROFILE -->
+      <section id="tab-profile" class="tab-section">
+        <div class="section-header"><h2>👤 Mi Perfil</h2></div>
+        <div class="profile-card" id="profile-card">
+          <div class="profile-avatar" id="profile-avatar">👤</div>
+          <div class="profile-info">
+            <h3 id="profile-name">Jugador</h3>
+            <p id="profile-email">-</p>
+            <p id="profile-date">Registrado: -</p>
+          </div>
+          <div class="profile-stats">
+            <div class="pstat"><span id="ps-figuritas">0</span><label>Figuritas</label></div>
+            <div class="pstat"><span id="ps-tiradas">0</span><label>Tiradas</label></div>
+            <div class="pstat"><span id="ps-aciertos">0</span><label>Aciertos</label></div>
+            <div class="pstat"><span id="ps-monedas">0</span><label>Monedas</label></div>
+          </div>
+          <div class="profile-battle-stats">
+            <div class="pstat"><span id="ps-wins">0</span><label>🏆 Victorias</label></div>
+            <div class="pstat"><span id="ps-losses">0</span><label>💀 Derrotas</label></div>
+          </div>
+        </div>
+        <div class="profile-section">
+          <h3>Equipos Favoritos</h3>
+          <div id="fav-teams-list" class="fav-list"></div>
+        </div>
+        <div class="profile-section">
+          <h3>Jugadores Favoritos</h3>
+          <div id="fav-players-list" class="fav-list"></div>
+        </div>
+        <div class="profile-section">
+          <h3>Historial de Predicciones</h3>
+          <div id="bet-history" class="bet-history"></div>
+        </div>
+        <div class="profile-section">
+          <h3>Datos</h3>
+          <div class="data-actions" style="flex-direction:column">
+            <button class="btn btn-sm" id="btn-convert-dupes">🔄 Convertir duplicados → monedas</button>
+            <button class="btn btn-secondary" id="btn-export">📥 Exportar JSON</button>
+            <label class="btn btn-secondary" id="label-import">
+              📤 Importar JSON
+              <input type="file" id="btn-import" accept=".json" style="display:none"/>
+            </label>
+          </div>
+        </div>
+      </section>
+
+    </main>
+  </div>
+
+  <!-- TOAST -->
+  <div id="toast" class="toast"></div>
+
+  <!-- MODAL -->
+  <div id="modal-overlay" class="modal-overlay" style="display:none;">
+    <div class="modal-box" id="modal-box">
+      <button class="modal-close" id="modal-close">✕</button>
+      <div id="modal-content"></div>
+    </div>
+  </div>
+
+  <!-- SCRIPTS -->
+  <script src="js/utils/db.js"></script>
+  <script src="js/utils/auth.js"></script>
+  <script src="js/utils/toast.js"></script>
+  <script src="js/utils/modal.js"></script>
+  <script src="js/modules/api.js"></script>
+  <script src="js/modules/gacha.js"></script>
+  <script src="js/modules/album.js"></script>
+  <script src="js/modules/predictions.js"></script>
+  <script src="js/modules/profile.js"></script>
+  <script src="js/modules/stats.js"></script>
+  <script src="js/modules/dashboard.js"></script>
+  <script src="js/modules/battle.js"></script>
+  <script src="js/modules/exchange.js"></script>
+  <script src="js/app.js"></script>
+
+  <!-- Service Worker PWA -->
+  <script>
+    if ('serviceWorker' in navigator) {
+      window.addEventListener('load', () => {
+        navigator.serviceWorker.register('/sw.js')
+          .then(r => console.log('[PWA] SW registrado:', r.scope))
+          .catch(e => console.warn('[PWA] SW fallo:', e));
+      });
+    }
+
+    // PWA Install prompt
+    let deferredPrompt;
+    window.addEventListener('beforeinstallprompt', e => {
+      e.preventDefault();
+      deferredPrompt = e;
+      const banner = document.getElementById('pwa-install-banner');
+      if (banner && !localStorage.getItem('pwa-banner-dismissed')) {
+        banner.style.display = 'flex';
+      }
+    });
+
+    document.getElementById('pwa-install-btn')?.addEventListener('click', async () => {
+      if (!deferredPrompt) return;
+      deferredPrompt.prompt();
+      const { outcome } = await deferredPrompt.userChoice;
+      deferredPrompt = null;
+      document.getElementById('pwa-install-banner').style.display = 'none';
+    });
+
+    document.getElementById('pwa-banner-close')?.addEventListener('click', () => {
+      document.getElementById('pwa-install-banner').style.display = 'none';
+      localStorage.setItem('pwa-banner-dismissed', '1');
+    });
+  </script>
+</body>
+</html>
