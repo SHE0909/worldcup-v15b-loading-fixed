@@ -1,17 +1,26 @@
 /**
- * api.js — v10
+ * api.js — v12
  * NUEVAS APIs:
  *   1. api-football (RapidAPI)  ✅ key: e1317aae745eba2daea7870d948b8e8f
  *   2. football-data.org        ✅ key: 3bec1d9c3a5d418ebed176fdaaafe7e0
- *   3. thesportsdb              ✅ fotos jugadores (fallback)
+ *   3. thesportsdb              ✅ fotos jugadores (FUENTE PRINCIPAL)
  *   4. Mock                     ✅ fallback
  *
- * FIXES v10:
- *   - Mapa de fotos hardcodeadas (Wikimedia) para todos los jugadores principales
- *   - Caché de 3 capas: memoria → localStorage → IndexedDB → TheSportsDB
- *   - No más fotos incorrectas: TheSportsDB ya NO usa players[0] como fallback ciego
- *   - Fotos persisten entre sesiones, cambios de pestaña y recargas
- *   - Migración automática de caché legacy wcc_photos_v1 → wcc_photos_v2
+ * CAMBIOS v12:
+ *   - getLiveMatches(): busca EN VIVO en Mundial + Amistosos internacionales (league=10)
+ *   - getUpcomingMatches(): incluye amistosos (league=10) antes del Mundial
+ *   - getTeamMatches(teamName): nuevo método — partidos jugados y futuros de un equipo
+ *
+ * FIXES v11 — Sistema de fotos:
+ *   - _PHOTO_MAP (URLs de Wikipedia) eliminado del flujo activo: estaba
+ *     causando que se mostraran emojis porque las URLs están rotas.
+ *   - TheSportsDB es ahora la fuente principal de fotos reales.
+ *   - getPhotoById(): flujo corregido: memCache → localStorage(v3) → IDB → TheSportsDB
+ *   - getPhotoSync(): ya NO consulta _PHOTO_MAP (URLs rotas); solo memCache y localStorage v3
+ *   - getPlayerPhotosCached(): ya NO pasa por _PHOTO_MAP; usa TheSportsDB directamente
+ *   - Clave localStorage cambiada a wcc_photos_v3 para forzar migración limpia
+ *   - wcc_photos_v1 y wcc_photos_v2 se invalidan automáticamente (URLs Wikipedia obsoletas)
+ *   - precachePhotos() llama _migrateLegacyPhotoCache() en primer uso
  */
 
 const API_CONFIG = {
@@ -32,8 +41,9 @@ const API_CONFIG = {
   }
 };
 
-/* ── IDs de api-football para el Mundial 2026 ── */
-const AF_WORLD_CUP_ID  = 1;    // FIFA World Cup en api-football
+/* ── IDs de api-football ── */
+const AF_WORLD_CUP_ID  = 1;    // FIFA World Cup
+const AF_FRIENDLIES_ID = 10;   // International Friendlies (Amistosos internacionales)
 const AF_SEASON_2026   = 2026;
 
 /* ── Banderas por país ── */
@@ -293,51 +303,80 @@ const API = {
   },
 
   /* ══════════════════════════════════════════
-     PARTIDOS EN VIVO
+     PARTIDOS EN VIVO — v12
+     Busca Mundial 2026 + Amistosos internacionales simultáneamente
   ══════════════════════════════════════════ */
   async getLiveMatches() {
+    // TTL corto para en vivo: 60 seg
     const mem = this._memGet('live');
     if (mem) return mem;
-    const cached = await DB.getCacheStats('live');
-    if (cached) return this._memSet('live', cached);
 
-    // api-football: fixture?live=all con filtro por liga
-    const af = await this._af(`/fixtures?live=all&league=${AF_WORLD_CUP_ID}&season=${AF_SEASON_2026}`);
-    if (af?.response?.length > 0) {
-      const data = af.response.map(f => ({
-        id:        `af_${f.fixture.id}`,
-        home:      f.teams.home.name,
-        away:      f.teams.away.name,
-        homeFlag:  getFlag(f.teams.home.name),
-        awayFlag:  getFlag(f.teams.away.name),
-        scoreHome: f.goals.home ?? 0,
-        scoreAway: f.goals.away ?? 0,
-        minute:    f.fixture.status.elapsed || '?',
-        status:    'live'
-      }));
-      await DB.setCacheStats('live', data);
-      return this._memSet('live', data);
+    const _afMap = f => ({
+      id:          `af_${f.fixture.id}`,
+      home:        f.teams.home.name,
+      away:        f.teams.away.name,
+      homeFlag:    getFlag(f.teams.home.name),
+      awayFlag:    getFlag(f.teams.away.name),
+      scoreHome:   f.goals.home ?? 0,
+      scoreAway:   f.goals.away ?? 0,
+      minute:      f.fixture.status.elapsed || '?',
+      status:      'live',
+      competition: f.league?.name || '',
+      type:        (f.league?.id === AF_WORLD_CUP_ID) ? 'worldcup' : 'friendly'
+    });
+
+    /* 1. api-football — Mundial + Amistosos en paralelo */
+    const [afWC, afFr] = await Promise.all([
+      this._af(`/fixtures?live=all&league=${AF_WORLD_CUP_ID}&season=${AF_SEASON_2026}`),
+      this._af(`/fixtures?live=all&league=${AF_FRIENDLIES_ID}&season=${AF_SEASON_2026}`)
+    ]);
+    const afCombined = [...(afWC?.response||[]), ...(afFr?.response||[])];
+    if (afCombined.length > 0) {
+      const data = afCombined.map(_afMap);
+      this._memCache['live'] = { data, ts: Date.now() - (this._MEM_TTL - 60000) }; // TTL 60s
+      return data;
     }
 
-    // fallback football-data
-    const fd = await this._fd('/competitions/2000/matches?status=LIVE');
-    if (fd?.matches?.length > 0) {
-      const data = fd.matches.map(m => ({
-        id: m.id, home: m.homeTeam.shortName||m.homeTeam.name,
-        away: m.awayTeam.shortName||m.awayTeam.name,
-        homeFlag: getFlag(m.homeTeam.name), awayFlag: getFlag(m.awayTeam.name),
-        scoreHome: m.score.fullTime.home??0, scoreAway: m.score.fullTime.away??0,
-        minute: m.minute||'?', status:'live'
+    /* 2. football-data.org — Mundial + cualquier partido en juego */
+    const [fdWC, fdAny] = await Promise.all([
+      this._fd('/competitions/2000/matches?status=LIVE'),
+      this._fd('/matches?status=IN_PLAY&limit=15')
+    ]);
+    const fdAll = [...(fdWC?.matches||[]), ...(fdAny?.matches||[])];
+    const seen = new Set();
+    const fdUniq = fdAll.filter(m => { if(seen.has(m.id)) return false; seen.add(m.id); return true; });
+    if (fdUniq.length > 0) {
+      const data = fdUniq.map(m => ({
+        id:          `fd_${m.id}`,
+        home:        m.homeTeam.shortName || m.homeTeam.name,
+        away:        m.awayTeam.shortName || m.awayTeam.name,
+        homeFlag:    getFlag(m.homeTeam.name),
+        awayFlag:    getFlag(m.awayTeam.name),
+        scoreHome:   m.score.fullTime.home ?? m.score.halfTime.home ?? 0,
+        scoreAway:   m.score.fullTime.away ?? m.score.halfTime.away ?? 0,
+        minute:      m.minute || '?',
+        status:      'live',
+        competition: m.competition?.name || '',
+        type:        m.competition?.id === 2000 ? 'worldcup' : 'friendly'
       }));
-      await DB.setCacheStats('live', data);
+      this._memCache['live'] = { data, ts: Date.now() - (this._MEM_TTL - 60000) };
       return data;
+    }
+
+    /* 3. Mock: mostrar partidos de hoy si existen */
+    const todayStr = new Date().toISOString().split('T')[0];
+    const todayMocks = [...MOCK.friendlyMatches, ...MOCK.upcomingMatches]
+      .filter(m => m.date === todayStr);
+    if (todayMocks.length > 0) {
+      return todayMocks.map(m => ({ ...m, status: 'scheduled_today' }));
     }
 
     return MOCK.liveMatches;
   },
 
   /* ══════════════════════════════════════════
-     PRÓXIMOS PARTIDOS
+     PRÓXIMOS PARTIDOS — v12
+     Mundial 2026 + Amistosos internacionales pre-mundial
   ══════════════════════════════════════════ */
   async getUpcomingMatches() {
     const mem = this._memGet('upcoming');
@@ -345,27 +384,37 @@ const API = {
     const cached = await DB.getCacheStats('upcoming');
     if (cached) return this._memSet('upcoming', cached);
 
-    /* 1. api-football — fixtures NS próximos (funciona cuando el torneo ya arrancó) */
-    const af = await this._af(`/fixtures?league=${AF_WORLD_CUP_ID}&season=${AF_SEASON_2026}&status=NS&next=12`);
-    if (af?.response?.length > 0) {
-      const data = af.response.map(f => ({
-        id:          `af_${f.fixture.id}`,
-        home:        f.teams.home.name,
-        away:        f.teams.away.name,
-        homeFlag:    getFlag(f.teams.home.name),
-        awayFlag:    getFlag(f.teams.away.name),
-        date:        f.fixture.date?.split('T')[0],
-        time:        f.fixture.date?.split('T')[1]?.substring(0,5),
-        competition: f.league.round || 'Mundial 2026',
-        venue:       f.fixture.venue?.name || '',
-        type:        'worldcup'
-      }));
+    const _afMap = (f, type) => ({
+      id:          `af_${f.fixture.id}`,
+      home:        f.teams.home.name,
+      away:        f.teams.away.name,
+      homeFlag:    getFlag(f.teams.home.name),
+      awayFlag:    getFlag(f.teams.away.name),
+      date:        f.fixture.date?.split('T')[0],
+      time:        f.fixture.date?.split('T')[1]?.substring(0,5),
+      competition: f.league?.round || f.league?.name || (type==='worldcup'?'Mundial 2026':'Amistoso'),
+      venue:       f.fixture.venue?.name || '',
+      type
+    });
+
+    /* 1. api-football — Mundial + Amistosos próximos en paralelo */
+    const [afWC, afFr] = await Promise.all([
+      this._af(`/fixtures?league=${AF_WORLD_CUP_ID}&season=${AF_SEASON_2026}&status=NS&next=12`),
+      this._af(`/fixtures?league=${AF_FRIENDLIES_ID}&season=${AF_SEASON_2026}&status=NS&next=10`)
+    ]);
+
+    const afWCdata = (afWC?.response || []).map(f => _afMap(f, 'worldcup'));
+    const afFrData = (afFr?.response || []).map(f => _afMap(f, 'friendly'));
+
+    if (afWCdata.length > 0 || afFrData.length > 0) {
+      // Ordenar: primero amistosos (son antes del Mundial), luego Mundial
+      const data = [...afFrData, ...afWCdata]
+        .sort((a,b) => (a.date||'') < (b.date||'') ? -1 : 1);
       await DB.setCacheStats('upcoming', data);
       return this._memSet('upcoming', data);
     }
 
-    /* 2. football-data.org — funciona ANTES de que empiece el Mundial
-       Primero intentar partidos del Mundial programados */
+    /* 2. football-data.org — Mundial programado */
     const fdWC = await this._fd('/competitions/2000/matches?status=SCHEDULED');
     if (fdWC?.matches?.length > 0) {
       const data = fdWC.matches.slice(0, 12).map(m => ({
@@ -384,30 +433,11 @@ const API = {
       return this._memSet('upcoming', data);
     }
 
-    /* 3. football-data.org — amistosos internacionales (competición 2018 = World Cup Q.)
-       o cualquier fixture próximo de selecciones mundialistas */
-    const fdFriendly = await this._fd('/matches?competitions=2018&status=SCHEDULED&limit=10');
-    if (fdFriendly?.matches?.length > 0) {
-      const data = fdFriendly.matches.slice(0, 10).map(m => ({
-        id:          `fd_${m.id}`,
-        home:        m.homeTeam.shortName || m.homeTeam.name,
-        away:        m.awayTeam.shortName || m.awayTeam.name,
-        homeFlag:    getFlag(m.homeTeam.name || m.homeTeam.shortName),
-        awayFlag:    getFlag(m.awayTeam.name || m.awayTeam.shortName),
-        date:        m.utcDate?.split('T')[0],
-        time:        m.utcDate?.split('T')[1]?.substring(0,5),
-        competition: m.competition?.name || 'Clasificatorio',
-        venue:       m.venue || '',
-        type:        'friendly'
-      }));
-      await DB.setCacheStats('upcoming', data);
-      return this._memSet('upcoming', data);
-    }
-
-    /* 4. MOCK como último recurso */
-    return this._memSet('upcoming', [...MOCK.friendlyMatches, ...MOCK.upcomingMatches]);
+    /* 3. MOCK: amistosos + Mundial (siempre disponible) */
+    const allMock = [...MOCK.friendlyMatches, ...MOCK.upcomingMatches]
+      .sort((a,b) => (a.date||'') < (b.date||'') ? -1 : 1);
+    return this._memSet('upcoming', allMock);
   },
-
   /* ══════════════════════════════════════════
      TABLA DE POSICIONES
   ══════════════════════════════════════════ */
@@ -569,64 +599,47 @@ const API = {
   },
 
   /* ══════════════════════════════════════════════════════════════════
-     FOTOS v10 — Sistema de 3 capas:
-       1. MAPA HARDCODEADO: URLs de Wikimedia, siempre confiables
-       2. CACHÉ IndexedDB: persiste entre sesiones/pestañas, no se borra
-       3. TheSportsDB: fallback para jugadores no en el mapa
+     FOTOS v11 — TheSportsDB como fuente principal
+       FLUJO: memCache → localStorage(v3) → IndexedDB → TheSportsDB
+       _PHOTO_MAP eliminado del flujo principal: se mantiene solo como
+       último fallback para evitar romper código que lo referencie.
+       MIGRACIÓN: wcc_photos_v1 y wcc_photos_v2 se invalidan porque
+       pueden contener URLs de Wikipedia rotas.
   ══════════════════════════════════════════════════════════════════ */
 
-  /* Mapa de fotos por sdbName — Wikipedia REST API (sin bloqueo hotlink) */
-  _PHOTO_MAP: {
-    // Legendarios
-    'Lionel Messi':       'https://upload.wikimedia.org/wikipedia/commons/thumb/b/b4/Lionel-Messi-Argentina-2022-FIFA-World-Cup_%28cropped%29.jpg/220px-Lionel-Messi-Argentina-2022-FIFA-World-Cup_%28cropped%29.jpg',
-    'Kylian Mbappe':      'https://upload.wikimedia.org/wikipedia/commons/thumb/5/57/2019-07-17_SG_Dynamo_Dresden_vs._Paris_Saint-Germain_by_Sandro_Halank%E2%80%93218_%28cropped%29.jpg/220px-2019-07-17_SG_Dynamo_Dresden_vs._Paris_Saint-Germain_by_Sandro_Halank%E2%80%93218_%28cropped%29.jpg',
-    'Vinicius Junior':    'https://upload.wikimedia.org/wikipedia/commons/thumb/9/9e/Vinicius_Junior_2023.jpg/220px-Vinicius_Junior_2023.jpg',
-    'Erling Haaland':     'https://upload.wikimedia.org/wikipedia/commons/thumb/a/a4/2023-10-12_Erling_Haaland_%28cropped%29.jpg/220px-2023-10-12_Erling_Haaland_%28cropped%29.jpg',
-    // Épicos
-    'Pedri Gonzalez':     'https://upload.wikimedia.org/wikipedia/commons/thumb/c/cc/Pedri_2022_%28cropped%29.jpg/220px-Pedri_2022_%28cropped%29.jpg',
-    'Jude Bellingham':    'https://upload.wikimedia.org/wikipedia/commons/thumb/8/80/Jude_Bellingham_2022_%28cropped%29.jpg/220px-Jude_Bellingham_2022_%28cropped%29.jpg',
-    'Rodri':              'https://upload.wikimedia.org/wikipedia/commons/thumb/4/4f/Rodri_%28footballer%2C_born_1996%29_2019_%28cropped%29.jpg/220px-Rodri_%28footballer%2C_born_1996%29_2019_%28cropped%29.jpg',
-    'Bernardo Silva':     'https://upload.wikimedia.org/wikipedia/commons/thumb/3/30/Bernardo_Silva_2022_%28cropped%29.jpg/220px-Bernardo_Silva_2022_%28cropped%29.jpg',
-    'Raphinha':           'https://upload.wikimedia.org/wikipedia/commons/thumb/6/65/2022-11-24_FIFA_World_Cup_2022_group_G_Brazil_Serbia_-_Raphinha_%28cropped%29.jpg/220px-2022-11-24_FIFA_World_Cup_2022_group_G_Brazil_Serbia_-_Raphinha_%28cropped%29.jpg',
-    'Lamine Yamal':       'https://upload.wikimedia.org/wikipedia/commons/thumb/5/55/Lamine_Yamal_2024_%28cropped%29.jpg/220px-Lamine_Yamal_2024_%28cropped%29.jpg',
-    'Phil Foden':         'https://upload.wikimedia.org/wikipedia/commons/thumb/2/29/Phil_Foden_2023_%28cropped%29.jpg/220px-Phil_Foden_2023_%28cropped%29.jpg',
-    'Gavi':               'https://upload.wikimedia.org/wikipedia/commons/thumb/6/60/Gavi_%28player%29_2022_%28cropped%29.jpg/220px-Gavi_%28player%29_2022_%28cropped%29.jpg',
-    'Bukayo Saka':        'https://upload.wikimedia.org/wikipedia/commons/thumb/9/9c/Bukayo_Saka_2022_WC_%28cropped%29.jpg/220px-Bukayo_Saka_2022_WC_%28cropped%29.jpg',
-    'Federico Valverde':  'https://upload.wikimedia.org/wikipedia/commons/thumb/5/5b/Federico_Valverde_2022_%28cropped%29.jpg/220px-Federico_Valverde_2022_%28cropped%29.jpg',
-    // Raros
-    'Marquinhos':         'https://upload.wikimedia.org/wikipedia/commons/thumb/e/ef/Marquinhos_%28footballer%29_2022_%28cropped%29.jpg/220px-Marquinhos_%28footballer%29_2022_%28cropped%29.jpg',
-    'Ruben Dias':         'https://upload.wikimedia.org/wikipedia/commons/thumb/8/82/R%C3%BAben_Dias_2022_%28cropped%29.jpg/220px-R%C3%BAben_Dias_2022_%28cropped%29.jpg',
-    'Virgil van Dijk':    'https://upload.wikimedia.org/wikipedia/commons/thumb/4/44/Virgil_van_Dijk_2022_%28cropped%29.jpg/220px-Virgil_van_Dijk_2022_%28cropped%29.jpg',
-    'Alisson Becker':     'https://upload.wikimedia.org/wikipedia/commons/thumb/5/5f/Alisson_Becker_2022_%28cropped%29.jpg/220px-Alisson_Becker_2022_%28cropped%29.jpg',
-    'Thibaut Courtois':   'https://upload.wikimedia.org/wikipedia/commons/thumb/8/85/Thibaut_Courtois_2022_%28cropped%29.jpg/220px-Thibaut_Courtois_2022_%28cropped%29.jpg',
-    'Antoine Griezmann':  'https://upload.wikimedia.org/wikipedia/commons/thumb/9/9b/Antoine_Griezmann_2018_WC_%28cropped%29.jpg/220px-Antoine_Griezmann_2018_WC_%28cropped%29.jpg',
-    'Cody Gakpo':         'https://upload.wikimedia.org/wikipedia/commons/thumb/c/c7/Cody_Gakpo_2022_%28cropped%29.jpg/220px-Cody_Gakpo_2022_%28cropped%29.jpg',
-    'Hirving Lozano':     'https://upload.wikimedia.org/wikipedia/commons/thumb/9/99/Hirving_Lozano_2022_%28cropped%29.jpg/220px-Hirving_Lozano_2022_%28cropped%29.jpg',
-    'Goncalo Ramos':      'https://upload.wikimedia.org/wikipedia/commons/thumb/8/87/Gon%C3%A7alo_Ramos_2022_WC_%28cropped%29.jpg/220px-Gon%C3%A7alo_Ramos_2022_WC_%28cropped%29.jpg',
-    'Joao Felix':         'https://upload.wikimedia.org/wikipedia/commons/thumb/0/06/Jo%C3%A3o_F%C3%A9lix_2022_%28cropped%29.jpg/220px-Jo%C3%A3o_F%C3%A9lix_2022_%28cropped%29.jpg',
-    'Takefusa Kubo':      'https://upload.wikimedia.org/wikipedia/commons/thumb/e/e6/Takefusa_Kubo_2022_%28cropped%29.jpg/220px-Takefusa_Kubo_2022_%28cropped%29.jpg',
-    'Hakim Ziyech':       'https://upload.wikimedia.org/wikipedia/commons/thumb/9/9b/Hakim_Ziyech_2022_WC_%28cropped%29.jpg/220px-Hakim_Ziyech_2022_WC_%28cropped%29.jpg',
-    // Comunes
-    'Weston McKennie':    'https://upload.wikimedia.org/wikipedia/commons/thumb/8/82/Weston_McKennie_2022_%28cropped%29.jpg/220px-Weston_McKennie_2022_%28cropped%29.jpg',
-    'Richarlison':        'https://upload.wikimedia.org/wikipedia/commons/thumb/b/b2/Richarlison_2022_%28cropped%29.jpg/220px-Richarlison_2022_%28cropped%29.jpg',
-    'Jonathan David':     'https://upload.wikimedia.org/wikipedia/commons/thumb/9/9d/Jonathan_David_2022_%28cropped%29.jpg/220px-Jonathan_David_2022_%28cropped%29.jpg',
-    'Evan Ferguson':      'https://upload.wikimedia.org/wikipedia/commons/thumb/d/db/Evan_Ferguson_2024_%28cropped%29.jpg/220px-Evan_Ferguson_2024_%28cropped%29.jpg',
-    'Piero Hincapie':     'https://upload.wikimedia.org/wikipedia/commons/thumb/a/a4/Piero_Hincapi%C3%A9_2022_%28cropped%29.jpg/220px-Piero_Hincapi%C3%A9_2022_%28cropped%29.jpg',
-    'Sofiane Boufal':     'https://upload.wikimedia.org/wikipedia/commons/thumb/f/fa/Sofiane_Boufal_2022_WC_%28cropped%29.jpg/220px-Sofiane_Boufal_2022_WC_%28cropped%29.jpg',
-    'Pervis Estupinan':   'https://upload.wikimedia.org/wikipedia/commons/thumb/7/78/Pervis_Estupi%C3%B1%C3%A1n_2022_%28cropped%29.jpg/220px-Pervis_Estupi%C3%B1%C3%A1n_2022_%28cropped%29.jpg',
-    'Mats Hummels':       'https://upload.wikimedia.org/wikipedia/commons/thumb/5/54/Mats_Hummels_2018_WC_%28cropped%29.jpg/220px-Mats_Hummels_2018_WC_%28cropped%29.jpg',
-    'Kepa Arrizabalaga':  'https://upload.wikimedia.org/wikipedia/commons/thumb/c/ca/Kepa_Arrizabalaga_2022_%28cropped%29.jpg/220px-Kepa_Arrizabalaga_2022_%28cropped%29.jpg',
-    'Marcus Rashford':    'https://upload.wikimedia.org/wikipedia/commons/thumb/9/9b/Marcus_Rashford_2022_WC_%28cropped%29.jpg/220px-Marcus_Rashford_2022_WC_%28cropped%29.jpg',
-    'Giovanni Reyna':     'https://upload.wikimedia.org/wikipedia/commons/thumb/0/06/Giovanni_Reyna_2022_%28cropped%29.jpg/220px-Giovanni_Reyna_2022_%28cropped%29.jpg',
-    'Victor Osimhen':     'https://upload.wikimedia.org/wikipedia/commons/thumb/9/9b/Victor_Osimhen_2022_%28cropped%29.jpg/220px-Victor_Osimhen_2022_%28cropped%29.jpg',
-    'Romelu Lukaku':      'https://upload.wikimedia.org/wikipedia/commons/thumb/4/4d/Romelu_Lukaku_2022_WC_%28cropped%29.jpg/220px-Romelu_Lukaku_2022_WC_%28cropped%29.jpg',
-    'Ola Solbakken':      'https://upload.wikimedia.org/wikipedia/commons/thumb/2/2a/Ole_Romeny_2023_%28cropped%29.jpg/220px-Ole_Romeny_2023_%28cropped%29.jpg',
-  },
+  /* _PHOTO_MAP conservado solo como referencia/fallback de emergencia.
+     NO se usa como fuente prioritaria — las URLs de Wikipedia están rotas. */
+  _PHOTO_MAP: {},
 
-  /* ── Caché en memoria (runtime) — evita consultas duplicadas en la misma sesión ── */
+  /* Caché en memoria (runtime) — evita consultas duplicadas en la misma sesión */
   _photoMemCache: {},
 
-  /* ── IndexedDB: store 'photo_cache', key=figId, value={id,url,ts} ── */
+  /* Clave de localStorage v3 — intencionalmente diferente de v1/v2 para
+     forzar migración limpia y descartar URLs de Wikipedia obsoletas */
+  _LS_PHOTO_KEY: 'wcc_photos_v3',
+
+  /* Ejecutar una sola vez al iniciar: limpiar cachés legacy con URLs rotas */
+  _migrateLegacyPhotoCache() {
+    try {
+      // v1 y v2 pueden tener URLs de Wikipedia obsoletas → eliminar
+      if (localStorage.getItem('wcc_photos_v1')) localStorage.removeItem('wcc_photos_v1');
+      if (localStorage.getItem('wcc_photos_v2')) localStorage.removeItem('wcc_photos_v2');
+    } catch(_) {}
+  },
+
+  /* ── localStorage helpers ── */
+  _photoStore() {
+    try {
+      const raw = localStorage.getItem(this._LS_PHOTO_KEY);
+      return raw ? JSON.parse(raw) : {};
+    } catch(_) { return {}; }
+  },
+
+  _photoSave(store) {
+    try { localStorage.setItem(this._LS_PHOTO_KEY, JSON.stringify(store)); } catch(_) {}
+  },
+
+  /* ── IndexedDB helpers ── */
   async _idbGetPhoto(figId) {
     try {
       const row = await DB.get('photo_cache', figId);
@@ -640,55 +653,29 @@ const API = {
     } catch(_) {}
   },
 
-  /* ── localStorage (compatibilidad legacy + fallback rápido sync) ── */
-  _LS_PHOTO_KEY: 'wcc_photos_v2',
-
-  _photoStore() {
-    try {
-      const raw = localStorage.getItem(this._LS_PHOTO_KEY);
-      return raw ? JSON.parse(raw) : {};
-    } catch(_) { return {}; }
-  },
-
-  _photoSave(store) {
-    try { localStorage.setItem(this._LS_PHOTO_KEY, JSON.stringify(store)); } catch(_) {}
-  },
-
   /**
-   * Obtiene foto de un jugador — sistema de 3 capas:
-   *   1. Mapa hardcodeado (instantáneo, siempre correcto)
-   *   2. Caché en memoria (instantáneo, misma sesión)
-   *   3. localStorage (sync, persiste entre sesiones)
-   *   4. IndexedDB (async, más robusto que localStorage)
-   *   5. TheSportsDB (fallback de red, solo si todo lo anterior falla)
+   * getPhotoById — fuente de verdad asíncrona.
+   * FLUJO CORREGIDO (v11):
+   *   1. memCache       → instantáneo, misma sesión
+   *   2. localStorage   → sync, persiste entre sesiones (solo v3, sin Wikipedia)
+   *   3. IndexedDB      → async, más robusto
+   *   4. TheSportsDB    → red, fuente principal de imágenes reales
+   * _PHOTO_MAP ya NO es fuente prioritaria.
    */
   async getPhotoById(figId, sdbName) {
-    // 1. Mapa hardcodeado — fuente más confiable
-    const hardcoded = this._PHOTO_MAP[sdbName];
-    if (hardcoded) {
-      // Guardar en cachés para consistencia
-      if (!this._photoMemCache[figId]) {
-        this._photoMemCache[figId] = hardcoded;
-        const ls = this._photoStore();
-        if (!ls[figId]) { ls[figId] = hardcoded; this._photoSave(ls); }
-        this._idbSetPhoto(figId, hardcoded); // async, sin await
-      }
-      return hardcoded;
-    }
-
-    // 2. Caché en memoria
+    // 1. Caché en memoria (más rápido)
     if (this._photoMemCache[figId] !== undefined) {
       return this._photoMemCache[figId];
     }
 
-    // 3. localStorage (sync)
+    // 2. localStorage v3 (solo contiene URLs de TheSportsDB, no de Wikipedia)
     const ls = this._photoStore();
     if (ls[figId] !== undefined) {
       this._photoMemCache[figId] = ls[figId];
       return ls[figId];
     }
 
-    // 4. IndexedDB
+    // 3. IndexedDB
     const idbUrl = await this._idbGetPhoto(figId);
     if (idbUrl !== null) {
       this._photoMemCache[figId] = idbUrl;
@@ -697,20 +684,22 @@ const API = {
       return idbUrl;
     }
 
-    // 5. TheSportsDB — solo si no hay en ningún caché
+    // 4. TheSportsDB — fuente principal de fotos reales
     const url = await this.getPlayerPhoto(sdbName);
     if (url) {
       this._photoMemCache[figId] = url;
       ls[figId] = url;
       this._photoSave(ls);
-      this._idbSetPhoto(figId, url); // async
+      this._idbSetPhoto(figId, url); // async, sin bloquear
     }
     return url || null;
   },
 
   /**
-   * Busca la foto en TheSportsDB con match exacto de nombre.
-   * Solo se llama si el jugador no está en el mapa hardcodeado.
+   * getPlayerPhoto — consulta TheSportsDB por nombre.
+   * Prioriza strCutout (recorte sin fondo) sobre strThumb.
+   * Match exacto primero; match parcial como fallback seguro.
+   * NO usa players[0] a ciegas para evitar fotos incorrectas.
    */
   async getPlayerPhoto(playerName) {
     try {
@@ -720,7 +709,7 @@ const API = {
       const nameLower = playerName.toLowerCase();
       // Match exacto primero
       const exact = players.find(p => p.strPlayer?.toLowerCase() === nameLower);
-      // Si no hay exacto, intentar match parcial (ej: "Pedri" → "Pedri González")
+      // Match parcial seguro (ej: "Pedri" → "Pedri González")
       const partial = !exact && players.find(p => {
         const pn = p.strPlayer?.toLowerCase() || '';
         return pn.includes(nameLower) || nameLower.includes(pn.split(' ')[0]);
@@ -731,53 +720,62 @@ const API = {
   },
 
   /**
-   * getPhotoSync(fig) — HELPER SÍNCRONO unificado
-   * Siempre devuelve la mejor URL disponible SIN async:
-   *   1. _PHOTO_MAP por sdbName  (hardcodeado, más confiable)
-   *   2. _PHOTO_MAP por name     (fallback)
-   *   3. _photoMemCache por id   (runtime)
-   *   4. localStorage por id     (persistido)
-   * Si nada → null (se mostrará emoji)
-   *
-   * USO: reemplaza API._photoStore()[fig.id] en TODOS los renders síncronos.
-   * Sigue llamando getPhotoById() en background para llenar el caché.
+   * getPhotoSync — helper síncrono para renders inmediatos.
+   * FLUJO CORREGIDO (v11): NO consulta _PHOTO_MAP (URLs rotas).
+   *   1. memCache   → runtime de la sesión actual
+   *   2. localStorage v3 → URLs de TheSportsDB persistidas
+   * Si nada → null (el render mostrará emoji; getPhotoById se llama en bg).
    */
   getPhotoSync(fig) {
     if (!fig) return null;
-    // 1 & 2 — mapa hardcodeado
-    const fromMap = this._PHOTO_MAP[fig.sdbName] || this._PHOTO_MAP[fig.name];
-    if (fromMap) return fromMap;
-    // 3 — memoria runtime
+    // 1 — memoria runtime (URLs de TheSportsDB, cargadas esta sesión)
     const fromMem = this._photoMemCache[fig.id];
     if (fromMem) return fromMem;
-    // 4 — localStorage
+    // 2 — localStorage v3 (solo URLs de TheSportsDB, no Wikipedia)
     try {
       const ls = this._photoStore();
       return ls[fig.id] || null;
     } catch(_) { return null; }
   },
 
-  /* Compatibilidad con código antiguo */
+  /**
+   * getPlayerPhotosCached — compatibilidad con código antiguo.
+   * Ahora consulta TheSportsDB directamente sin pasar por _PHOTO_MAP.
+   */
   async getPlayerPhotosCached(playerName) {
     const nameKey = 'n_' + playerName;
+    // Buscar en memoria
+    if (this._photoMemCache[nameKey] !== undefined) return this._photoMemCache[nameKey];
+    // Buscar en localStorage v3
     const ls = this._photoStore();
-    if (ls[nameKey] !== undefined) return ls[nameKey];
-    // Buscar en mapa hardcodeado por nombre
-    const hardcoded = this._PHOTO_MAP[playerName];
-    if (hardcoded) { ls[nameKey] = hardcoded; this._photoSave(ls); return hardcoded; }
+    if (ls[nameKey] !== undefined) {
+      this._photoMemCache[nameKey] = ls[nameKey];
+      return ls[nameKey];
+    }
+    // Consultar TheSportsDB
     const url = await this.getPlayerPhoto(playerName);
-    if (url) { ls[nameKey] = url; this._photoSave(ls); }
+    if (url) {
+      this._photoMemCache[nameKey] = url;
+      ls[nameKey] = url;
+      this._photoSave(ls);
+    }
     return url || null;
   },
 
-  /* Precargar fotos de todas las figuritas al iniciar la app */
+  /**
+   * precachePhotos — precarga inteligente al iniciar la app.
+   * Solo consulta la red para figuras sin foto en ningún caché.
+   * Máx 5 solicitudes paralelas para no saturar TheSportsDB.
+   */
   async precachePhotos(figuritas) {
     if (!figuritas?.length) return;
+    // Migrar cachés legacy en el primer uso
+    this._migrateLegacyPhotoCache();
     const pool = (typeof Gacha !== 'undefined') ? Gacha.getPool() : [];
     const toFetch = figuritas
       .map(f => pool.find(p => p.id === f.id))
       .filter(fig => fig && !this.getPhotoSync(fig));
-    // Fetch en paralelo, máx 5 a la vez para no saturar la red
+    // Fetch en paralelo, máx 5 a la vez
     for (let i = 0; i < toFetch.length; i += 5) {
       await Promise.allSettled(
         toFetch.slice(i, i+5).map(fig => this.getPhotoById(fig.id, fig.sdbName || fig.name))
@@ -787,10 +785,97 @@ const API = {
 
   /* Limpiar caché de fotos al hacer logout */
   clearPhotoCache() {
-    this._teamsCache = null;
-    this._memCache   = {};
+    this._teamsCache    = null;
+    this._memCache      = {};
     this._photoMemCache = {};
-    // NO borrar localStorage ni IndexedDB — las fotos son recursos estáticos
+    // NO borrar localStorage v3 ni IndexedDB — las fotos son recursos estáticos
+  },
+
+  /* ══════════════════════════════════════════
+     PARTIDOS DE UN EQUIPO — v12
+     Busca partidos jugados, en vivo y futuros de un equipo específico
+     Se usa en el modal de favorito "equipo"
+  ══════════════════════════════════════════ */
+  async getTeamMatches(teamName) {
+    const cacheKey = `team_matches_${teamName}`;
+    const mem = this._memGet(cacheKey);
+    if (mem) return mem;
+
+    const normalize = s => s?.toLowerCase().replace(/[áàä]/g,'a').replace(/[éèë]/g,'e')
+      .replace(/[íìï]/g,'i').replace(/[óòö]/g,'o').replace(/[úùü]/g,'u')
+      .replace(/ñ/g,'n').trim() || '';
+
+    const teamNorm = normalize(teamName);
+
+    /* ── Buscar team ID en api-football ── */
+    let afTeamId = null;
+    try {
+      const search = await this._af(`/teams?league=${AF_WORLD_CUP_ID}&season=${AF_SEASON_2026}`);
+      if (search?.response?.length) {
+        const match = search.response.find(t =>
+          normalize(t.team.name) === teamNorm ||
+          normalize(t.team.name).includes(teamNorm) ||
+          teamNorm.includes(normalize(t.team.name))
+        );
+        if (match) afTeamId = match.team.id;
+      }
+    } catch(_) {}
+
+    const played = [];
+    const upcoming = [];
+
+    /* ── api-football: si encontramos el equipo ── */
+    if (afTeamId) {
+      const [afFT, afNS, afLive] = await Promise.all([
+        this._af(`/fixtures?team=${afTeamId}&season=${AF_SEASON_2026}&status=FT&last=10`),
+        this._af(`/fixtures?team=${afTeamId}&season=${AF_SEASON_2026}&status=NS&next=5`),
+        this._af(`/fixtures?team=${afTeamId}&season=${AF_SEASON_2026}&live=all`)
+      ]);
+
+      const mapFix = (f, status) => ({
+        id:          `af_${f.fixture.id}`,
+        home:        f.teams.home.name,
+        away:        f.teams.away.name,
+        homeFlag:    getFlag(f.teams.home.name),
+        awayFlag:    getFlag(f.teams.away.name),
+        scoreHome:   f.goals.home ?? null,
+        scoreAway:   f.goals.away ?? null,
+        date:        f.fixture.date?.split('T')[0],
+        time:        f.fixture.date?.split('T')[1]?.substring(0,5),
+        competition: f.league?.round || f.league?.name || 'Internacional',
+        venue:       f.fixture.venue?.name || '',
+        minute:      f.fixture.status?.elapsed || null,
+        status,
+        type:        f.league?.id === AF_WORLD_CUP_ID ? 'worldcup' : 'friendly'
+      });
+
+      (afFT?.response  || []).forEach(f => played.push(mapFix(f, 'finished')));
+      (afLive?.response|| []).forEach(f => played.unshift(mapFix(f, 'live')));
+      (afNS?.response  || []).forEach(f => upcoming.push(mapFix(f, 'upcoming')));
+
+      if (played.length > 0 || upcoming.length > 0) {
+        const result = { played, upcoming };
+        this._memSet(cacheKey, result);
+        return result;
+      }
+    }
+
+    /* ── Fallback: filtrar MOCK por nombre de equipo ── */
+    const allMock = [
+      ...MOCK.friendlyMatches.map(m=>({...m,status:'finished',scoreHome:null,scoreAway:null})),
+      ...MOCK.upcomingMatches.map(m=>({...m,status:'upcoming'}))
+    ];
+
+    const filterTeam = m =>
+      normalize(m.home).includes(teamNorm) || teamNorm.includes(normalize(m.home)) ||
+      normalize(m.away).includes(teamNorm) || teamNorm.includes(normalize(m.away));
+
+    const mockPlayed   = allMock.filter(m => m.status==='finished' && filterTeam(m));
+    const mockUpcoming = allMock.filter(m => m.status==='upcoming'  && filterTeam(m));
+
+    const result = { played: mockPlayed, upcoming: mockUpcoming };
+    this._memSet(cacheKey, result);
+    return result;
   },
 
   /* ══════════════════════════════════════════

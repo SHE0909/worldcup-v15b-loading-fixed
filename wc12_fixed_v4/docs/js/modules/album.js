@@ -125,19 +125,12 @@ const Album = {
     const grid = document.getElementById('album-grid');
     if (!grid) return;
 
-    // Migrar caché legacy wcc_photos_v1 → wcc_photos_v2
+    // Migrar/invalidar cachés legacy de fotos (v1, v2 con URLs de Wikipedia rotas)
+    // La migración real la hace API._migrateLegacyPhotoCache() en precachePhotos.
+    // Aquí solo nos aseguramos de que no queden claves v1/v2 en localStorage.
     try {
-      const oldRaw = localStorage.getItem('wcc_photos_v1');
-      if (oldRaw) {
-        const oldStore = JSON.parse(oldRaw);
-        const newStore = API._photoStore();
-        let changed = false;
-        Object.entries(oldStore).forEach(([k, v]) => {
-          if (v && !newStore[k]) { newStore[k] = v; changed = true; }
-        });
-        if (changed) API._photoSave(newStore);
-        localStorage.removeItem('wcc_photos_v1');
-      }
+      if (localStorage.getItem('wcc_photos_v1')) localStorage.removeItem('wcc_photos_v1');
+      if (localStorage.getItem('wcc_photos_v2')) localStorage.removeItem('wcc_photos_v2');
     } catch(_) {}
 
     grid.innerHTML = filtered.map(fig => {
