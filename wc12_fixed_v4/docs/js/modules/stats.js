@@ -121,18 +121,23 @@ const ALL_PLAYERS = [
 
 const Stats = {
   _currentTab: 'teams',
+  _lastQuery: '',
 
   async render(tab = 'teams') {
     this._currentTab = tab;
+    // Restaurar el input de búsqueda si hay query guardada
+    const input = document.getElementById('search-input');
+    if (input && this._lastQuery) input.value = this._lastQuery;
     const content = document.getElementById('stats-content');
     if (!content) return;
     content.innerHTML = '<div class="spinner"></div>';
     try {
-      if (tab === 'teams')   await this.renderTeams(content);
-      if (tab === 'players') await this.renderPlayers(content);
+      // Usar la última query al cambiar de tab para no perder la búsqueda
+      const q = this._lastQuery;
+      if (tab === 'teams')   await this.renderTeams(content, q);
+      if (tab === 'players') await this.renderPlayers(content, q);
       if (tab === 'scorers') await this.renderScorers(content);
     } catch(err) {
-      // BUG FIX: si algo falla, quitar el spinner y mostrar error
       console.error('[Stats.render]', err);
       content.innerHTML = '<p class="empty-state" style="color:var(--text-muted)">Error al cargar datos. Intenta de nuevo.</p>';
     }
@@ -292,12 +297,13 @@ const Stats = {
   },
 
   async search(query) {
+    this._lastQuery = query; // Persistir query para cuando se cambie de tab
     const content = document.getElementById('stats-content');
     if (!content) return;
     content.innerHTML = '<div class="spinner"></div>';
     if (this._currentTab === 'teams')   await this.renderTeams(content, query);
     if (this._currentTab === 'players') await this.renderPlayers(content, query);
-    if (this._currentTab === 'scorers') await this.renderScorers(content, query);
+    if (this._currentTab === 'scorers') await this.renderScorers(content);
   },
 
   /* Buscar por nombre para el modal de favorito en Dashboard */

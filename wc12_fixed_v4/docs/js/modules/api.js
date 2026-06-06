@@ -26,6 +26,7 @@ const API_CONFIG = {
     enabled: true
   },
   sportsDB: {
+    /* Clave pública gratuita "3" — suficiente para buscar jugadores */
     base:    'https://www.thesportsdb.com/api/v1/json/3',
     enabled: true
   }
@@ -197,6 +198,23 @@ const MOCK = {
     { id:'p48', name:'Manuel Neuer',       team:'Alemania',   flag:'🇩🇪', goals:0, assists:0, pos:'POR', caps:124, rating:86 },
     { id:'p49', name:'Thibaut Courtois',   team:'Bélgica',    flag:'🇧🇪', goals:0, assists:0, pos:'POR', caps:102, rating:90 },
     { id:'p50', name:'Kaoru Mitoma',       team:'Japón',      flag:'🇯🇵', goals:0, assists:0, pos:'DEL', caps:40,  rating:84 },
+    /* ── Figuritas que faltaban en MOCK ── */
+    { id:'p51', name:'Gavi',              team:'España',     flag:'🇪🇸', goals:0, assists:0, pos:'MED', caps:41,  rating:86 },
+    { id:'p52', name:'Bukayo Saka',       team:'Inglaterra', flag:'🏴󠁧󠁢󠁥󠁮󠁧󠁿', goals:0, assists:0, pos:'DEL', caps:44,  rating:87 },
+    { id:'p53', name:'Goncalo Ramos',     team:'Portugal',   flag:'🇵🇹', goals:0, assists:0, pos:'DEL', caps:22,  rating:81 },
+    { id:'p54', name:'Joao Félix',        team:'Portugal',   flag:'🇵🇹', goals:0, assists:0, pos:'DEL', caps:50,  rating:80 },
+    { id:'p55', name:'Weston McKennie',   team:'EEUU',       flag:'🇺🇸', goals:0, assists:0, pos:'MED', caps:47,  rating:74 },
+    { id:'p56', name:'Richarlison',       team:'Brasil',     flag:'🇧🇷', goals:0, assists:0, pos:'DEL', caps:52,  rating:76 },
+    { id:'p57', name:'Evan Ferguson',     team:'Irlanda',    flag:'🇮🇪', goals:0, assists:0, pos:'DEL', caps:18,  rating:72 },
+    { id:'p58', name:'Piero Hincapié',    team:'Ecuador',    flag:'🇪🇨', goals:0, assists:0, pos:'DEF', caps:22,  rating:73 },
+    { id:'p59', name:'Sofiane Boufal',    team:'Marruecos',  flag:'🇲🇦', goals:0, assists:0, pos:'DEL', caps:48,  rating:74 },
+    { id:'p60', name:'Pervis Estupiñán', team:'Ecuador',    flag:'🇪🇨', goals:0, assists:0, pos:'DEF', caps:24,  rating:74 },
+    { id:'p61', name:'Mats Hummels',      team:'Alemania',   flag:'🇩🇪', goals:0, assists:0, pos:'DEF', caps:78,  rating:76 },
+    { id:'p62', name:'Kepa Arrizabalaga', team:'España',     flag:'🇪🇸', goals:0, assists:0, pos:'POR', caps:19,  rating:73 },
+    { id:'p63', name:'Marcus Rashford',   team:'Inglaterra', flag:'🏴󠁧󠁢󠁥󠁮󠁧󠁿', goals:0, assists:0, pos:'DEL', caps:60,  rating:77 },
+    { id:'p64', name:'Giovanni Reyna',    team:'EEUU',       flag:'🇺🇸', goals:0, assists:0, pos:'MED', caps:19,  rating:73 },
+    { id:'p65', name:'Romelu Lukaku',     team:'Bélgica',    flag:'🇧🇪', goals:0, assists:0, pos:'DEL', caps:112, rating:77 },
+    { id:'p66', name:'Ola Solbakken',     team:'Noruega',    flag:'🇳🇴', goals:0, assists:0, pos:'MED', caps:30,  rating:71 },
   ],
 
   finishedMatches: [],
@@ -327,7 +345,7 @@ const API = {
     const cached = await DB.getCacheStats('upcoming');
     if (cached) return this._memSet('upcoming', cached);
 
-    // api-football
+    /* 1. api-football — fixtures NS próximos (funciona cuando el torneo ya arrancó) */
     const af = await this._af(`/fixtures?league=${AF_WORLD_CUP_ID}&season=${AF_SEASON_2026}&status=NS&next=12`);
     if (af?.response?.length > 0) {
       const data = af.response.map(f => ({
@@ -346,7 +364,47 @@ const API = {
       return this._memSet('upcoming', data);
     }
 
-    // fallback
+    /* 2. football-data.org — funciona ANTES de que empiece el Mundial
+       Primero intentar partidos del Mundial programados */
+    const fdWC = await this._fd('/competitions/2000/matches?status=SCHEDULED');
+    if (fdWC?.matches?.length > 0) {
+      const data = fdWC.matches.slice(0, 12).map(m => ({
+        id:          `fd_${m.id}`,
+        home:        m.homeTeam.shortName || m.homeTeam.name,
+        away:        m.awayTeam.shortName || m.awayTeam.name,
+        homeFlag:    getFlag(m.homeTeam.name || m.homeTeam.shortName),
+        awayFlag:    getFlag(m.awayTeam.name || m.awayTeam.shortName),
+        date:        m.utcDate?.split('T')[0],
+        time:        m.utcDate?.split('T')[1]?.substring(0,5),
+        competition: m.stage?.replace(/_/g,' ') || 'Mundial 2026',
+        venue:       m.venue || '',
+        type:        'worldcup'
+      }));
+      await DB.setCacheStats('upcoming', data);
+      return this._memSet('upcoming', data);
+    }
+
+    /* 3. football-data.org — amistosos internacionales (competición 2018 = World Cup Q.)
+       o cualquier fixture próximo de selecciones mundialistas */
+    const fdFriendly = await this._fd('/matches?competitions=2018&status=SCHEDULED&limit=10');
+    if (fdFriendly?.matches?.length > 0) {
+      const data = fdFriendly.matches.slice(0, 10).map(m => ({
+        id:          `fd_${m.id}`,
+        home:        m.homeTeam.shortName || m.homeTeam.name,
+        away:        m.awayTeam.shortName || m.awayTeam.name,
+        homeFlag:    getFlag(m.homeTeam.name || m.homeTeam.shortName),
+        awayFlag:    getFlag(m.awayTeam.name || m.awayTeam.shortName),
+        date:        m.utcDate?.split('T')[0],
+        time:        m.utcDate?.split('T')[1]?.substring(0,5),
+        competition: m.competition?.name || 'Clasificatorio',
+        venue:       m.venue || '',
+        type:        'friendly'
+      }));
+      await DB.setCacheStats('upcoming', data);
+      return this._memSet('upcoming', data);
+    }
+
+    /* 4. MOCK como último recurso */
     return this._memSet('upcoming', [...MOCK.friendlyMatches, ...MOCK.upcomingMatches]);
   },
 
@@ -517,7 +575,7 @@ const API = {
        3. TheSportsDB: fallback para jugadores no en el mapa
   ══════════════════════════════════════════════════════════════════ */
 
-  /* Mapa de fotos hardcodeadas por sdbName — Wikimedia Commons */
+  /* Mapa de fotos por sdbName — Wikipedia REST API (sin bloqueo hotlink) */
   _PHOTO_MAP: {
     // Legendarios
     'Lionel Messi':       'https://upload.wikimedia.org/wikipedia/commons/thumb/b/b4/Lionel-Messi-Argentina-2022-FIFA-World-Cup_%28cropped%29.jpg/220px-Lionel-Messi-Argentina-2022-FIFA-World-Cup_%28cropped%29.jpg',
@@ -562,7 +620,7 @@ const API = {
     'Giovanni Reyna':     'https://upload.wikimedia.org/wikipedia/commons/thumb/0/06/Giovanni_Reyna_2022_%28cropped%29.jpg/220px-Giovanni_Reyna_2022_%28cropped%29.jpg',
     'Victor Osimhen':     'https://upload.wikimedia.org/wikipedia/commons/thumb/9/9b/Victor_Osimhen_2022_%28cropped%29.jpg/220px-Victor_Osimhen_2022_%28cropped%29.jpg',
     'Romelu Lukaku':      'https://upload.wikimedia.org/wikipedia/commons/thumb/4/4d/Romelu_Lukaku_2022_WC_%28cropped%29.jpg/220px-Romelu_Lukaku_2022_WC_%28cropped%29.jpg',
-    'Ole Romeny':         'https://upload.wikimedia.org/wikipedia/commons/thumb/2/2a/Ole_Romeny_2023_%28cropped%29.jpg/220px-Ole_Romeny_2023_%28cropped%29.jpg',
+    'Ola Solbakken':      'https://upload.wikimedia.org/wikipedia/commons/thumb/2/2a/Ole_Romeny_2023_%28cropped%29.jpg/220px-Ole_Romeny_2023_%28cropped%29.jpg',
   },
 
   /* ── Caché en memoria (runtime) — evita consultas duplicadas en la misma sesión ── */
@@ -672,6 +730,33 @@ const API = {
     } catch(_) { return null; }
   },
 
+  /**
+   * getPhotoSync(fig) — HELPER SÍNCRONO unificado
+   * Siempre devuelve la mejor URL disponible SIN async:
+   *   1. _PHOTO_MAP por sdbName  (hardcodeado, más confiable)
+   *   2. _PHOTO_MAP por name     (fallback)
+   *   3. _photoMemCache por id   (runtime)
+   *   4. localStorage por id     (persistido)
+   * Si nada → null (se mostrará emoji)
+   *
+   * USO: reemplaza API._photoStore()[fig.id] en TODOS los renders síncronos.
+   * Sigue llamando getPhotoById() en background para llenar el caché.
+   */
+  getPhotoSync(fig) {
+    if (!fig) return null;
+    // 1 & 2 — mapa hardcodeado
+    const fromMap = this._PHOTO_MAP[fig.sdbName] || this._PHOTO_MAP[fig.name];
+    if (fromMap) return fromMap;
+    // 3 — memoria runtime
+    const fromMem = this._photoMemCache[fig.id];
+    if (fromMem) return fromMem;
+    // 4 — localStorage
+    try {
+      const ls = this._photoStore();
+      return ls[fig.id] || null;
+    } catch(_) { return null; }
+  },
+
   /* Compatibilidad con código antiguo */
   async getPlayerPhotosCached(playerName) {
     const nameKey = 'n_' + playerName;
@@ -689,10 +774,9 @@ const API = {
   async precachePhotos(figuritas) {
     if (!figuritas?.length) return;
     const pool = (typeof Gacha !== 'undefined') ? Gacha.getPool() : [];
-    const ls = this._photoStore();
     const toFetch = figuritas
       .map(f => pool.find(p => p.id === f.id))
-      .filter(fig => fig && !this._PHOTO_MAP[fig.sdbName || fig.name] && !ls[fig.id]);
+      .filter(fig => fig && !this.getPhotoSync(fig));
     // Fetch en paralelo, máx 5 a la vez para no saturar la red
     for (let i = 0; i < toFetch.length; i += 5) {
       await Promise.allSettled(
@@ -720,7 +804,10 @@ const API = {
       this.getUpcomingMatches(),
       this.getStandings()
     ]);
-    return { live, upcoming, standings };
+    /* Determinar fuente: si algún dato vino de API real, indicarlo */
+    const fromApi = live?.some?.(m => m.id?.startsWith?.('af_'))
+                 || standings?.some?.(t => t._fromApi);
+    return { live, upcoming, standings, source: fromApi ? 'API Football' : 'mock' };
   },
 
   getCrest(name) { return `https://flagcdn.com/w80/${TEAM_FLAGS[name]?'':'xx'}.png`; },

@@ -82,7 +82,7 @@ const App = {
   async _renderTab(tab) {
     switch (tab) {
       case 'dashboard':   await Dashboard.render(); break;
-      case 'stats':       await Stats.render('teams'); break;
+      case 'stats':       await Stats.render(Stats._currentTab || 'teams'); break;
       case 'gacha': {
         const u = await Auth.currentUser();
         if (u) {
@@ -313,7 +313,7 @@ const App = {
         if (!wrap) return;
         const isCutout = url.includes('cutout') || url.includes('Cutout');
         const img = document.createElement('img');
-        img.className = 'fig-photo';
+        img.className = "fig-photo"; img.referrerPolicy = "no-referrer";
         img.alt = f.name;
         img.src = url;
         img.style.cssText = `object-fit:${isCutout?'contain':'cover'};object-position:${isCutout?'center':'top center'};`;
@@ -350,14 +350,15 @@ const App = {
     const stats = Album.getPlayerStats ? (Album.getPlayerStats(f.id) || {}) : {};
     const isPOR = f.pos === 'POR';
 
-    /* Usar foto cacheada directamente si ya está disponible */
-    const cachedUrl = API._photoStore()[f.id] || photoUrl || null;  // localStorage
+    /* Usar foto disponible de forma síncrona (mapa hardcodeado → memoria → localStorage) */
+    const cachedUrl = API.getPhotoSync(f) || photoUrl || null;
     const isCutout  = cachedUrl && (cachedUrl.includes('cutout') || cachedUrl.includes('Cutout'));
     const photoSection = `<div class="fig-photo-wrap" data-id="${f.id}">
       <span class="fig-emoji-fallback"${cachedUrl ? ' style="display:none"' : ''}>${f.emoji}</span>
       ${cachedUrl
         ? `<img class="fig-photo" src="${cachedUrl}" alt="${f.name}"
                 style="object-fit:${isCutout?'contain':'cover'};object-position:${isCutout?'center':'top center'};"
+                referrerpolicy="no-referrer"
                 onerror="this.remove();this.parentNode.querySelector('.fig-emoji-fallback').style.display=''">`
         : ''}
     </div>`;

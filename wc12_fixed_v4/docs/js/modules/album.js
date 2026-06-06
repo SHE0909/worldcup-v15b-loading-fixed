@@ -144,13 +144,11 @@ const Album = {
       const uFig  = owned.find(f => f.id === fig.id);
       const has   = !!uFig;
       const dupes = uFig?.duplicados || 0;
-      // Fuente 1: mapa hardcodeado (instantáneo). Fuente 2: localStorage.
-      const hardcoded  = API._PHOTO_MAP[fig.sdbName || fig.name];
-      const photoStore = API._photoStore();
-      const cached     = hardcoded || photoStore[fig.id];
-      const photoHtml  = has
+      // getPhotoSync: mapa hardcodeado → memoria → localStorage (sin async, sin race conditions)
+      const cached    = has ? API.getPhotoSync(fig) : null;
+      const photoHtml = has
         ? (cached
-            ? `<img src="${cached}" class="album-slot-img" alt="${fig.name}" loading="lazy"
+            ? `<img src="${cached}" class="album-slot-img" alt="${fig.name}" referrerpolicy="no-referrer" loading="lazy"
                     onerror="this.style.display='none';this.parentNode.querySelector('.album-slot-emoji-fb').style.display='inline'"><span class="album-slot-emoji album-slot-emoji-fb" style="display:none">${fig.emoji}</span>`
             : `<span class="album-slot-emoji">${fig.emoji}</span>`)
         : `<span class="album-slot-unknown">❓</span>`;
@@ -167,16 +165,14 @@ const Album = {
       el.addEventListener('click', () => this.showCardDetail(el.dataset.id, owned))
     );
 
-    // Solo buscar en red para figuras sin foto hardcodeada y sin caché
-    const photoStore = API._photoStore();
+    // Solo buscar en red para figuras sin foto accesible de forma síncrona
     filtered.filter(f => ownedSet.has(f.id)).forEach(fig => {
-      if (API._PHOTO_MAP[fig.sdbName || fig.name]) return; // hardcodeada, ya pintada
-      if (photoStore[fig.id]) return;                       // en caché, ya pintada
+      if (API.getPhotoSync(fig)) return; // ya está disponible, no ir a la red
       this._getPhoto(fig).then(url => {
         if (!url) return;
         const wrap = document.getElementById(`aphoto-${fig.id}`);
         if (wrap) {
-          wrap.innerHTML = `<img src="${url}" class="album-slot-img" alt="${fig.name}" loading="lazy"
+          wrap.innerHTML = `<img src="${url}" class="album-slot-img" alt="${fig.name}" referrerpolicy="no-referrer" loading="lazy"
                                  onerror="this.style.display='none'">`;
         }
       });
@@ -198,7 +194,7 @@ const Album = {
       <div class="modal-player-detail">
         ${photo
           ? `<div class="modal-player-photo">
-               <img src="${photo}" alt="${fig.name}"
+               <img referrerpolicy="no-referrer" src="${photo}" alt="${fig.name}"
                     style="width:100%;height:100%;object-fit:cover;object-position:top center;border-radius:8px;"
                     onerror="this.parentNode.innerHTML='<span style=font-size:4rem>${fig.emoji}</span>'"/>
              </div>`
@@ -266,7 +262,7 @@ const Album = {
         const key    = `${ri}_${si}`;
         const figId  = saved[key];
         const fig    = figId ? owned.find(f => f.id === figId) : null;
-        const photo  = fig ? API._photoStore()[fig.id] || null : null;
+        const photo  = fig ? API.getPhotoSync(fig) : null;
         const slot   = document.createElement('div');
         slot.className = `formation-slot${fig?' filled':''}`;
         slot.dataset.key = key;
@@ -274,7 +270,7 @@ const Album = {
         slot.innerHTML = fig
           ? `<div class="slot-photo-wrap">${
               photo
-                ? `<img src="${photo}" class="slot-photo-img" alt="${fig.name}"
+                ? `<img referrerpolicy="no-referrer" src="${photo}" class="slot-photo-img" alt="${fig.name}"
                         onerror="this.style.display='none'">`
                 : `<span style="font-size:1.3rem">${fig.emoji}</span>`
             }</div>
@@ -291,7 +287,7 @@ const Album = {
     // Precargar fotos de slots asignados sin bloquear
     Object.values(saved).filter(Boolean).forEach(id => {
       const fig = owned.find(f => f.id === id);
-      if (fig && API._photoStore()[fig.id] === undefined) {
+      if (fig && !API.getPhotoSync(fig)) {
         this._getPhoto(fig).then(() => this.renderIdealTeam());
       }
     });
@@ -322,12 +318,12 @@ const Album = {
     }
     const currentId = saved[key];
     const cardsHtml = available.map(f => {
-      const photo = API._photoStore()[f.id] || null;
+      const photo = API.getPhotoSync(f);
       return `
         <div class="slot-pick-card${f.id===currentId?' slot-pick-active':''}" data-pick="${f.id}">
           <div class="slot-pick-photo">
             ${photo
-              ? `<img src="${photo}" alt="${f.name}"
+              ? `<img referrerpolicy="no-referrer" src="${photo}" alt="${f.name}"
                       style="width:100%;height:100%;object-fit:cover;object-position:top center;"
                       onerror="this.parentNode.innerHTML='<span style=font-size:1.5rem>${f.emoji}</span>'">`
               : `<span style="font-size:1.5rem">${f.emoji}</span>`}
@@ -364,7 +360,7 @@ const Album = {
         saved[key] = pick;
         // precargar foto del nuevo asignado
         const f = owned.find(x => x.id === pick);
-        if (f && API._photoStore()[f.id] === undefined) await this._getPhoto(f);
+        if (f && !API.getPhotoSync(f)) await this._getPhoto(f);
       }
       user.equipo_ideal = saved;
       await Auth.updateUser(user);
@@ -376,7 +372,7 @@ const Album = {
 
     // Precargar fotos disponibles en bg
     available.forEach(f => {
-      if (API._photoStore()[f.id] === undefined) this._getPhoto(f);
+      if (!API.getPhotoSync(f)) this._getPhoto(f);
     });
   },
 

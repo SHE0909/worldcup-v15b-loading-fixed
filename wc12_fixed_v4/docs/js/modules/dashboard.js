@@ -57,10 +57,10 @@ const Dashboard = {
       const homeCrest = API.getCrest(m.home);
       const awayCrest = API.getCrest(m.away);
       const homeImg = homeCrest
-        ? `<img src="${homeCrest}" style="width:18px;height:18px;object-fit:contain;vertical-align:middle" onerror="this.style.display='none'">`
+        ? `<img referrerpolicy="no-referrer" src="${homeCrest}" style="width:18px;height:18px;object-fit:contain;vertical-align:middle" onerror="this.style.display='none'">`
         : (m.homeFlag || '');
       const awayImg = awayCrest
-        ? `<img src="${awayCrest}" style="width:18px;height:18px;object-fit:contain;vertical-align:middle" onerror="this.style.display='none'">`
+        ? `<img referrerpolicy="no-referrer" src="${awayCrest}" style="width:18px;height:18px;object-fit:contain;vertical-align:middle" onerror="this.style.display='none'">`
         : (m.awayFlag || '');
       return `
       <div class="match-item">
@@ -157,14 +157,19 @@ const Dashboard = {
     });
 
     // Cargar fotos async (solo jugadores por ahora)
+    const pool = (typeof Gacha !== 'undefined') ? Gacha.getPool() : [];
     favs.slice(0, 8).forEach(async f => {
       if (f.tipo !== 'player') return;
       try {
-        const url = await API.getPlayerPhotosCached(f.name);
+        // Buscar en el pool de figuritas para usar getPhotoById (caché unificado por id)
+        const poolFig = pool.find(p => p.id === f.id || p.name.toLowerCase() === f.name.toLowerCase());
+        const url = poolFig
+          ? await API.getPhotoById(poolFig.id, poolFig.sdbName || poolFig.name)
+          : await API.getPlayerPhotosCached(f.name);
         if (!url) return;
         const wrap = document.getElementById(`fav-photo-${f.id}`);
         if (!wrap) return;
-        wrap.innerHTML = `<img src="${url}" alt="${f.name}"
+        wrap.innerHTML = `<img referrerpolicy="no-referrer" src="${url}" alt="${f.name}"
           style="width:100%;height:100%;object-fit:cover;object-position:top center;border-radius:8px;"
           onerror="this.style.display='none'">`;
       } catch(_) {}
@@ -174,10 +179,14 @@ const Dashboard = {
   async _showFavStats(id, tipo, name) {
     if (tipo === 'player') {
       const player = Stats.findPlayer ? Stats.findPlayer(name) : null;
-      const photo  = await API.getPlayerPhotosCached(name).catch(()=>null);
+      const pool   = (typeof Gacha !== 'undefined') ? Gacha.getPool() : [];
+      const poolFig = pool.find(p => p.id === id || p.name.toLowerCase() === name.toLowerCase());
+      const photo  = poolFig
+        ? await API.getPhotoById(poolFig.id, poolFig.sdbName || poolFig.name).catch(()=>null)
+        : await API.getPlayerPhotosCached(name).catch(()=>null);
       const photoHtml = photo
         ? `<div style="width:110px;height:130px;margin:0 auto 0.75rem;border-radius:8px;overflow:hidden;border:2px solid var(--border-bright)">
-             <img src="${photo}" style="width:100%;height:100%;object-fit:cover;object-position:top center;" onerror="this.style.display='none'">
+             <img referrerpolicy="no-referrer" src="${photo}" style="width:100%;height:100%;object-fit:cover;object-position:top center;" onerror="this.style.display='none'">
            </div>`
         : `<div style="font-size:3rem;margin-bottom:0.5rem">${'👤'}</div>`;
       const p = player || { name, pos:'—', team:'—', caps:0, goals:0, assists:0, rating:'—' };
