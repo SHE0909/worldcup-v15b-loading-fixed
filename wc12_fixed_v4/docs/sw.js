@@ -1,7 +1,7 @@
 /**
  * Service Worker — World Cup Collector UES v7 PWA
  */
-const CACHE_NAME = 'wcc-ues-v13';
+const CACHE_NAME = 'wcc-ues-v14';
 const STATIC_ASSETS = [
   '/',
   '/index.html',

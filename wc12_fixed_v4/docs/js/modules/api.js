@@ -1,10 +1,17 @@
 /**
- * api.js — v12
+ * api.js — v14
  * NUEVAS APIs:
  *   1. api-football (RapidAPI)  ✅ key: e1317aae745eba2daea7870d948b8e8f
  *   2. football-data.org        ✅ key: 3bec1d9c3a5d418ebed176fdaaafe7e0
  *   3. thesportsdb              ✅ fotos jugadores (FUENTE PRINCIPAL)
  *   4. Mock                     ✅ fallback
+ *
+ * CAMBIOS v13:
+ *   - MOCK actualizado: Portugal vs Chile (06-jun), más amistosos correctos
+ *   - getLiveMatches(): ya NO muestra "scheduled_today" en el panel en vivo
+ *     (ese estado sólo existe para que el dashboard lo ignore en esa sección)
+ *   - getUpcomingMatches(): filtra partidos pasados para no mostrar fechas ya jugadas
+ *   - Mejor detección de API errors (rate limit, 403, plan limitado)
  *
  * CAMBIOS v12:
  *   - getLiveMatches(): busca EN VIVO en Mundial + Amistosos internacionales (league=10)
@@ -73,171 +80,119 @@ const TEAM_FLAGS = {
 
 function getFlag(name) { return TEAM_FLAGS[name] || '🏳️'; }
 
+/* ── Fecha LOCAL del usuario (no UTC) ────────────────────────────────
+   new Date().toISOString() devuelve fecha UTC, que en El Salvador (UTC-6)
+   puede ser UN DÍA ADELANTE respecto a la hora local.
+   Siempre usar localDateStr() para comparar fechas de partidos.
+──────────────────────────────────────────────────────────────────── */
+function localDateStr(d) {
+  const dt = d || new Date();
+  const y  = dt.getFullYear();
+  const m  = String(dt.getMonth() + 1).padStart(2, '0');
+  const day= String(dt.getDate()).padStart(2, '0');
+  return `${y}-${m}-${day}`;
+}
+
+/* ── yesterdayStr ── */
+function yesterdayStr() {
+  const d = new Date();
+  d.setDate(d.getDate() - 1);
+  return localDateStr(d);
+}
+
 /* ══════════════════════════════════════════════
    MOCK DATA COMPLETO — 48 equipos del Mundial 2026
 ══════════════════════════════════════════════ */
+/* ══════════════════════════════════════════════════════════════════
+   _mockStatus(date, time) — calcula estado dinámicamente a partir
+   de la fecha/hora del partido vs. hora actual del navegador.
+   Se llama en tiempo de ejecución, así el mock nunca queda desactualizado.
+   Duración estimada de un partido: 105 min (90 + 15 extra).
+══════════════════════════════════════════════════════════════════ */
+function _mockStatus(date, time, scoreHome, scoreAway) {
+  if (!date || !time) return 'scheduled';
+  // Si ya tiene marcador fijo → siempre finished
+  if (scoreHome !== null && scoreHome !== undefined &&
+      scoreAway !== null && scoreAway !== undefined) return 'finished';
+  const start = new Date(`${date}T${time}:00`);
+  const now   = Date.now();
+  const diffMin = (now - start.getTime()) / 60000; // minutos transcurridos (neg = futuro)
+  if (diffMin < 0)    return 'scheduled';          // aún no empieza
+  if (diffMin < 105)  return 'live';               // en curso (estimado)
+  return 'finished';                               // más de 105 min → terminó
+}
+
 const MOCK = {
   liveMatches: [],
 
+  /* ── Todos los partidos (amistosos + Mundial) ──────────────────────
+     scoreHome/scoreAway = null  → pendiente (estado calculado por hora)
+     scoreHome/scoreAway = número → resultado final conocido
+  ──────────────────────────────────────────────────────────────────── */
   friendlyMatches: [
-    { id:'f001', home:'Brasil',       away:'Egipto',         homeFlag:'🇧🇷', awayFlag:'🇪🇬', date:'2026-06-03', time:'16:00', competition:'Amistoso', type:'friendly', venue:'USA' },
-    { id:'f002', home:'Argentina',    away:'Honduras',       homeFlag:'🇦🇷', awayFlag:'🇭🇳', date:'2026-06-06', time:'21:00', competition:'Amistoso', type:'friendly', venue:'Kyle Field, Texas' },
-    { id:'f003', home:'Inglaterra',   away:'Nueva Zelanda',  homeFlag:'🏴󠁧󠁢󠁥󠁮󠁧󠁿', awayFlag:'🇳🇿', date:'2026-06-06', time:'19:00', competition:'Amistoso', type:'friendly', venue:'USA' },
-    { id:'f004', home:'Portugal',     away:'Nigeria',        homeFlag:'🇵🇹', awayFlag:'🇳🇬', date:'2026-06-07', time:'20:00', competition:'Amistoso', type:'friendly', venue:'USA' },
-    { id:'f005', home:'Francia',      away:'Irlanda del N.', homeFlag:'🇫🇷', awayFlag:'🏴󠁧󠁢󠁮󠁩󠁲󠁿', date:'2026-06-07', time:'21:00', competition:'Amistoso', type:'friendly', venue:'USA' },
-    { id:'f006', home:'España',       away:'Perú',           homeFlag:'🇪🇸', awayFlag:'🇵🇪', date:'2026-06-09', time:'20:00', competition:'Amistoso', type:'friendly', venue:'USA' },
-    { id:'f007', home:'Argentina',    away:'Islandia',       homeFlag:'🇦🇷', awayFlag:'🇮🇸', date:'2026-06-09', time:'22:00', competition:'Amistoso', type:'friendly', venue:'Alabama' },
-    { id:'f008', home:'Marruecos',    away:'Noruega',        homeFlag:'🇲🇦', awayFlag:'🇳🇴', date:'2026-06-07', time:'19:00', competition:'Amistoso', type:'friendly', venue:'USA' },
+    /* ── RESULTADOS CONOCIDOS (ya terminaron) ── */
+    { id:'f001', home:'Brasil',     away:'Egipto',     homeFlag:'🇧🇷', awayFlag:'🇪🇬', date:'2026-06-03', time:'16:00', competition:'Amistoso', type:'friendly', venue:'Orlando, FL',        scoreHome:4, scoreAway:0 },
+    { id:'f009', home:'México',     away:'Ecuador',    homeFlag:'🇲🇽', awayFlag:'🇪🇨', date:'2026-06-04', time:'22:00', competition:'Amistoso', type:'friendly', venue:'Phoenix, AZ',        scoreHome:1, scoreAway:1 },
+    { id:'f010', home:'Uruguay',    away:'Austria',    homeFlag:'🇺🇾', awayFlag:'🇦🇹', date:'2026-06-05', time:'19:00', competition:'Amistoso', type:'friendly', venue:'Los Ángeles, CA',     scoreHome:2, scoreAway:1 },
+    { id:'f011', home:'Colombia',   away:'Perú',       homeFlag:'🇨🇴', awayFlag:'🇵🇪', date:'2026-06-05', time:'21:00', competition:'Amistoso', type:'friendly', venue:'Miami, FL',           scoreHome:0, scoreAway:0 },
+    /* ── 6 JUN — resultados conocidos ── */
+    { id:'f012', home:'Portugal',   away:'Chile',      homeFlag:'🇵🇹', awayFlag:'🇨🇱', date:'2026-06-06', time:'00:00', competition:'Amistoso', type:'friendly', venue:'Newark, NJ',          scoreHome:1, scoreAway:0 },
+    { id:'f002', home:'Argentina',  away:'Honduras',   homeFlag:'🇦🇷', awayFlag:'🇭🇳', date:'2026-06-06', time:'02:00', competition:'Amistoso', type:'friendly', venue:'Kyle Field, TX',      scoreHome:2, scoreAway:0 },
+    { id:'f003', home:'Inglaterra', away:'Nueva Zelanda',homeFlag:'🏴󠁧󠁢󠁥󠁮󠁧󠁿',awayFlag:'🇳🇿',date:'2026-06-06',time:'01:00',competition:'Amistoso',type:'friendly',venue:'Chicago, IL',       scoreHome:2, scoreAway:1 },
+    { id:'f013', home:'Alemania',   away:'Eslovenia',  homeFlag:'🇩🇪', awayFlag:'🇸🇮', date:'2026-06-06', time:'00:30', competition:'Amistoso', type:'friendly', venue:'Denver, CO',          scoreHome:3, scoreAway:0 },
+    { id:'f016', home:'Brasil',     away:'México',     homeFlag:'🇧🇷', awayFlag:'🇲🇽', date:'2026-06-06', time:'03:00', competition:'Amistoso', type:'friendly', venue:'Dallas, TX',          scoreHome:2, scoreAway:1 },
+    /* ── 7 JUN — HOY (hora local EE.UU. → hora UTC, estado dinámico por hora) ── */
+    { id:'f004', home:'Portugal',   away:'Nigeria',    homeFlag:'🇵🇹', awayFlag:'🇳🇬', date:'2026-06-07', time:'22:00', competition:'Amistoso', type:'friendly', venue:'Newark, NJ',          scoreHome:null, scoreAway:null },
+    { id:'f005', home:'Francia',    away:'Irlanda del N.',homeFlag:'🇫🇷',awayFlag:'🏴󠁧󠁢󠁮󠁩󠁲󠁿',date:'2026-06-08',time:'00:00',competition:'Amistoso',type:'friendly',venue:'East Rutherford',   scoreHome:null, scoreAway:null },
+    { id:'f008', home:'Marruecos',  away:'Noruega',    homeFlag:'🇲🇦', awayFlag:'🇳🇴', date:'2026-06-07', time:'23:00', competition:'Amistoso', type:'friendly', venue:'Washington D.C.',     scoreHome:null, scoreAway:null },
+    { id:'f017', home:'Japón',      away:'Islandia',   homeFlag:'🇯🇵', awayFlag:'🇮🇸', date:'2026-06-07', time:'22:00', competition:'Amistoso', type:'friendly', venue:'San José, CA',        scoreHome:null, scoreAway:null },
+    { id:'f018', home:'Corea del Sur',away:'Australia',homeFlag:'🇰🇷', awayFlag:'🇦🇺', date:'2026-06-07', time:'22:30', competition:'Amistoso', type:'friendly', venue:'Houston, TX',         scoreHome:null, scoreAway:null },
+    /* ── 8 JUN ── */
+    { id:'f014', home:'Bélgica',    away:'Escocia',    homeFlag:'🇧🇪', awayFlag:'🏴󠁧󠁢󠁳󠁣󠁴󠁿', date:'2026-06-09', time:'00:00', competition:'Amistoso', type:'friendly', venue:'Atlanta, GA',       scoreHome:null, scoreAway:null },
+    /* ── 9 JUN ── */
+    { id:'f006', home:'España',     away:'Perú',       homeFlag:'🇪🇸', awayFlag:'🇵🇪', date:'2026-06-10', time:'00:00', competition:'Amistoso', type:'friendly', venue:'Filadelfia, PA',      scoreHome:null, scoreAway:null },
+    { id:'f007', home:'Argentina',  away:'Islandia',   homeFlag:'🇦🇷', awayFlag:'🇮🇸', date:'2026-06-10', time:'01:30', competition:'Amistoso', type:'friendly', venue:'Tuscaloosa, AL',      scoreHome:null, scoreAway:null },
+    { id:'f015', home:'Brasil',     away:'Paraguay',   homeFlag:'🇧🇷', awayFlag:'🇵🇾', date:'2026-06-10', time:'02:00', competition:'Amistoso', type:'friendly', venue:'Fort Worth, TX',      scoreHome:null, scoreAway:null },
   ],
 
+  /* ── Partidos del Mundial 2026 (inicio: 11 Jun) ── */
   upcomingMatches: [
-    { id:'wc001', home:'México',        away:'Sudáfrica',    homeFlag:'🇲🇽', awayFlag:'🇿🇦', date:'2026-06-11', time:'15:00', competition:'Grupo A — J1', type:'worldcup', venue:'Estadio Azteca' },
-    { id:'wc002', home:'Canadá',        away:'Bosnia y Herz.',homeFlag:'🇨🇦', awayFlag:'🇧🇦', date:'2026-06-12', time:'21:00', competition:'Grupo B — J1', type:'worldcup', venue:'Toronto' },
-    { id:'wc003', home:'Brasil',        away:'Marruecos',    homeFlag:'🇧🇷', awayFlag:'🇲🇦', date:'2026-06-13', time:'22:00', competition:'Grupo C — J1', type:'worldcup', venue:'MetLife, NY' },
-    { id:'wc004', home:'Alemania',      away:'Curazao',      homeFlag:'🇩🇪', awayFlag:'🇨🇼', date:'2026-06-14', time:'19:00', competition:'Grupo E — J1', type:'worldcup', venue:'Houston' },
-    { id:'wc005', home:'Países Bajos',  away:'Japón',        homeFlag:'🇳🇱', awayFlag:'🇯🇵', date:'2026-06-15', time:'01:00', competition:'Grupo F — J1', type:'worldcup', venue:'Dallas' },
-    { id:'wc006', home:'España',        away:'Cabo Verde',   homeFlag:'🇪🇸', awayFlag:'🇨🇻', date:'2026-06-15', time:'19:00', competition:'Grupo H — J1', type:'worldcup', venue:'Atlanta' },
-    { id:'wc007', home:'Francia',       away:'Senegal',      homeFlag:'🇫🇷', awayFlag:'🇸🇳', date:'2026-06-16', time:'21:00', competition:'Grupo I — J1', type:'worldcup', venue:'MetLife, NY' },
-    { id:'wc008', home:'Argentina',     away:'Argelia',      homeFlag:'🇦🇷', awayFlag:'🇩🇿', date:'2026-06-17', time:'01:00', competition:'Grupo J — J1', type:'worldcup', venue:'Kansas City' },
-    { id:'wc009', home:'Noruega',       away:'Irak',         homeFlag:'🇳🇴', awayFlag:'🇮🇶', date:'2026-06-17', time:'00:00', competition:'Grupo I — J1', type:'worldcup', venue:'Boston' },
-    { id:'wc010', home:'Portugal',      away:'Arabia Saudí', homeFlag:'🇵🇹', awayFlag:'🇸🇦', date:'2026-06-18', time:'19:00', competition:'Grupo K — J1', type:'worldcup', venue:'Kansas City' },
-    { id:'wc011', home:'Inglaterra',    away:'Costa Rica',   homeFlag:'🏴󠁧󠁢󠁥󠁮󠁧󠁿', awayFlag:'🇨🇷', date:'2026-06-18', time:'22:00', competition:'Grupo L — J1', type:'worldcup', venue:'Dallas' },
-    { id:'wc012', home:'Colombia',      away:'Chile',        homeFlag:'🇨🇴', awayFlag:'🇨🇱', date:'2026-06-19', time:'19:00', competition:'Grupo G — J1', type:'worldcup', venue:'Miami' },
-  ],
-
-  /* 48 equipos del Mundial 2026 */
-  teams: [
-    /* Grupo A */ { id:'t01', name:'México',       flag:'🇲🇽', group:'A', pj:0,w:0,d:0,l:0,gf:0,gc:0,pts:0 },
-    { id:'t02', name:'Sudáfrica',    flag:'🇿🇦', group:'A', pj:0,w:0,d:0,l:0,gf:0,gc:0,pts:0 },
-    { id:'t03', name:'Corea del Sur',flag:'🇰🇷', group:'A', pj:0,w:0,d:0,l:0,gf:0,gc:0,pts:0 },
-    { id:'t04', name:'Chequia',      flag:'🇨🇿', group:'A', pj:0,w:0,d:0,l:0,gf:0,gc:0,pts:0 },
-    /* Grupo B */ { id:'t05', name:'Canadá',       flag:'🇨🇦', group:'B', pj:0,w:0,d:0,l:0,gf:0,gc:0,pts:0 },
-    { id:'t06', name:'Bosnia y Herz.',flag:'🇧🇦', group:'B', pj:0,w:0,d:0,l:0,gf:0,gc:0,pts:0 },
-    { id:'t07', name:'Qatar',        flag:'🇶🇦', group:'B', pj:0,w:0,d:0,l:0,gf:0,gc:0,pts:0 },
-    { id:'t08', name:'Suiza',        flag:'🇨🇭', group:'B', pj:0,w:0,d:0,l:0,gf:0,gc:0,pts:0 },
-    /* Grupo C */ { id:'t09', name:'Brasil',       flag:'🇧🇷', group:'C', pj:0,w:0,d:0,l:0,gf:0,gc:0,pts:0 },
-    { id:'t10', name:'Marruecos',    flag:'🇲🇦', group:'C', pj:0,w:0,d:0,l:0,gf:0,gc:0,pts:0 },
-    { id:'t11', name:'Haití',        flag:'🇭🇹', group:'C', pj:0,w:0,d:0,l:0,gf:0,gc:0,pts:0 },
-    { id:'t12', name:'Escocia',      flag:'🏴󠁧󠁢󠁳󠁣󠁴󠁿', group:'C', pj:0,w:0,d:0,l:0,gf:0,gc:0,pts:0 },
-    /* Grupo D */ { id:'t13', name:'Estados Unidos',flag:'🇺🇸', group:'D', pj:0,w:0,d:0,l:0,gf:0,gc:0,pts:0 },
-    { id:'t14', name:'Paraguay',     flag:'🇵🇾', group:'D', pj:0,w:0,d:0,l:0,gf:0,gc:0,pts:0 },
-    { id:'t15', name:'Panamá',       flag:'🇵🇦', group:'D', pj:0,w:0,d:0,l:0,gf:0,gc:0,pts:0 },
-    { id:'t16', name:'Jamaica',      flag:'🇯🇲', group:'D', pj:0,w:0,d:0,l:0,gf:0,gc:0,pts:0 },
-    /* Grupo E */ { id:'t17', name:'Alemania',     flag:'🇩🇪', group:'E', pj:0,w:0,d:0,l:0,gf:0,gc:0,pts:0 },
-    { id:'t18', name:'Costa de Marfil',flag:'🇨🇮', group:'E', pj:0,w:0,d:0,l:0,gf:0,gc:0,pts:0 },
-    { id:'t19', name:'Ecuador',      flag:'🇪🇨', group:'E', pj:0,w:0,d:0,l:0,gf:0,gc:0,pts:0 },
-    { id:'t20', name:'Curazao',      flag:'🇨🇼', group:'E', pj:0,w:0,d:0,l:0,gf:0,gc:0,pts:0 },
-    /* Grupo F */ { id:'t21', name:'Países Bajos', flag:'🇳🇱', group:'F', pj:0,w:0,d:0,l:0,gf:0,gc:0,pts:0 },
-    { id:'t22', name:'Japón',        flag:'🇯🇵', group:'F', pj:0,w:0,d:0,l:0,gf:0,gc:0,pts:0 },
-    { id:'t23', name:'Iraq',         flag:'🇮🇶', group:'F', pj:0,w:0,d:0,l:0,gf:0,gc:0,pts:0 },
-    { id:'t24', name:'Noruega',      flag:'🇳🇴', group:'F', pj:0,w:0,d:0,l:0,gf:0,gc:0,pts:0 },
-    /* Grupo G */ { id:'t25', name:'Bélgica',      flag:'🇧🇪', group:'G', pj:0,w:0,d:0,l:0,gf:0,gc:0,pts:0 },
-    { id:'t26', name:'Egipto',       flag:'🇪🇬', group:'G', pj:0,w:0,d:0,l:0,gf:0,gc:0,pts:0 },
-    { id:'t27', name:'Colombia',     flag:'🇨🇴', group:'G', pj:0,w:0,d:0,l:0,gf:0,gc:0,pts:0 },
-    { id:'t28', name:'Chile',        flag:'🇨🇱', group:'G', pj:0,w:0,d:0,l:0,gf:0,gc:0,pts:0 },
-    /* Grupo H */ { id:'t29', name:'España',       flag:'🇪🇸', group:'H', pj:0,w:0,d:0,l:0,gf:0,gc:0,pts:0 },
-    { id:'t30', name:'Arabia Saudí', flag:'🇸🇦', group:'H', pj:0,w:0,d:0,l:0,gf:0,gc:0,pts:0 },
-    { id:'t31', name:'Uruguay',      flag:'🇺🇾', group:'H', pj:0,w:0,d:0,l:0,gf:0,gc:0,pts:0 },
-    { id:'t32', name:'Cabo Verde',   flag:'🇨🇻', group:'H', pj:0,w:0,d:0,l:0,gf:0,gc:0,pts:0 },
-    /* Grupo I */ { id:'t33', name:'Francia',      flag:'🇫🇷', group:'I', pj:0,w:0,d:0,l:0,gf:0,gc:0,pts:0 },
-    { id:'t34', name:'Senegal',      flag:'🇸🇳', group:'I', pj:0,w:0,d:0,l:0,gf:0,gc:0,pts:0 },
-    { id:'t35', name:'Austria',      flag:'🇦🇹', group:'I', pj:0,w:0,d:0,l:0,gf:0,gc:0,pts:0 },
-    { id:'t36', name:'Venezuela',    flag:'🇻🇪', group:'I', pj:0,w:0,d:0,l:0,gf:0,gc:0,pts:0 },
-    /* Grupo J */ { id:'t37', name:'Argentina',    flag:'🇦🇷', group:'J', pj:0,w:0,d:0,l:0,gf:0,gc:0,pts:0 },
-    { id:'t38', name:'Argelia',      flag:'🇩🇿', group:'J', pj:0,w:0,d:0,l:0,gf:0,gc:0,pts:0 },
-    { id:'t39', name:'Islandia',     flag:'🇮🇸', group:'J', pj:0,w:0,d:0,l:0,gf:0,gc:0,pts:0 },
-    { id:'t40', name:'Honduras',     flag:'🇭🇳', group:'J', pj:0,w:0,d:0,l:0,gf:0,gc:0,pts:0 },
-    /* Grupo K */ { id:'t41', name:'Portugal',     flag:'🇵🇹', group:'K', pj:0,w:0,d:0,l:0,gf:0,gc:0,pts:0 },
-    { id:'t42', name:'Arabia Saudí', flag:'🇸🇦', group:'K', pj:0,w:0,d:0,l:0,gf:0,gc:0,pts:0 },
-    { id:'t43', name:'Ucrania',      flag:'🇺🇦', group:'K', pj:0,w:0,d:0,l:0,gf:0,gc:0,pts:0 },
-    { id:'t44', name:'Nigeria',      flag:'🇳🇬', group:'K', pj:0,w:0,d:0,l:0,gf:0,gc:0,pts:0 },
-    /* Grupo L */ { id:'t45', name:'Inglaterra',   flag:'🏴󠁧󠁢󠁥󠁮󠁧󠁿', group:'L', pj:0,w:0,d:0,l:0,gf:0,gc:0,pts:0 },
-    { id:'t46', name:'Costa Rica',   flag:'🇨🇷', group:'L', pj:0,w:0,d:0,l:0,gf:0,gc:0,pts:0 },
-    { id:'t47', name:'Eslovenia',    flag:'🇸🇮', group:'L', pj:0,w:0,d:0,l:0,gf:0,gc:0,pts:0 },
-    { id:'t48', name:'Camerún',      flag:'🇨🇲', group:'L', pj:0,w:0,d:0,l:0,gf:0,gc:0,pts:0 },
-  ],
-
-  players: [
-    { id:'p01', name:'Lionel Messi',       team:'Argentina',  flag:'🇦🇷', goals:0, assists:0, pos:'DEL', caps:187, rating:93 },
-    { id:'p02', name:'Kylian Mbappé',      team:'Francia',    flag:'🇫🇷', goals:0, assists:0, pos:'DEL', caps:82,  rating:92 },
-    { id:'p03', name:'Vinicius Jr.',        team:'Brasil',     flag:'🇧🇷', goals:0, assists:0, pos:'DEL', caps:55,  rating:91 },
-    { id:'p04', name:'Erling Haaland',     team:'Noruega',    flag:'🇳🇴', goals:0, assists:0, pos:'DEL', caps:34,  rating:91 },
-    { id:'p05', name:'Pedri',              team:'España',     flag:'🇪🇸', goals:0, assists:0, pos:'MED', caps:48,  rating:87 },
-    { id:'p06', name:'Jude Bellingham',    team:'Inglaterra', flag:'🏴󠁧󠁢󠁥󠁮󠁧󠁿', goals:0, assists:0, pos:'MED', caps:40,  rating:88 },
-    { id:'p07', name:'Rodri',              team:'España',     flag:'🇪🇸', goals:0, assists:0, pos:'MED', caps:61,  rating:91 },
-    { id:'p08', name:'Marquinhos',         team:'Brasil',     flag:'🇧🇷', goals:0, assists:0, pos:'DEF', caps:84,  rating:86 },
-    { id:'p09', name:'Lamine Yamal',       team:'España',     flag:'🇪🇸', goals:0, assists:0, pos:'DEL', caps:20,  rating:88 },
-    { id:'p10', name:'Raphinha',           team:'Brasil',     flag:'🇧🇷', goals:0, assists:0, pos:'DEL', caps:52,  rating:86 },
-    { id:'p11', name:'Bernardo Silva',     team:'Portugal',   flag:'🇵🇹', goals:0, assists:0, pos:'MED', caps:89,  rating:87 },
-    { id:'p12', name:'Rúben Dias',         team:'Portugal',   flag:'🇵🇹', goals:0, assists:0, pos:'DEF', caps:74,  rating:88 },
-    { id:'p13', name:'Antoine Griezmann', team:'Francia',    flag:'🇫🇷', goals:0, assists:0, pos:'DEL', caps:137, rating:85 },
-    { id:'p14', name:'Hirving Lozano',     team:'México',     flag:'🇲🇽', goals:0, assists:0, pos:'DEL', caps:76,  rating:82 },
-    { id:'p15', name:'Hakim Ziyech',       team:'Marruecos',  flag:'🇲🇦', goals:0, assists:0, pos:'MED', caps:62,  rating:83 },
-    { id:'p16', name:'Takefusa Kubo',      team:'Japón',      flag:'🇯🇵', goals:0, assists:0, pos:'MED', caps:38,  rating:83 },
-    { id:'p17', name:'Casemiro',           team:'Brasil',     flag:'🇧🇷', goals:0, assists:0, pos:'MED', caps:77,  rating:85 },
-    { id:'p18', name:'Bruno Fernandes',    team:'Portugal',   flag:'🇵🇹', goals:0, assists:0, pos:'MED', caps:75,  rating:87 },
-    { id:'p19', name:'Ousmane Dembélé',   team:'Francia',    flag:'🇫🇷', goals:0, assists:0, pos:'DEL', caps:57,  rating:84 },
-    { id:'p20', name:'Kevin De Bruyne',    team:'Bélgica',    flag:'🇧🇪', goals:0, assists:0, pos:'MED', caps:108, rating:91 },
-    { id:'p21', name:'Nico Williams',      team:'España',     flag:'🇪🇸', goals:0, assists:0, pos:'DEL', caps:18,  rating:85 },
-    { id:'p22', name:'Achraf Hakimi',      team:'Marruecos',  flag:'🇲🇦', goals:0, assists:0, pos:'DEF', caps:75,  rating:86 },
-    { id:'p23', name:'Cristiano Ronaldo',  team:'Portugal',   flag:'🇵🇹', goals:0, assists:0, pos:'DEL', caps:215, rating:88 },
-    { id:'p24', name:'Alisson Becker',     team:'Brasil',     flag:'🇧🇷', goals:0, assists:0, pos:'POR', caps:72,  rating:89 },
-    { id:'p25', name:'Harry Kane',         team:'Inglaterra', flag:'🏴󠁧󠁢󠁥󠁮󠁧󠁿', goals:0, assists:0, pos:'DEL', caps:92,  rating:88 },
-    { id:'p26', name:'Phil Foden',         team:'Inglaterra', flag:'🏴󠁧󠁢󠁥󠁮󠁧󠁿', goals:0, assists:0, pos:'DEL', caps:42,  rating:87 },
-    { id:'p27', name:'Florian Wirtz',      team:'Alemania',   flag:'🇩🇪', goals:0, assists:0, pos:'MED', caps:30,  rating:87 },
-    { id:'p28', name:'Jamal Musiala',      team:'Alemania',   flag:'🇩🇪', goals:0, assists:0, pos:'MED', caps:42,  rating:87 },
-    { id:'p29', name:'Virgil van Dijk',    team:'Países Bajos',flag:'🇳🇱', goals:0, assists:0, pos:'DEF', caps:64,  rating:87 },
-    { id:'p30', name:'Cody Gakpo',         team:'Países Bajos',flag:'🇳🇱', goals:0, assists:0, pos:'DEL', caps:38,  rating:84 },
-    { id:'p31', name:'Darwin Núñez',       team:'Uruguay',    flag:'🇺🇾', goals:0, assists:0, pos:'DEL', caps:39,  rating:85 },
-    { id:'p32', name:'Federico Valverde',  team:'Uruguay',    flag:'🇺🇾', goals:0, assists:0, pos:'MED', caps:64,  rating:87 },
-    { id:'p33', name:'Luka Modrić',        team:'Croacia',    flag:'🇭🇷', goals:0, assists:0, pos:'MED', caps:179, rating:87 },
-    { id:'p34', name:'Sadio Mané',         team:'Senegal',    flag:'🇸🇳', goals:0, assists:0, pos:'DEL', caps:99,  rating:84 },
-    { id:'p35', name:'Victor Osimhen',     team:'Nigeria',    flag:'🇳🇬', goals:0, assists:0, pos:'DEL', caps:32,  rating:86 },
-    { id:'p36', name:'Alphonso Davies',    team:'Canadá',     flag:'🇨🇦', goals:0, assists:0, pos:'DEF', caps:55,  rating:86 },
-    { id:'p37', name:'Jonathan David',     team:'Canadá',     flag:'🇨🇦', goals:0, assists:0, pos:'DEL', caps:36,  rating:84 },
-    { id:'p38', name:'Christian Pulisic',  team:'Estados Unidos',flag:'🇺🇸', goals:0, assists:0, pos:'DEL', caps:69, rating:83 },
-    { id:'p39', name:'Declan Rice',        team:'Inglaterra', flag:'🏴󠁧󠁢󠁥󠁮󠁧󠁿', goals:0, assists:0, pos:'MED', caps:52,  rating:86 },
-    { id:'p40', name:'Granit Xhaka',       team:'Suiza',      flag:'🇨🇭', goals:0, assists:0, pos:'MED', caps:128, rating:83 },
-    { id:'p41', name:'Martin Ødegaard',    team:'Noruega',    flag:'🇳🇴', goals:0, assists:0, pos:'MED', caps:89,  rating:86 },
-    { id:'p42', name:'Santiago Giménez',   team:'México',     flag:'🇲🇽', goals:0, assists:0, pos:'DEL', caps:32,  rating:83 },
-    { id:'p43', name:'Luis Díaz',          team:'Colombia',   flag:'🇨🇴', goals:0, assists:0, pos:'DEL', caps:42,  rating:86 },
-    { id:'p44', name:'James Rodríguez',   team:'Colombia',   flag:'🇨🇴', goals:0, assists:0, pos:'MED', caps:104, rating:84 },
-    { id:'p45', name:'Julián Álvarez',     team:'Argentina',  flag:'🇦🇷', goals:0, assists:0, pos:'DEL', caps:38,  rating:85 },
-    { id:'p46', name:'Enzo Fernández',     team:'Argentina',  flag:'🇦🇷', goals:0, assists:0, pos:'MED', caps:35,  rating:82 },
-    { id:'p47', name:'Emiliano Martínez', team:'Argentina',  flag:'🇦🇷', goals:0, assists:0, pos:'POR', caps:38,  rating:87 },
-    { id:'p48', name:'Manuel Neuer',       team:'Alemania',   flag:'🇩🇪', goals:0, assists:0, pos:'POR', caps:124, rating:86 },
-    { id:'p49', name:'Thibaut Courtois',   team:'Bélgica',    flag:'🇧🇪', goals:0, assists:0, pos:'POR', caps:102, rating:90 },
-    { id:'p50', name:'Kaoru Mitoma',       team:'Japón',      flag:'🇯🇵', goals:0, assists:0, pos:'DEL', caps:40,  rating:84 },
-    /* ── Figuritas que faltaban en MOCK ── */
-    { id:'p51', name:'Gavi',              team:'España',     flag:'🇪🇸', goals:0, assists:0, pos:'MED', caps:41,  rating:86 },
-    { id:'p52', name:'Bukayo Saka',       team:'Inglaterra', flag:'🏴󠁧󠁢󠁥󠁮󠁧󠁿', goals:0, assists:0, pos:'DEL', caps:44,  rating:87 },
-    { id:'p53', name:'Goncalo Ramos',     team:'Portugal',   flag:'🇵🇹', goals:0, assists:0, pos:'DEL', caps:22,  rating:81 },
-    { id:'p54', name:'Joao Félix',        team:'Portugal',   flag:'🇵🇹', goals:0, assists:0, pos:'DEL', caps:50,  rating:80 },
-    { id:'p55', name:'Weston McKennie',   team:'EEUU',       flag:'🇺🇸', goals:0, assists:0, pos:'MED', caps:47,  rating:74 },
-    { id:'p56', name:'Richarlison',       team:'Brasil',     flag:'🇧🇷', goals:0, assists:0, pos:'DEL', caps:52,  rating:76 },
-    { id:'p57', name:'Evan Ferguson',     team:'Irlanda',    flag:'🇮🇪', goals:0, assists:0, pos:'DEL', caps:18,  rating:72 },
-    { id:'p58', name:'Piero Hincapié',    team:'Ecuador',    flag:'🇪🇨', goals:0, assists:0, pos:'DEF', caps:22,  rating:73 },
-    { id:'p59', name:'Sofiane Boufal',    team:'Marruecos',  flag:'🇲🇦', goals:0, assists:0, pos:'DEL', caps:48,  rating:74 },
-    { id:'p60', name:'Pervis Estupiñán', team:'Ecuador',    flag:'🇪🇨', goals:0, assists:0, pos:'DEF', caps:24,  rating:74 },
-    { id:'p61', name:'Mats Hummels',      team:'Alemania',   flag:'🇩🇪', goals:0, assists:0, pos:'DEF', caps:78,  rating:76 },
-    { id:'p62', name:'Kepa Arrizabalaga', team:'España',     flag:'🇪🇸', goals:0, assists:0, pos:'POR', caps:19,  rating:73 },
-    { id:'p63', name:'Marcus Rashford',   team:'Inglaterra', flag:'🏴󠁧󠁢󠁥󠁮󠁧󠁿', goals:0, assists:0, pos:'DEL', caps:60,  rating:77 },
-    { id:'p64', name:'Giovanni Reyna',    team:'EEUU',       flag:'🇺🇸', goals:0, assists:0, pos:'MED', caps:19,  rating:73 },
-    { id:'p65', name:'Romelu Lukaku',     team:'Bélgica',    flag:'🇧🇪', goals:0, assists:0, pos:'DEL', caps:112, rating:77 },
-    { id:'p66', name:'Ola Solbakken',     team:'Noruega',    flag:'🇳🇴', goals:0, assists:0, pos:'MED', caps:30,  rating:71 },
+    { id:'wc001', home:'México',        away:'Sudáfrica',     homeFlag:'🇲🇽', awayFlag:'🇿🇦', date:'2026-06-11', time:'20:00', competition:'Grupo A — J1', type:'worldcup', venue:'Estadio Azteca, CDMX' },
+    { id:'wc002', home:'Canadá',        away:'Bosnia y Herz.',homeFlag:'🇨🇦', awayFlag:'🇧🇦', date:'2026-06-12', time:'21:00', competition:'Grupo B — J1', type:'worldcup', venue:'Toronto (BMO Field)' },
+    { id:'wc003', home:'Brasil',        away:'Marruecos',     homeFlag:'🇧🇷', awayFlag:'🇲🇦', date:'2026-06-13', time:'22:00', competition:'Grupo C — J1', type:'worldcup', venue:'MetLife Stadium, NY' },
+    { id:'wc004', home:'Alemania',      away:'Curazao',       homeFlag:'🇩🇪', awayFlag:'🇨🇼', date:'2026-06-14', time:'19:00', competition:'Grupo E — J1', type:'worldcup', venue:'NRG Stadium, Houston' },
+    { id:'wc005', home:'Países Bajos',  away:'Japón',         homeFlag:'🇳🇱', awayFlag:'🇯🇵', date:'2026-06-15', time:'19:00', competition:'Grupo F — J1', type:'worldcup', venue:'AT&T Stadium, Dallas' },
+    { id:'wc006', home:'España',        away:'Cabo Verde',    homeFlag:'🇪🇸', awayFlag:'🇨🇻', date:'2026-06-15', time:'22:00', competition:'Grupo H — J1', type:'worldcup', venue:'Mercedes-Benz Stadium, Atlanta' },
+    { id:'wc007', home:'Francia',       away:'Senegal',       homeFlag:'🇫🇷', awayFlag:'🇸🇳', date:'2026-06-16', time:'21:00', competition:'Grupo I — J1', type:'worldcup', venue:'MetLife Stadium, NY' },
+    { id:'wc008', home:'Argentina',     away:'Argelia',       homeFlag:'🇦🇷', awayFlag:'🇩🇿', date:'2026-06-17', time:'21:00', competition:'Grupo J — J1', type:'worldcup', venue:'Arrowhead Stadium, Kansas City' },
+    { id:'wc009', home:'Noruega',       away:'Irak',          homeFlag:'🇳🇴', awayFlag:'🇮🇶', date:'2026-06-17', time:'19:00', competition:'Grupo F — J1', type:'worldcup', venue:'Gillette Stadium, Boston' },
+    { id:'wc010', home:'Portugal',      away:'Arabia Saudí',  homeFlag:'🇵🇹', awayFlag:'🇸🇦', date:'2026-06-18', time:'22:00', competition:'Grupo K — J1', type:'worldcup', venue:'Arrowhead Stadium, Kansas City' },
+    { id:'wc011', home:'Inglaterra',    away:'Costa Rica',    homeFlag:'🏴󠁧󠁢󠁥󠁮󠁧󠁿', awayFlag:'🇨🇷', date:'2026-06-18', time:'19:00', competition:'Grupo L — J1', type:'worldcup', venue:'AT&T Stadium, Dallas' },
+    { id:'wc012', home:'Colombia',      away:'Chile',         homeFlag:'🇨🇴', awayFlag:'🇨🇱', date:'2026-06-19', time:'22:00', competition:'Grupo G — J1', type:'worldcup', venue:'Hard Rock Stadium, Miami' },
   ],
 
   finishedMatches: [],
 
   predictableMatches: [
-    { id:'f001', home:'Brasil',    away:'Egipto',       homeFlag:'🇧🇷', awayFlag:'🇪🇬', date:'2026-06-03', time:'16:00', competition:'Amistoso', type:'friendly' },
-    { id:'f005', home:'Francia',   away:'Irlanda del N.',homeFlag:'🇫🇷', awayFlag:'🏴󠁧󠁢󠁮󠁩󠁲󠁿', date:'2026-06-07', time:'21:00', competition:'Amistoso', type:'friendly' },
-    { id:'f006', home:'España',    away:'Perú',         homeFlag:'🇪🇸', awayFlag:'🇵🇪', date:'2026-06-09', time:'20:00', competition:'Amistoso', type:'friendly' },
-    { id:'wc001',home:'México',    away:'Sudáfrica',    homeFlag:'🇲🇽', awayFlag:'🇿🇦', date:'2026-06-11', time:'15:00', competition:'Grupo A — J1', type:'worldcup' },
-    { id:'wc003',home:'Brasil',    away:'Marruecos',    homeFlag:'🇧🇷', awayFlag:'🇲🇦', date:'2026-06-13', time:'22:00', competition:'Grupo C — J1', type:'worldcup' },
-    { id:'wc007',home:'Francia',   away:'Senegal',      homeFlag:'🇫🇷', awayFlag:'🇸🇳', date:'2026-06-16', time:'21:00', competition:'Grupo I — J1', type:'worldcup' },
-    { id:'wc006',home:'España',    away:'Cabo Verde',   homeFlag:'🇪🇸', awayFlag:'🇨🇻', date:'2026-06-15', time:'19:00', competition:'Grupo H — J1', type:'worldcup' },
-    { id:'wc008',home:'Argentina', away:'Argelia',      homeFlag:'🇦🇷', awayFlag:'🇩🇿', date:'2026-06-17', time:'01:00', competition:'Grupo J — J1', type:'worldcup' },
+    /* 7 Jun — hoy */
+    { id:'f004', home:'Portugal',    away:'Nigeria',        homeFlag:'🇵🇹', awayFlag:'🇳🇬', date:'2026-06-07', time:'22:00', competition:'Amistoso', type:'friendly' },
+    { id:'f008', home:'Marruecos',   away:'Noruega',        homeFlag:'🇲🇦', awayFlag:'🇳🇴', date:'2026-06-07', time:'23:00', competition:'Amistoso', type:'friendly' },
+    { id:'f017', home:'Japón',       away:'Islandia',       homeFlag:'🇯🇵', awayFlag:'🇮🇸', date:'2026-06-07', time:'22:00', competition:'Amistoso', type:'friendly' },
+    { id:'f018', home:'Corea del Sur',away:'Australia',     homeFlag:'🇰🇷', awayFlag:'🇦🇺', date:'2026-06-07', time:'22:30', competition:'Amistoso', type:'friendly' },
+    /* 8-9 Jun */
+    { id:'f005', home:'Francia',     away:'Irlanda del N.', homeFlag:'🇫🇷', awayFlag:'🏴󠁧󠁢󠁮󠁩󠁲󠁿', date:'2026-06-08', time:'00:00', competition:'Amistoso', type:'friendly' },
+    { id:'f014', home:'Bélgica',     away:'Escocia',        homeFlag:'🇧🇪', awayFlag:'🏴󠁧󠁢󠁳󠁣󠁴󠁿', date:'2026-06-09', time:'00:00', competition:'Amistoso', type:'friendly' },
+    { id:'f006', home:'España',      away:'Perú',           homeFlag:'🇪🇸', awayFlag:'🇵🇪', date:'2026-06-10', time:'00:00', competition:'Amistoso', type:'friendly' },
+    { id:'f007', home:'Argentina',   away:'Islandia',       homeFlag:'🇦🇷', awayFlag:'🇮🇸', date:'2026-06-10', time:'01:30', competition:'Amistoso', type:'friendly' },
+    { id:'f015', home:'Brasil',      away:'Paraguay',       homeFlag:'🇧🇷', awayFlag:'🇵🇾', date:'2026-06-10', time:'02:00', competition:'Amistoso', type:'friendly' },
+    /* Mundial */
+    { id:'wc001', home:'México',     away:'Sudáfrica',      homeFlag:'🇲🇽', awayFlag:'🇿🇦', date:'2026-06-11', time:'20:00', competition:'Grupo A — J1', type:'worldcup' },
+    { id:'wc002', home:'Canadá',     away:'Bosnia y Herz.', homeFlag:'🇨🇦', awayFlag:'🇧🇦', date:'2026-06-12', time:'21:00', competition:'Grupo B — J1', type:'worldcup' },
+    { id:'wc003', home:'Brasil',     away:'Marruecos',      homeFlag:'🇧🇷', awayFlag:'🇲🇦', date:'2026-06-13', time:'22:00', competition:'Grupo C — J1', type:'worldcup' },
+    { id:'wc007', home:'Francia',    away:'Senegal',        homeFlag:'🇫🇷', awayFlag:'🇸🇳', date:'2026-06-16', time:'21:00', competition:'Grupo I — J1', type:'worldcup' },
+    { id:'wc006', home:'España',     away:'Cabo Verde',     homeFlag:'🇪🇸', awayFlag:'🇨🇻', date:'2026-06-15', time:'22:00', competition:'Grupo H — J1', type:'worldcup' },
+    { id:'wc008', home:'Argentina',  away:'Argelia',        homeFlag:'🇦🇷', awayFlag:'🇩🇿', date:'2026-06-17', time:'21:00', competition:'Grupo J — J1', type:'worldcup' },
+    { id:'wc010', home:'Portugal',   away:'Arabia Saudí',   homeFlag:'🇵🇹', awayFlag:'🇸🇦', date:'2026-06-18', time:'22:00', competition:'Grupo K — J1', type:'worldcup' },
   ],
 
   standings: [
@@ -255,6 +210,58 @@ const MOCK = {
     { pos:12,team:'Uruguay',     flag:'🇺🇾', group:'H', pj:0,w:0,d:0,l:0,gf:0,gc:0,pts:0 },
   ]
 };
+
+// MOCK.teams: lista completa de selecciones del Mundial 2026 (48 equipos)
+MOCK.teams = [
+  { id:'t01', name:'Brasil',          flag:'🇧🇷', group:'C', pj:0,w:0,d:0,l:0,gf:0,gc:0,pts:0 },
+  { id:'t02', name:'Argentina',       flag:'🇦🇷', group:'J', pj:0,w:0,d:0,l:0,gf:0,gc:0,pts:0 },
+  { id:'t03', name:'Francia',         flag:'🇫🇷', group:'I', pj:0,w:0,d:0,l:0,gf:0,gc:0,pts:0 },
+  { id:'t04', name:'España',          flag:'🇪🇸', group:'H', pj:0,w:0,d:0,l:0,gf:0,gc:0,pts:0 },
+  { id:'t05', name:'Alemania',        flag:'🇩🇪', group:'E', pj:0,w:0,d:0,l:0,gf:0,gc:0,pts:0 },
+  { id:'t06', name:'Portugal',        flag:'🇵🇹', group:'K', pj:0,w:0,d:0,l:0,gf:0,gc:0,pts:0 },
+  { id:'t07', name:'Países Bajos',    flag:'🇳🇱', group:'F', pj:0,w:0,d:0,l:0,gf:0,gc:0,pts:0 },
+  { id:'t08', name:'Inglaterra',      flag:'🏴󠁧󠁢󠁥󠁮󠁧󠁿', group:'L', pj:0,w:0,d:0,l:0,gf:0,gc:0,pts:0 },
+  { id:'t09', name:'Bélgica',         flag:'🇧🇪', group:'G', pj:0,w:0,d:0,l:0,gf:0,gc:0,pts:0 },
+  { id:'t10', name:'Noruega',         flag:'🇳🇴', group:'F', pj:0,w:0,d:0,l:0,gf:0,gc:0,pts:0 },
+  { id:'t11', name:'Colombia',        flag:'🇨🇴', group:'G', pj:0,w:0,d:0,l:0,gf:0,gc:0,pts:0 },
+  { id:'t12', name:'Uruguay',         flag:'🇺🇾', group:'H', pj:0,w:0,d:0,l:0,gf:0,gc:0,pts:0 },
+  { id:'t13', name:'México',          flag:'🇲🇽', group:'B', pj:0,w:0,d:0,l:0,gf:0,gc:0,pts:0 },
+  { id:'t14', name:'Estados Unidos',  flag:'🇺🇸', group:'A', pj:0,w:0,d:0,l:0,gf:0,gc:0,pts:0 },
+  { id:'t15', name:'Canadá',          flag:'🇨🇦', group:'A', pj:0,w:0,d:0,l:0,gf:0,gc:0,pts:0 },
+  { id:'t16', name:'Marruecos',       flag:'🇲🇦', group:'D', pj:0,w:0,d:0,l:0,gf:0,gc:0,pts:0 },
+  { id:'t17', name:'Japón',           flag:'🇯🇵', group:'E', pj:0,w:0,d:0,l:0,gf:0,gc:0,pts:0 },
+  { id:'t18', name:'Senegal',         flag:'🇸🇳', group:'D', pj:0,w:0,d:0,l:0,gf:0,gc:0,pts:0 },
+  { id:'t19', name:'Croacia',         flag:'🇭🇷', group:'L', pj:0,w:0,d:0,l:0,gf:0,gc:0,pts:0 },
+  { id:'t20', name:'Suiza',           flag:'🇨🇭', group:'I', pj:0,w:0,d:0,l:0,gf:0,gc:0,pts:0 },
+  { id:'t21', name:'Ecuador',         flag:'🇪🇨', group:'B', pj:0,w:0,d:0,l:0,gf:0,gc:0,pts:0 },
+  { id:'t22', name:'Australia',       flag:'🇦🇺', group:'H', pj:0,w:0,d:0,l:0,gf:0,gc:0,pts:0 },
+  { id:'t23', name:'Corea del Sur',   flag:'🇰🇷', group:'K', pj:0,w:0,d:0,l:0,gf:0,gc:0,pts:0 },
+  { id:'t24', name:'Polonia',         flag:'🇵🇱', group:'I', pj:0,w:0,d:0,l:0,gf:0,gc:0,pts:0 },
+  { id:'t25', name:'Dinamarca',       flag:'🇩🇰', group:'F', pj:0,w:0,d:0,l:0,gf:0,gc:0,pts:0 },
+  { id:'t26', name:'Serbia',          flag:'🇷🇸', group:'G', pj:0,w:0,d:0,l:0,gf:0,gc:0,pts:0 },
+  { id:'t27', name:'Turquía',         flag:'🇹🇷', group:'E', pj:0,w:0,d:0,l:0,gf:0,gc:0,pts:0 },
+  { id:'t28', name:'Austria',         flag:'🇦🇹', group:'J', pj:0,w:0,d:0,l:0,gf:0,gc:0,pts:0 },
+  { id:'t29', name:'Ghana',           flag:'🇬🇭', group:'C', pj:0,w:0,d:0,l:0,gf:0,gc:0,pts:0 },
+  { id:'t30', name:'Nigeria',         flag:'🇳🇬', group:'C', pj:0,w:0,d:0,l:0,gf:0,gc:0,pts:0 },
+  { id:'t31', name:'Camerún',         flag:'🇨🇲', group:'D', pj:0,w:0,d:0,l:0,gf:0,gc:0,pts:0 },
+  { id:'t32', name:'Costa de Marfil', flag:'🇨🇮', group:'D', pj:0,w:0,d:0,l:0,gf:0,gc:0,pts:0 },
+  { id:'t33', name:'Sudáfrica',       flag:'🇿🇦', group:'B', pj:0,w:0,d:0,l:0,gf:0,gc:0,pts:0 },
+  { id:'t34', name:'Arabia Saudita',  flag:'🇸🇦', group:'K', pj:0,w:0,d:0,l:0,gf:0,gc:0,pts:0 },
+  { id:'t35', name:'Irán',            flag:'🇮🇷', group:'L', pj:0,w:0,d:0,l:0,gf:0,gc:0,pts:0 },
+  { id:'t36', name:'Qatar',           flag:'🇶🇦', group:'A', pj:0,w:0,d:0,l:0,gf:0,gc:0,pts:0 },
+  { id:'t37', name:'Nueva Zelanda',   flag:'🇳🇿', group:'J', pj:0,w:0,d:0,l:0,gf:0,gc:0,pts:0 },
+  { id:'t38', name:'Honduras',        flag:'🇭🇳', group:'B', pj:0,w:0,d:0,l:0,gf:0,gc:0,pts:0 },
+  { id:'t39', name:'Venezuela',       flag:'🇻🇪', group:'E', pj:0,w:0,d:0,l:0,gf:0,gc:0,pts:0 },
+  { id:'t40', name:'Chile',           flag:'🇨🇱', group:'G', pj:0,w:0,d:0,l:0,gf:0,gc:0,pts:0 },
+  { id:'t41', name:'Perú',            flag:'🇵🇪', group:'H', pj:0,w:0,d:0,l:0,gf:0,gc:0,pts:0 },
+  { id:'t42', name:'Paraguay',        flag:'🇵🇾', group:'A', pj:0,w:0,d:0,l:0,gf:0,gc:0,pts:0 },
+  { id:'t43', name:'Bolivia',         flag:'🇧🇴', group:'F', pj:0,w:0,d:0,l:0,gf:0,gc:0,pts:0 },
+  { id:'t44', name:'Escocia',         flag:'🏴󠁧󠁢󠁳󠁣󠁴󠁿', group:'I', pj:0,w:0,d:0,l:0,gf:0,gc:0,pts:0 },
+  { id:'t45', name:'Albania',         flag:'🇦🇱', group:'G', pj:0,w:0,d:0,l:0,gf:0,gc:0,pts:0 },
+  { id:'t46', name:'Hungría',         flag:'🇭🇺', group:'J', pj:0,w:0,d:0,l:0,gf:0,gc:0,pts:0 },
+  { id:'t47', name:'Eslovenia',       flag:'🇸🇮', group:'K', pj:0,w:0,d:0,l:0,gf:0,gc:0,pts:0 },
+  { id:'t48', name:'Rumania',         flag:'🇷🇴', group:'L', pj:0,w:0,d:0,l:0,gf:0,gc:0,pts:0 },
+];
 
 /* ══════════════════════════════════════════════
    API MODULE
@@ -325,15 +332,19 @@ const API = {
       type:        (f.league?.id === AF_WORLD_CUP_ID) ? 'worldcup' : 'friendly'
     });
 
-    /* 1. api-football — Mundial + Amistosos en paralelo */
-    const [afWC, afFr] = await Promise.all([
+    /* 1. api-football — Mundial + Amistosos + todos los internacionales en vivo */
+    const [afWC, afFr, afAll] = await Promise.all([
       this._af(`/fixtures?live=all&league=${AF_WORLD_CUP_ID}&season=${AF_SEASON_2026}`),
-      this._af(`/fixtures?live=all&league=${AF_FRIENDLIES_ID}&season=${AF_SEASON_2026}`)
+      this._af(`/fixtures?live=all&league=${AF_FRIENDLIES_ID}&season=${AF_SEASON_2026}`),
+      this._af(`/fixtures?live=all&league=${AF_FRIENDLIES_ID}`)  // sin filtro de season por si el año difiere
     ]);
-    const afCombined = [...(afWC?.response||[]), ...(afFr?.response||[])];
+    // Deduplicar por fixture.id
+    const afSeen = new Set();
+    const afCombined = [...(afWC?.response||[]), ...(afFr?.response||[]), ...(afAll?.response||[])]
+      .filter(f => { if (afSeen.has(f.fixture.id)) return false; afSeen.add(f.fixture.id); return true; });
     if (afCombined.length > 0) {
       const data = afCombined.map(_afMap);
-      this._memCache['live'] = { data, ts: Date.now() - (this._MEM_TTL - 60000) }; // TTL 60s
+      this._memSet('live', data);
       return data;
     }
 
@@ -359,19 +370,13 @@ const API = {
         competition: m.competition?.name || '',
         type:        m.competition?.id === 2000 ? 'worldcup' : 'friendly'
       }));
-      this._memCache['live'] = { data, ts: Date.now() - (this._MEM_TTL - 60000) };
+      this._memSet('live', data);
       return data;
     }
 
-    /* 3. Mock: mostrar partidos de hoy si existen */
-    const todayStr = new Date().toISOString().split('T')[0];
-    const todayMocks = [...MOCK.friendlyMatches, ...MOCK.upcomingMatches]
-      .filter(m => m.date === todayStr);
-    if (todayMocks.length > 0) {
-      return todayMocks.map(m => ({ ...m, status: 'scheduled_today' }));
-    }
-
-    return MOCK.liveMatches;
+    /* 3. Si las APIs no devuelven nada en vivo → lista vacía. NO mostrar "hoy" aquí,
+       eso le corresponde a getUpcomingMatches / renderUpcoming */
+    return [];
   },
 
   /* ══════════════════════════════════════════
@@ -379,71 +384,153 @@ const API = {
      Mundial 2026 + Amistosos internacionales pre-mundial
   ══════════════════════════════════════════ */
   async getUpcomingMatches() {
+    // Invalidar caché si cambió el día (para que "hoy" siempre sea correcto)
+    const todayStr = localDateStr();
+    const lastDay  = localStorage.getItem('wcc_upcoming_day');
+    if (lastDay !== todayStr) {
+      // Nuevo día → limpiar cachés para forzar recálculo de estados
+      this._memCache = Object.fromEntries(
+        Object.entries(this._memCache).filter(([k]) => !k.startsWith('upcoming'))
+      );
+      localStorage.removeItem('wcc_cache_upcoming');
+      localStorage.setItem('wcc_upcoming_day', todayStr);
+    }
+
     const mem = this._memGet('upcoming');
     if (mem) return mem;
+    const lsCached = this._lsGet('upcoming');
+    if (lsCached) return this._memSet('upcoming', lsCached);
     const cached = await DB.getCacheStats('upcoming');
     if (cached) return this._memSet('upcoming', cached);
 
-    const _afMap = (f, type) => ({
-      id:          `af_${f.fixture.id}`,
-      home:        f.teams.home.name,
-      away:        f.teams.away.name,
-      homeFlag:    getFlag(f.teams.home.name),
-      awayFlag:    getFlag(f.teams.away.name),
-      date:        f.fixture.date?.split('T')[0],
-      time:        f.fixture.date?.split('T')[1]?.substring(0,5),
-      competition: f.league?.round || f.league?.name || (type==='worldcup'?'Mundial 2026':'Amistoso'),
-      venue:       f.fixture.venue?.name || '',
-      type
-    });
+    const _afMap = (f, type) => {
+      const sc = f.fixture?.status?.short || '';
+      const isLive     = ['1H','2H','HT','ET','P','BT','INT'].includes(sc);
+      const isFinished = ['FT','AET','PEN'].includes(sc);
+      return {
+        id:          `af_${f.fixture.id}`,
+        home:        f.teams.home.name,
+        away:        f.teams.away.name,
+        homeFlag:    getFlag(f.teams.home.name),
+        awayFlag:    getFlag(f.teams.away.name),
+        date:        f.fixture.date?.split('T')[0],
+        time:        f.fixture.date?.split('T')[1]?.substring(0,5),
+        competition: f.league?.round || f.league?.name || (type==='worldcup'?'Mundial 2026':'Amistoso'),
+        venue:       f.fixture.venue?.name || '',
+        type,
+        status:      isLive ? 'live' : isFinished ? 'finished' : 'scheduled',
+        scoreHome:   (isLive || isFinished) ? (f.goals?.home ?? null) : null,
+        scoreAway:   (isLive || isFinished) ? (f.goals?.away ?? null) : null,
+        minute:      isLive ? (f.fixture.status?.elapsed || null) : null,
+      };
+    };
 
-    /* 1. api-football — Mundial + Amistosos próximos en paralelo */
-    const [afWC, afFr] = await Promise.all([
+    /* 1. api-football: partidos de HOY (todos los estados) + proximos programados */
+    const [afWCtoday, afFrToday, afWCnext, afFrNext] = await Promise.all([
+      this._af(`/fixtures?league=${AF_WORLD_CUP_ID}&season=${AF_SEASON_2026}&date=${todayStr}`),
+      this._af(`/fixtures?league=${AF_FRIENDLIES_ID}&date=${todayStr}`),
       this._af(`/fixtures?league=${AF_WORLD_CUP_ID}&season=${AF_SEASON_2026}&status=NS&next=12`),
-      this._af(`/fixtures?league=${AF_FRIENDLIES_ID}&season=${AF_SEASON_2026}&status=NS&next=10`)
+      this._af(`/fixtures?league=${AF_FRIENDLIES_ID}&season=${AF_SEASON_2026}&status=NS&next=8`),
     ]);
 
-    const afWCdata = (afWC?.response || []).map(f => _afMap(f, 'worldcup'));
-    const afFrData = (afFr?.response || []).map(f => _afMap(f, 'friendly'));
+    const afSeen = new Set();
+    const afAllRaw = [
+      ...(afWCtoday?.response||[]).map(f=>({...f,_type:'worldcup'})),
+      ...(afFrToday?.response||[]).map(f=>({...f,_type:'friendly'})),
+      ...(afWCnext?.response||[]).map(f=>({...f,_type:'worldcup'})),
+      ...(afFrNext?.response||[]).map(f=>({...f,_type:'friendly'})),
+    ].filter(f => { if (afSeen.has(f.fixture.id)) return false; afSeen.add(f.fixture.id); return true; });
 
-    if (afWCdata.length > 0 || afFrData.length > 0) {
-      // Ordenar: primero amistosos (son antes del Mundial), luego Mundial
-      const data = [...afFrData, ...afWCdata]
-        .sort((a,b) => (a.date||'') < (b.date||'') ? -1 : 1);
+    if (afAllRaw.length > 0) {
+      const data = afAllRaw
+        .map(f => _afMap(f, f._type))
+        .filter(m => (m.date||'') >= todayStr)
+        .sort((a,b) => ((a.date||'')+(a.time||'')) < ((b.date||'')+(b.time||'')) ? -1 : 1);
       await DB.setCacheStats('upcoming', data);
+      this._lsSet('upcoming', data);
       return this._memSet('upcoming', data);
     }
 
-    /* 2. football-data.org — Mundial programado */
-    const fdWC = await this._fd('/competitions/2000/matches?status=SCHEDULED');
-    if (fdWC?.matches?.length > 0) {
-      const data = fdWC.matches.slice(0, 12).map(m => ({
-        id:          `fd_${m.id}`,
-        home:        m.homeTeam.shortName || m.homeTeam.name,
-        away:        m.awayTeam.shortName || m.awayTeam.name,
-        homeFlag:    getFlag(m.homeTeam.name || m.homeTeam.shortName),
-        awayFlag:    getFlag(m.awayTeam.name || m.awayTeam.shortName),
-        date:        m.utcDate?.split('T')[0],
-        time:        m.utcDate?.split('T')[1]?.substring(0,5),
-        competition: m.stage?.replace(/_/g,' ') || 'Mundial 2026',
-        venue:       m.venue || '',
-        type:        'worldcup'
-      }));
-      await DB.setCacheStats('upcoming', data);
-      return this._memSet('upcoming', data);
+    /* 2. football-data.org: partidos de hoy + proximos */
+    const [fdToday, fdNext] = await Promise.all([
+      this._fd(`/matches?dateFrom=${todayStr}&dateTo=${todayStr}`),
+      this._fd('/competitions/2000/matches?status=SCHEDULED'),
+    ]);
+    const fdAll = [...(fdToday?.matches||[]), ...(fdNext?.matches||[])];
+    const fdSeen = new Set();
+    const fdUniq = fdAll.filter(m => { if(fdSeen.has(m.id)) return false; fdSeen.add(m.id); return true; });
+    if (fdUniq.length > 0) {
+      const data = fdUniq.map(m => {
+        const s = m.status;
+        const isLive     = ['IN_PLAY','HALF_TIME','PAUSED'].includes(s);
+        const isFinished = ['FINISHED'].includes(s);
+        return {
+          id:          `fd_${m.id}`,
+          home:        m.homeTeam.shortName || m.homeTeam.name,
+          away:        m.awayTeam.shortName || m.awayTeam.name,
+          homeFlag:    getFlag(m.homeTeam.name || m.homeTeam.shortName),
+          awayFlag:    getFlag(m.awayTeam.name || m.awayTeam.shortName),
+          date:        m.utcDate?.split('T')[0],
+          time:        m.utcDate?.split('T')[1]?.substring(0,5),
+          competition: m.stage?.replace(/_/g,' ') || m.competition?.name || 'Amistoso',
+          venue:       m.venue || '',
+          type:        m.competition?.id === 2000 ? 'worldcup' : 'friendly',
+          status:      isLive ? 'live' : isFinished ? 'finished' : 'scheduled',
+          scoreHome:   (isLive || isFinished) ? (m.score?.fullTime?.home ?? m.score?.halfTime?.home ?? null) : null,
+          scoreAway:   (isLive || isFinished) ? (m.score?.fullTime?.away ?? m.score?.halfTime?.away ?? null) : null,
+        };
+      }).filter(m => (m.date||'') >= todayStr)
+        .sort((a,b) => ((a.date||'')+(a.time||'')) < ((b.date||'')+(b.time||'')) ? -1 : 1);
+      if (data.length) {
+        await DB.setCacheStats('upcoming', data);
+        this._lsSet('upcoming', data);
+        return this._memSet('upcoming', data);
+      }
     }
 
-    /* 3. MOCK: amistosos + Mundial (siempre disponible) */
+    /* 3. MOCK fallback — estado calculado dinámicamente por hora real */
+    const todayLocal     = localDateStr();
+    const yesterdayLocal = yesterdayStr();
     const allMock = [...MOCK.friendlyMatches, ...MOCK.upcomingMatches]
-      .sort((a,b) => (a.date||'') < (b.date||'') ? -1 : 1);
+      .filter(m => {
+        const d = m.date || '';
+        // Incluir:
+        //   - Partidos de HOY (aunque ya terminaron)
+        //   - Partidos FUTUROS
+        //   - Partidos de AYER que tienen resultado (para mostrar "ayer" mientras no sea medianoche UTC)
+        if (d === todayLocal) return true;
+        if (d > todayLocal)   return true;
+        // Ayer con resultado → incluir para que no desaparezcan de golpe
+        if (d === yesterdayLocal && m.scoreHome !== null) return true;
+        return false;
+      })
+      .map(m => {
+        const dynStatus = _mockStatus(m.date, m.time, m.scoreHome, m.scoreAway);
+        return {
+          ...m,
+          status:    dynStatus,
+          scoreHome: (dynStatus === 'finished' || dynStatus === 'live') ? (m.scoreHome ?? null) : null,
+          scoreAway: (dynStatus === 'finished' || dynStatus === 'live') ? (m.scoreAway ?? null) : null,
+          isYesterday: m.date === yesterdayLocal,
+        };
+      })
+      .sort((a,b) => {
+        // Orden: live primero, luego por fecha+hora
+        if (a.status === 'live' && b.status !== 'live') return -1;
+        if (b.status === 'live' && a.status !== 'live') return 1;
+        return ((a.date||'')+(a.time||'')) < ((b.date||'')+(b.time||'')) ? -1 : 1;
+      });
     return this._memSet('upcoming', allMock);
   },
+
   /* ══════════════════════════════════════════
      TABLA DE POSICIONES
   ══════════════════════════════════════════ */
   async getStandings() {
     const mem = this._memGet('standings');
     if (mem) return mem;
+    const lsCached = this._lsGet('standings');
+    if (lsCached) return this._memSet('standings', lsCached);
     const cached = await DB.getCacheStats('standings');
     if (cached) return this._memSet('standings', cached);
 
@@ -467,6 +554,7 @@ const API = {
       });
       if (rows.length > 0) {
         await DB.setCacheStats('standings', rows);
+        this._lsSet('standings', rows);
         return this._memSet('standings', rows);
       }
     }
@@ -483,7 +571,11 @@ const API = {
           gf:r.goalsFor, gc:r.goalsAgainst, pts:r.points
         }));
       });
-      if (rows.length) { await DB.setCacheStats('standings', rows); return this._memSet('standings', rows); }
+      if (rows.length) {
+        await DB.setCacheStats('standings', rows);
+        this._lsSet('standings', rows);
+        return this._memSet('standings', rows);
+      }
     }
 
     return this._memSet('standings', MOCK.standings);
@@ -494,17 +586,82 @@ const API = {
   ══════════════════════════════════════════ */
   _teamsCache: null,   // BUG FIX: caché para no re-llamar API externa en cada cambio de tab
   _memCache: {},       // Caché en memoria (vive mientras la página no recarga)
-  _MEM_TTL: 30 * 60 * 1000,  // 30 minutos
+
+  /* TTLs diferenciados por tipo de dato */
+  _TTL: {
+    live:      60  * 1000,           // 60 segundos
+    upcoming:  5   * 60 * 1000,      // 5 minutos (era 30, reducido para que el estado se recalcule)
+    standings: 6   * 60 * 60 * 1000, // 6 horas
+    scorers:   6   * 60 * 60 * 1000, // 6 horas
+    finished:  6   * 60 * 60 * 1000, // 6 horas
+    default:   10  * 60 * 1000       // 10 minutos
+  },
+
+  _ttlFor(key) {
+    if (key.startsWith('live'))      return this._TTL.live;
+    if (key.startsWith('upcoming'))  return this._TTL.upcoming;
+    if (key.startsWith('standings')) return this._TTL.standings;
+    if (key.startsWith('scorers'))   return this._TTL.scorers;
+    if (key.startsWith('finished'))  return this._TTL.finished;
+    return this._TTL.default;
+  },
 
   _memGet(key) {
     const entry = this._memCache[key];
     if (!entry) return null;
-    if (Date.now() - entry.ts > this._MEM_TTL) { delete this._memCache[key]; return null; }
+    if (Date.now() - entry.ts > this._ttlFor(key)) { delete this._memCache[key]; return null; }
     return entry.data;
   },
   _memSet(key, data) {
     this._memCache[key] = { data, ts: Date.now() };
     return data;
+  },
+
+  /* ── LocalStorage cache helpers (persiste entre recargas) ── */
+  _lsGet(key) {
+    try {
+      const raw = localStorage.getItem(`wcc_cache_${key}`);
+      if (!raw) return null;
+      const { data, ts } = JSON.parse(raw);
+      if (Date.now() - ts > this._ttlFor(key)) {
+        localStorage.removeItem(`wcc_cache_${key}`);
+        return null;
+      }
+      return data;
+    } catch(_) { return null; }
+  },
+  _lsSet(key, data) {
+    try {
+      localStorage.setItem(`wcc_cache_${key}`, JSON.stringify({ data, ts: Date.now() }));
+    } catch(_) {}
+    return data;
+  },
+
+  /* ── Page Visibility API — pausa timers cuando la pestaña está oculta ── */
+  _pausedTimers: [],
+  pauseWhenHidden() {
+    if (this._visibilityBound) return;
+    this._visibilityBound = true;
+    document.addEventListener('visibilitychange', () => {
+      if (document.hidden) {
+        // Pausar todos los timers registrados
+        this._pausedTimers.forEach(t => { if (t.id) { clearInterval(t.id); t.id = null; } });
+      } else {
+        // Reanudar timers — dispara inmediatamente y luego en intervalo
+        this._pausedTimers.forEach(t => {
+          if (!t.id) {
+            t.fn();  // actualizar al volver
+            t.id = setInterval(t.fn, t.ms);
+          }
+        });
+      }
+    });
+  },
+  registerTimer(fn, ms) {
+    const entry = { fn, ms, id: setInterval(fn, ms) };
+    this._pausedTimers.push(entry);
+    this.pauseWhenHidden();
+    return entry;
   },
 
   async getTeams(query = '') {
@@ -594,8 +751,64 @@ const API = {
     return this._memSet('finished', MOCK.finishedMatches);
   },
 
+  /**
+   * getMatchState(match) — estado dinámico según hora actual
+   * Returns: 'upcoming' | 'starting_soon' | 'live' | 'finished' | 'closed'
+   */
+  getMatchState(m) {
+    // Estado explícito tiene prioridad
+    if (m.status === 'live')     return 'live';
+    if (m.status === 'finished') return 'finished';
+
+    if (!m.date || !m.time) return 'upcoming';
+
+    // Usamos hora local del usuario. Los partidos duran ~2h,
+    // así que solo marcamos 'finished' si pasaron más de 2.5h desde el inicio.
+    const matchTs = new Date(`${m.date}T${m.time}:00`).getTime();
+    const diffMs  = matchTs - Date.now();
+    const diffH   = diffMs / (1000 * 60 * 60);
+
+    if (diffH < -2.5) return 'finished';      // pasaron más de 2.5h → probablemente terminó
+    if (diffH < 0)    return 'live';           // empezó hace menos de 2.5h → en curso estimado
+    if (diffH <= 1)   return 'starting_soon';  // por comenzar (≤1h)
+    if (diffH <= 3)   return 'closed';         // predicciones cerradas (≤3h antes)
+    return 'upcoming';
+  },
+
+  /**
+   * getTimeUntilMatch(match) — tiempo legible hasta el inicio
+   */
+  getTimeUntilMatch(m) {
+    if (!m.date || !m.time) return '';
+    const diffMs = new Date(`${m.date}T${m.time}:00`).getTime() - Date.now();
+    if (diffMs <= 0) return '';
+    const h = Math.floor(diffMs / 3600000);
+    const min = Math.floor((diffMs % 3600000) / 60000);
+    if (h >= 24) {
+      const d = Math.floor(h / 24);
+      return `En ${d}d ${h % 24}h`;
+    }
+    if (h > 0) return `En ${h}h ${min}m`;
+    return `En ${min}m`;
+  },
+
   async getPredictableMatches() {
-    return MOCK.predictableMatches;
+    const todayStr = localDateStr();
+
+    // Solo filtramos partidos de días ANTERIORES a hoy y los que tienen status:'finished' explícito.
+    // NO filtramos por getMatchState() aquí — ese estado solo es visual.
+    // Un partido de hoy cuya hora ya pasó sigue apareciendo (puede estar en curso o recién terminado).
+    return MOCK.predictableMatches
+      .filter(m => {
+        if ((m.date || '') < todayStr) return false;        // días anteriores: fuera
+        if (m.status === 'finished') return false;          // terminado explícito: fuera
+        return true;
+      })
+      .sort((a, b) => {
+        const ta = new Date(`${a.date}T${a.time||'23:59'}:00`).getTime();
+        const tb = new Date(`${b.date}T${b.time||'23:59'}:00`).getTime();
+        return ta - tb;
+      });
   },
 
   /* ══════════════════════════════════════════════════════════════════
@@ -861,8 +1074,15 @@ const API = {
     }
 
     /* ── Fallback: filtrar MOCK por nombre de equipo ── */
+    const todayStr2 = localDateStr();
     const allMock = [
-      ...MOCK.friendlyMatches.map(m=>({...m,status:'finished',scoreHome:null,scoreAway:null})),
+      // Partidos terminados reales con scores
+      ...(MOCK.finishedFriendlies||[]).map(m=>({...m,status:'finished'})),
+      // Amistosos de mock: los pasados como finished, los de hoy/futuro como upcoming
+      ...MOCK.friendlyMatches.map(m=>({
+        ...m,
+        status: (m.date < todayStr2) ? 'finished' : (m.date === todayStr2 ? 'live_today' : 'upcoming')
+      })),
       ...MOCK.upcomingMatches.map(m=>({...m,status:'upcoming'}))
     ];
 

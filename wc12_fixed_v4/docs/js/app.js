@@ -10,6 +10,17 @@ const App = {
     // Mostrar loading splash si existe
     const splash = document.getElementById('loading-splash');
 
+    // Limpiar caché de upcoming si el día cambió (fix timezone UTC vs local)
+    try {
+      const now = new Date();
+      const todayLocal = `${now.getFullYear()}-${String(now.getMonth()+1).padStart(2,'0')}-${String(now.getDate()).padStart(2,'0')}`;
+      const lastDay = localStorage.getItem('wcc_upcoming_day');
+      if (lastDay !== todayLocal) {
+        localStorage.removeItem('wcc_cache_upcoming');
+        localStorage.setItem('wcc_upcoming_day', todayLocal);
+      }
+    } catch(_) {}
+
     try {
       await DB.open();
     } catch(dbErr) {
@@ -117,6 +128,10 @@ const App = {
       btn.addEventListener('click', () => {
         document.querySelectorAll('.stab').forEach(b => b.classList.remove('active'));
         btn.classList.add('active');
+        // Limpiar búsqueda al cambiar de tab
+        const input = document.getElementById('search-input');
+        if (input) input.value = '';
+        Stats._lastQuery = '';
         Stats.render(btn.dataset.stab);
       });
     });

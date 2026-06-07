@@ -23,9 +23,29 @@ const Predictions = {
     }
 
     list.innerHTML = matches.map(m => {
-      const existing = preds.find(p => p.matchId === m.id);
-      const isLocked = !!existing;
+      const existing   = preds.find(p => p.matchId === m.id);
+      const isLocked   = !!existing;
       const isFriendly = m.type === 'friendly';
+      const state      = API.getMatchState(m);       // 'upcoming'|'starting_soon'|'live'|'finished'|'closed'
+      const isClosed   = isLocked || state === 'closed' || state === 'live' || state === 'finished';
+
+      // Etiqueta de estado
+      let stateHtml = '';
+      if (state === 'live') {
+        stateHtml = `<span class="pred-state-badge pred-state-live">🔴 EN DIRECTO</span>`;
+      } else if (state === 'starting_soon') {
+        stateHtml = `<span class="pred-state-badge pred-state-soon">⚡ Por comenzar · ${API.getTimeUntilMatch(m)}</span>`;
+      } else if (state === 'closed' && !isLocked) {
+        stateHtml = `<span class="pred-state-badge pred-state-closed">🔒 Predicción cerrada</span>`;
+      } else if (state === 'upcoming' && !isLocked) {
+        const timeLeft = API.getTimeUntilMatch(m);
+        // Avisar cuando cierra pronto (dentro de las próximas 4h pero aún abierto)
+        const matchTs = new Date(`${m.date}T${m.time}:00`).getTime();
+        const diffH   = (matchTs - Date.now()) / 3600000;
+        if (diffH <= 5) {
+          stateHtml = `<span class="pred-state-badge pred-state-warning">⏰ Cierra ${timeLeft}</span>`;
+        }
+      }
 
       // Escudos reales
       const homeCrest = API.getCrest(m.home);
@@ -34,11 +54,12 @@ const Predictions = {
       return `
         <div class="prediction-card" data-match="${m.id}">
           <div class="pred-meta">
-            <div style="display:flex;align-items:center;gap:0.5rem;">
+            <div style="display:flex;align-items:center;gap:0.5rem;flex-wrap:wrap;">
               <span class="pred-type-badge ${isFriendly ? 'pred-type-friendly' : 'pred-type-worldcup'}">
                 ${isFriendly ? '🤝 Amistoso' : '🏆 Mundial 2026'}
               </span>
               <span class="pred-competition">${m.competition || 'Mundial 2026'}</span>
+              ${stateHtml}
             </div>
             <span class="pred-date">${this._formatDate(m.date)}${m.time ? ' · ' + m.time : ''}</span>
           </div>
@@ -53,7 +74,7 @@ const Predictions = {
             </div>
 
             <div class="pred-vs-block">
-              <span class="pred-vs">VS</span>
+              <span class="pred-vs">${state === 'live' ? `<span style="color:#ff4466">${m.scoreHome??0} — ${m.scoreAway??0}</span>` : 'VS'}</span>
               <span class="pred-date-badge">${this._formatDate(m.date)}</span>
             </div>
 
@@ -68,9 +89,16 @@ const Predictions = {
 
           ${m.venue ? `<div class="pred-venue">📍 ${m.venue}</div>` : ''}
 
+          ${state === 'starting_soon' && !isLocked ? `
+            <div class="pred-lineup-row">
+              <button class="btn-lineup" data-match="${m.id}">👕 Ver alineación</button>
+            </div>` : ''}
+
           ${isLocked
             ? this._renderLocked(existing)
-            : this._renderOpen(m)
+            : isClosed
+              ? this._renderClosed(state)
+              : this._renderOpen(m)
           }
         </div>
       `;
@@ -95,6 +123,11 @@ const Predictions = {
         const exact = card.querySelector('.exact-score')?.value.trim() || '';
         this._savePrediction(matchId, selected.dataset.pick, exact, card);
       });
+    });
+
+    // Botón Ver Alineación
+    list.querySelectorAll('.btn-lineup').forEach(btn => {
+      btn.addEventListener('click', () => this._showLineup(btn.dataset.match, matches));
     });
   },
 
@@ -130,6 +163,69 @@ const Predictions = {
       </button>
     `;
   },
+
+  _renderClosed(state) {
+    const msg = state === 'live'
+      ? '🔴 Partido en curso — predicciones cerradas'
+      : state === 'finished'
+        ? '✅ Partido finalizado'
+        : '🔒 Predicciones cerradas (faltan menos de 3h)';
+    return `
+      <div class="pred-locked" style="text-align:center;padding:0.75rem 0;">
+        <span style="font-size:0.78rem;color:var(--text-muted)">${msg}</span>
+      </div>
+    `;
+  },
+
+  async _showLineup(matchId, matches) {
+    const m = matches.find(x => x.id === matchId);
+    if (!m) return;
+
+    // Intentar obtener alineación de api-football si el id es af_*
+    let lineupHtml = '';
+    if (matchId.startsWith('af_')) {
+      try {
+        const fixtureId = matchId.replace('af_', '');
+        const af = await API._af(`/fixtures/lineups?fixture=${fixtureId}`);
+        if (af?.response?.length > 0) {
+          lineupHtml = af.response.map(team => {
+            const starters   = (team.startXI || []).map(p => p.player.name).join(', ');
+            const subs       = (team.substitutes || []).map(p => p.player.name).join(', ');
+            const formation  = team.formation ? `[${team.formation}]` : '';
+            return `
+              <div style="margin-bottom:0.75rem">
+                <p style="font-weight:700;color:var(--gold);margin-bottom:0.25rem">
+                  ${team.team?.name || ''} ${formation}
+                </p>
+                <p style="font-size:0.7rem;color:var(--text-secondary);margin-bottom:0.15rem">
+                  <strong>Titulares:</strong> ${starters || '—'}
+                </p>
+                <p style="font-size:0.7rem;color:var(--text-muted)">
+                  <strong>Suplentes:</strong> ${subs || '—'}
+                </p>
+              </div>`;
+          }).join('<hr style="border-color:var(--border);margin:0.5rem 0">');
+        }
+      } catch(_) {}
+    }
+
+    if (!lineupHtml) {
+      lineupHtml = `<p style="font-size:0.75rem;color:var(--text-muted);text-align:center;padding:0.5rem 0">
+        Alineación aún no confirmada.<br>Vuelve a revisar más cerca del inicio.
+      </p>`;
+    }
+
+    Modal.open(`
+      <div class="modal-player-detail">
+        <h2 class="modal-player-name" style="margin-bottom:0.25rem">👕 Alineación</h2>
+        <p style="font-size:0.7rem;color:var(--text-muted);margin-bottom:0.75rem">
+          ${m.homeFlag||''} ${m.home} vs ${m.away} ${m.awayFlag||''}
+        </p>
+        ${lineupHtml}
+      </div>
+    `);
+  },
+
 
   _renderLocked(pred) {
     const resultIcon = pred.result === 'win' ? '✅' : pred.result === 'loss' ? '❌' : '⏳';

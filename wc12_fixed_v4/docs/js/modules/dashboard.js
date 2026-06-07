@@ -13,106 +13,227 @@ const Dashboard = {
       this.renderStandings(),
       this.renderFavorites()
     ]);
+
+    // Actualizar próximos partidos cada 30 minutos (pausa si pestaña oculta)
+    if (!this._upcomingRefreshTimer) {
+      this._upcomingRefreshTimer = API.registerTimer(() => this.renderUpcoming(), 30 * 60 * 1000);
+    }
+    // Actualizar posiciones cada 6 horas (pausa si pestaña oculta)
+    if (!this._standingsRefreshTimer) {
+      this._standingsRefreshTimer = API.registerTimer(() => this.renderStandings(), 6 * 60 * 60 * 1000);
+    }
   },
 
-  /* ── En Vivo — v12 (Mundial + Amistosos) ── */
+  /* ── En Vivo — v14 ── */
   async renderLive() {
     const el = document.getElementById('live-matches');
     if (!el) return;
 
-    el.innerHTML = '<p class="empty-state" style="opacity:.5">Actualizando...</p>';
+    // Solo mostrar "consultando" en primer render, no en cada refresh
+    if (!el.dataset.initialized) {
+      el.innerHTML = '<p class="empty-state" style="opacity:.4;font-size:0.7rem">Consultando partidos en vivo...</p>';
+      el.dataset.initialized = '1';
+    }
     const matches = await API.getLiveMatches();
 
-    if (!matches || matches.length === 0) {
+    // Solo mostrar partidos que REALMENTE están en curso (status === 'live')
+    const liveOnly = (matches || []).filter(m => m.status === 'live');
+
+    if (liveOnly.length === 0) {
       el.innerHTML = '<p class="empty-state">No hay partidos en vivo ahora mismo</p>';
       return;
     }
 
-    el.innerHTML = matches.map(m => {
-      const isLive     = m.status === 'live';
-      const isToday    = m.status === 'scheduled_today';
-      const isFriendly = m.type  === 'friendly';
+    el.innerHTML = liveOnly.map(m => {
+      const isFriendly = m.type === 'friendly';
       const badgeStyle = isFriendly
         ? 'background:rgba(74,168,255,0.2);color:#4aa8ff;border:1px solid rgba(74,168,255,0.4)'
         : 'background:rgba(255,215,0,0.15);color:var(--gold);border:1px solid rgba(255,215,0,0.35)';
-      const badgeLabel = isFriendly ? 'AMISTOSO' : '🏆 MUNDIAL';
-      const scoreHtml = isLive
-        ? `${m.scoreHome ?? 0} — ${m.scoreAway ?? 0}`
-        : (m.time || 'vs');
       return `
-      <div class="match-item match-live-item" style="${isLive ? 'border-left:3px solid #ff4466' : isToday ? 'border-left:3px solid #4aa8ff' : ''}">
+      <div class="match-item match-live-item has-bar" style="border-left-color:#ff4466;display:block">
         <div style="display:flex;gap:4px;margin-bottom:4px;align-items:center">
-          <span style="font-size:0.5rem;padding:1px 5px;border-radius:10px;font-weight:700;letter-spacing:1px;${badgeStyle}">${badgeLabel}</span>
-          ${isLive
-            ? `<span class="match-live-badge" style="font-size:0.55rem;margin-left:auto">🔴 ${m.minute ? m.minute+"'" : 'EN VIVO'}</span>`
-            : isToday
-              ? `<span style="font-size:0.55rem;color:#4aa8ff;margin-left:auto">📅 HOY · ${m.time||''}</span>`
-              : ''}
+          <span style="font-size:0.5rem;padding:1px 5px;border-radius:10px;font-weight:700;letter-spacing:1px;${badgeStyle}">
+            ${isFriendly ? 'AMISTOSO' : '🏆 MUNDIAL'}
+          </span>
+          <span class="match-live-badge" style="font-size:0.55rem;margin-left:auto">
+            🔴 ${m.minute ? m.minute+"'" : 'EN VIVO'}
+          </span>
         </div>
         <div class="match-teams-row">
           <span>${m.homeFlag||''} ${m.home}</span>
-          <span class="match-score" style="${isLive?'color:#fff':'color:var(--text-muted)'}">${scoreHtml}</span>
+          <span class="match-score">${m.scoreHome??0} — ${m.scoreAway??0}</span>
           <span>${m.away} ${m.awayFlag||''}</span>
         </div>
         ${m.competition ? `<div style="font-size:0.62rem;color:var(--text-muted);margin-top:2px;text-align:center">${m.competition}</div>` : ''}
       </div>`;
     }).join('');
 
-    const hasRealLive = matches.some(m => m.status === 'live');
-    if (hasRealLive && !this._liveRefreshTimer) {
-      this._liveRefreshTimer = setInterval(() => {
+    // Auto-refresh cada 60 seg mientras haya partidos vivos — pausa si pestaña oculta
+    if (!this._liveRefreshTimer) {
+      this._liveRefreshTimer = API.registerTimer(() => {
         delete API._memCache['live'];
         this.renderLive();
       }, 60000);
     }
   },
-  /* ── Próximos ── */
+  /* ── Próximos y resultados del día — v15 ─────────────────────────
+     LÓGICA:
+     • Panel IZQUIERDO (renderLive): solo partidos status==='live'
+     • Panel DERECHO (renderUpcoming):
+         - "HOY": todos los partidos de hoy (finished, live, scheduled)
+           incluyendo los que ya terminaron con su marcador
+         - "PRÓXIMOS": partidos de días futuros (sin marcar ya terminados)
+     • Los partidos de ayer o anteriores NO se muestran (ya pasó el día)
+     • Un partido con scoreHome/Away fijo → siempre 'finished' sin importar la hora
+     ────────────────────────────────────────────────────────────────── */
   async renderUpcoming() {
     const el = document.getElementById('upcoming-matches');
     if (!el) return;
-    const matches = await API.getUpcomingMatches();
 
-    if (!matches || matches.length === 0) {
-      el.innerHTML = '<p class="empty-state">Sin próximos partidos</p>';
+    const [allRaw, liveMatches] = await Promise.all([
+      API.getUpcomingMatches(),
+      API.getLiveMatches()
+    ]);
+
+    // Actualizar estado con datos de live en tiempo real
+    const liveById   = new Map((liveMatches||[]).map(m => [m.id, m]));
+    const liveByTeam = new Map();
+    (liveMatches||[]).forEach(m => {
+      liveByTeam.set((m.home||'').toLowerCase(), m);
+      liveByTeam.set((m.away||'').toLowerCase(), m);
+    });
+
+    const all = (allRaw||[]).map(m => {
+      const liveMatch = liveById.get(m.id)
+        || (liveByTeam.has((m.home||'').toLowerCase()) && liveByTeam.has((m.away||'').toLowerCase())
+            ? liveByTeam.get((m.home||'').toLowerCase()) : null);
+      if (liveMatch) {
+        return { ...m, status:'live', scoreHome:liveMatch.scoreHome, scoreAway:liveMatch.scoreAway, minute:liveMatch.minute };
+      }
+      return m;
+    });
+
+    if (!all || all.length === 0) {
+      el.innerHTML = '<p class="empty-state">Sin partidos cargados</p>';
       return;
     }
 
-    el.innerHTML = matches.slice(0, 6).map(m => {
+    // Fecha "hoy" en zona local del usuario
+    const now      = new Date();
+    const todayStr = `${now.getFullYear()}-${String(now.getMonth()+1).padStart(2,'0')}-${String(now.getDate()).padStart(2,'0')}`;
+    const yestDate = new Date(now); yestDate.setDate(yestDate.getDate()-1);
+    const yestStr  = `${yestDate.getFullYear()}-${String(yestDate.getMonth()+1).padStart(2,'0')}-${String(yestDate.getDate()).padStart(2,'0')}`;
+    const renderMatch = m => {
+      const isToday    = m.date === todayStr;
+      const isYesterday= m.date === yestStr;
+      const isLive     = m.status === 'live';
+      const isFinished = m.status === 'finished';
       const isFriendly = m.type === 'friendly';
-      const homeCrest = API.getCrest(m.home);
-      const awayCrest = API.getCrest(m.away);
-      const homeImg = homeCrest
-        ? `<img referrerpolicy="no-referrer" src="${homeCrest}" style="width:18px;height:18px;object-fit:contain;vertical-align:middle" onerror="this.style.display='none'">`
-        : (m.homeFlag || '');
-      const awayImg = awayCrest
-        ? `<img referrerpolicy="no-referrer" src="${awayCrest}" style="width:18px;height:18px;object-fit:contain;vertical-align:middle" onerror="this.style.display='none'">`
-        : (m.awayFlag || '');
+
+      const badgeLabel = isFriendly ? 'AMISTOSO' : '🏆 MUNDIAL';
+      const badgeStyle = isFriendly
+        ? 'background:rgba(74,168,255,0.15);color:var(--rare);border:1px solid rgba(74,168,255,0.3)'
+        : 'background:rgba(255,215,0,0.12);color:var(--gold);border:1px solid rgba(255,215,0,0.3)';
+
+      const barColor = isLive ? '#ff4466' : isFinished ? '#555' : isToday ? '#4aa8ff' : 'transparent';
+
+      let statusBadge = '';
+      if (isLive) {
+        statusBadge = `<span style="font-size:0.5rem;padding:1px 5px;border-radius:6px;background:rgba(255,68,102,0.2);color:#ff4466;font-weight:700;margin-left:2px">🔴 EN VIVO${m.minute ? ' · '+m.minute+"'" : ''}</span>`;
+      } else if (isFinished) {
+        statusBadge = '<span style="font-size:0.5rem;padding:1px 5px;border-radius:6px;background:rgba(100,100,100,0.2);color:#888;font-weight:700;margin-left:2px">✓ FIN</span>';
+      } else if (isToday) {
+        statusBadge = `<span style="font-size:0.5rem;padding:1px 4px;border-radius:6px;background:rgba(74,168,255,0.2);color:#4aa8ff;font-weight:700;margin-left:2px">HOY · ${m.time||''}</span>`;
+      }
+
+      // Marcador final o en vivo
+      let scoreHtml = '';
+      if (isFinished && m.scoreHome !== null && m.scoreAway !== null) {
+        scoreHtml = `<span style="font-size:0.88rem;font-weight:800;color:#ddd;letter-spacing:1px;padding:0 4px;min-width:54px;text-align:center">${m.scoreHome} — ${m.scoreAway}</span>`;
+      } else if (isLive && m.scoreHome !== null && m.scoreAway !== null) {
+        scoreHtml = `<span style="font-size:0.88rem;font-weight:800;color:#ff4466;letter-spacing:1px;padding:0 4px;min-width:54px;text-align:center">${m.scoreHome} — ${m.scoreAway}</span>`;
+      } else {
+        const timeStr = m.time ? m.time+' hrs' : '—';
+        scoreHtml = `<span style="color:var(--text-muted);font-size:0.72rem;font-weight:400;min-width:54px;text-align:center">${timeStr}</span>`;
+      }
+
+      const hasBar = isLive || isFinished || isToday;
       return `
-      <div class="match-item">
+      <div class="match-item ${hasBar ? 'has-bar' : ''}" style="${hasBar ? `border-left-color:${barColor}` : ''}">
         <div style="flex:1;min-width:0">
-          <div style="display:flex;gap:4px;margin-bottom:3px">
-            <span style="font-size:0.55rem;padding:1px 5px;border-radius:10px;font-family:'Barlow Condensed',sans-serif;font-weight:700;letter-spacing:1px;
-              ${isFriendly
-                ? 'background:rgba(74,168,255,0.15);color:var(--rare);border:1px solid rgba(74,168,255,0.3)'
-                : 'background:rgba(255,215,0,0.12);color:var(--gold);border:1px solid rgba(255,215,0,0.3)'}">
-              ${isFriendly ? 'AMISTOSO' : '🏆 MUNDIAL'}
-            </span>
+          <div style="display:flex;gap:4px;margin-bottom:3px;align-items:center;flex-wrap:wrap">
+            <span style="font-size:0.55rem;padding:1px 5px;border-radius:10px;font-family:'Barlow Condensed',sans-serif;font-weight:700;letter-spacing:1px;${badgeStyle}">${badgeLabel}</span>
+            ${statusBadge}
           </div>
           <div class="match-teams-row" style="font-size:0.82rem;font-weight:600">
-            <span style="display:flex;align-items:center;gap:4px">${homeImg} ${m.home}</span>
-            <span style="color:var(--text-muted);font-size:0.75rem;font-weight:400">vs</span>
-            <span style="display:flex;align-items:center;gap:4px">${m.away} ${awayImg}</span>
+            <span style="${isFinished ? 'color:var(--text-secondary)' : ''}">${m.homeFlag||''} ${m.home}</span>
+            ${scoreHtml}
+            <span style="${isFinished ? 'color:var(--text-secondary)' : ''}">${m.away} ${m.awayFlag||''}</span>
           </div>
-          <div style="font-size:0.68rem;color:var(--text-muted);margin-top:2px">
-            ${this._formatDate(m.date)} ${m.time ? '· ' + m.time : ''}
-            ${m.venue ? `<br>📍 ${m.venue}` : ''}
-          </div>
+          ${m.venue ? `<div style="font-size:0.62rem;color:var(--text-muted);margin-top:1px">📍 ${m.venue}</div>` : ''}
         </div>
-      </div>
-    `}).join('');
+      </div>`;
+    };
+
+    // Partidos de HOY: finished (con score) + live + scheduled
+    const todayFinished  = all.filter(m => m.date === todayStr && m.status === 'finished');
+    const todayLive      = all.filter(m => m.date === todayStr && m.status === 'live');
+    const todayScheduled = all.filter(m => m.date === todayStr && m.status === 'scheduled');
+    // Partidos de AYER con resultado (para que no desaparezcan hasta medianoche)
+    const yesterdayDone  = all.filter(m => m.date === yestStr && m.status === 'finished');
+    // Partidos futuros (días > hoy, excluir finalizados)
+    const futureMatches  = all.filter(m => m.date > todayStr && m.status !== 'finished');
+
+    let html = '';
+
+    // ── AYER con resultados (si hay y no hay otros "hoy") ──
+    if (yesterdayDone.length > 0) {
+      const months = ['Ene','Feb','Mar','Abr','May','Jun','Jul','Ago','Sep','Oct','Nov','Dic'];
+      const [,ym,yd] = yestStr.split('-');
+      html += `<p style="font-size:0.6rem;font-weight:700;color:var(--text-muted);letter-spacing:1px;text-transform:uppercase;margin:0 0 4px">
+        Ayer · ${parseInt(yd)} ${months[parseInt(ym)-1]}
+        <span style="color:var(--text-muted);font-weight:400;margin-left:4px">(${yesterdayDone.length} resultado${yesterdayDone.length>1?'s':''})</span>
+      </p>`;
+      html += yesterdayDone.map(renderMatch).join('');
+    }
+
+    // ── HOY: live → programados → finalizados ──
+    const todayAll = [...todayLive, ...todayScheduled, ...todayFinished];
+    if (todayAll.length > 0) {
+      const months = ['Ene','Feb','Mar','Abr','May','Jun','Jul','Ago','Sep','Oct','Nov','Dic'];
+      const todayLabel = `Hoy · ${now.getDate()} ${months[now.getMonth()]}`;
+      html += `<p style="font-size:0.6rem;font-weight:700;color:#4aa8ff;letter-spacing:1px;text-transform:uppercase;margin:${yesterdayDone.length?'8px':0} 0 4px">
+        ${todayLabel}
+        ${todayFinished.length > 0 ? `<span style="color:var(--text-muted);font-weight:400;margin-left:4px">(${todayFinished.length} finalizado${todayFinished.length>1?'s':''})</span>` : ''}
+      </p>`;
+      html += todayAll.map(renderMatch).join('');
+    } else if (!yesterdayDone.length) {
+      html += '<p style="font-size:0.72rem;color:var(--text-muted);padding:4px 0">No hay partidos hoy</p>';
+    }
+
+    // PRÓXIMOS (días futuros, máx 6)
+    if (futureMatches.length > 0) {
+      // Agrupar por fecha
+      const byDate = {};
+      futureMatches.forEach(m => { (byDate[m.date] = byDate[m.date]||[]).push(m); });
+
+      Object.keys(byDate).sort().slice(0, 3).forEach(dateKey => {
+        const [, mm, dd] = dateKey.split('-');
+        const months = ['Ene','Feb','Mar','Abr','May','Jun','Jul','Ago','Sep','Oct','Nov','Dic'];
+        const label = dateKey === this._tomorrowStr() ? 'Mañana' : `${parseInt(dd)} ${months[parseInt(mm)-1]}`;
+        html += `<p style="font-size:0.6rem;font-weight:700;color:var(--text-muted);letter-spacing:1px;text-transform:uppercase;margin:8px 0 4px">${label}</p>`;
+        html += byDate[dateKey].slice(0, 4).map(renderMatch).join('');
+      });
+    }
+
+    el.innerHTML = html;
   },
 
-  /* ── Tabla de posiciones ── */
+  _tomorrowStr() {
+    const d = new Date();
+    d.setDate(d.getDate() + 1);
+    return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
+  },  /* ── Tabla de posiciones ── */
   async renderStandings() {
     const el = document.getElementById('standings-preview');
     if (!el) return;
