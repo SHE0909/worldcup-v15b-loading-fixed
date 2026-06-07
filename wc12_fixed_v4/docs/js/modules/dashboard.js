@@ -324,9 +324,9 @@ const Dashboard = {
 
   async _showFavStats(id, tipo, name) {
     if (tipo === 'player') {
-      const player = Stats.findPlayer ? Stats.findPlayer(name) : null;
       const pool   = (typeof Gacha !== 'undefined') ? Gacha.getPool() : [];
       const poolFig = pool.find(p => p.id === id || p.name.toLowerCase() === name.toLowerCase());
+      // Usar SIEMPRE poolFig como fuente de stats (misma fuente que el Álbum)
       const photo  = poolFig
         ? await API.getPhotoById(poolFig.id, poolFig.sdbName || poolFig.name).catch(()=>null)
         : await API.getPlayerPhotosCached(name).catch(()=>null);
@@ -335,7 +335,7 @@ const Dashboard = {
              <img referrerpolicy="no-referrer" src="${photo}" style="width:100%;height:100%;object-fit:cover;object-position:top center;" onerror="this.style.display='none'">
            </div>`
         : `<div style="font-size:3rem;margin-bottom:0.5rem">${'👤'}</div>`;
-      const p = player || { name, pos:'—', team:'—', caps:0, goals:0, assists:0, rating:'—' };
+      const p = poolFig || { name, pos:'—', team:'—', caps:0, goals:0, assists:0, rating:'—', flag:'' };
       Modal.open(`
         <div class="modal-player-detail">
           ${photoHtml}
@@ -346,9 +346,9 @@ const Dashboard = {
             ${p.rating ? `<span class="figurita-rating">⭐ ${p.rating}</span>` : ''}
           </div>
           <div class="modal-stats-row">
-            <div class="modal-stat"><span>${p.goals}</span><label>Goles</label></div>
-            <div class="modal-stat"><span>${p.assists}</span><label>Asist.</label></div>
-            <div class="modal-stat"><span>${p.caps}</span><label>Partidos</label></div>
+            <div class="modal-stat"><span>${p.goals ?? 0}</span><label>Goles</label></div>
+            <div class="modal-stat"><span>${p.assists ?? 0}</span><label>Asist.</label></div>
+            <div class="modal-stat"><span>${p.apps ?? p.caps ?? 0}</span><label>Partidos</label></div>
           </div>
         </div>`);
     } else {

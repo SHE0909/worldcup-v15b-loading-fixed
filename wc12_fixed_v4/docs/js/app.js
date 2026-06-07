@@ -66,15 +66,19 @@ const App = {
   async loadUserData(user = null) {
     const u = user || await Auth.currentUser();
     if (!u) return;
+    this.refreshHeader(u);
+  },
 
-    document.getElementById('header-greeting').textContent = `Hola, ${u.name.split(' ')[0]}`;
-    document.getElementById('hdr-tiradas').innerHTML =
-      `🎴 <strong>${u.tiradas ?? 0}</strong>`;
+  /* ── Actualizar header sin recargar la página ── */
+  async refreshHeader(u = null) {
+    const user = u || await Auth.currentUser();
+    if (!user) return;
+    document.getElementById('header-greeting').textContent = `Hola, ${user.name.split(' ')[0]}`;
+    document.getElementById('hdr-tiradas').innerHTML = `🎴 <strong>${user.tiradas ?? 0}</strong>`;
     const gc = document.getElementById('gacha-count');
-    if (gc) gc.textContent = u.tiradas ?? 0;
-
+    if (gc) gc.textContent = user.tiradas ?? 0;
     const hdrMonedas = document.getElementById('hdr-monedas');
-    if (hdrMonedas) hdrMonedas.innerHTML = `💰 <strong>${u.monedas ?? 0}</strong>`;
+    if (hdrMonedas) hdrMonedas.innerHTML = `💰 <strong>${user.monedas ?? 0}</strong>`;
   },
 
   navigateTo(tab) {
@@ -298,12 +302,8 @@ const App = {
       return;
     }
 
-    /* 4. Actualizar contadores */
-    const gc = document.getElementById('gacha-count');
-    if (gc) gc.textContent = pull.user.tiradas;
-    document.getElementById('hdr-tiradas').innerHTML = `🎴 <strong>${pull.user.tiradas}</strong>`;
-    const hdrMonedas = document.getElementById('hdr-monedas');
-    if (hdrMonedas) hdrMonedas.innerHTML = `💰 <strong>${pull.user.monedas ?? 0}</strong>`;
+    /* 4. Actualizar contadores del header */
+    await App.refreshHeader(pull.user);
 
     /* 5. Pre-poblar cache de fotos (async) y luego renderizar cartas */
     await Promise.all(pull.results.map(f => Gacha.getPlayerPhoto(f)));
@@ -353,9 +353,11 @@ const App = {
     if (pb) pb.style.width = `${Math.min(100, (pc / 50) * 100)}%`;
 
     /* 9. Notificación */
+    const goat = pull.results.find(f => f.rareza === 'goat');
     const leg  = pull.results.find(f => f.rareza === 'legendary');
     const epic = pull.results.find(f => f.rareza === 'epic');
-    if (leg)       Toast.success(`✨ ¡LEGENDARIA! ¡Obtuviste a ${leg.name}!`, 5000);
+    if (goat)      Toast.success(`🐐 ¡¡GOAT!! ¡¡Obtuviste a ${goat.name}!! 🔴`, 7000);
+    else if (leg)  Toast.success(`✨ ¡LEGENDARIA! ¡Obtuviste a ${leg.name}!`, 5000);
     else if (epic) Toast.success(`⚡ ¡Épica! ${epic.name}`, 3000);
     else           Toast.show(`+${pull.results.length} figurita${pull.results.length > 1 ? 's' : ''}`);
   },

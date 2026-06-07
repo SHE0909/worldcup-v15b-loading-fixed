@@ -334,12 +334,84 @@ const Battle = {
   },
 
   /* ══════════════════════════════════════════
-     TANDA DE PENALES — Minijuego de timing
+     TANDA DE PENALES — Minijuego interactivo
+     Ronda A: usuario dispara, CPU ataja
+     Ronda B: CPU dispara, usuario elige dónde atajar
   ══════════════════════════════════════════ */
   async startPenaltyBattle() {
     let userGoals = 0, cpuGoals = 0;
     let round = 0;
-    const totalRounds = 3;
+    const totalRounds = 3; // 3 rondas: cada ronda = 1 disparo usuario + 1 disparo CPU
+
+    const DIRS = ['↖️ Izq. arriba','⬆️ Centro','↗️ Der. arriba','↙️ Izq. abajo','⬇️ Raso centro','↘️ Der. abajo'];
+    const DIRS_SHORT = ['Izq. arr.','Centro','Der. arr.','Izq. abajo','Raso','Der. abajo'];
+
+    const showResult = (userScored, cpuScored, onNext) => {
+      Modal.open(`
+        <div style="text-align:center;padding:1rem 0">
+          <div style="display:flex;justify-content:center;gap:1.5rem;margin-bottom:0.5rem">
+            <div>
+              <div style="font-size:2rem">${userScored ? '⚽' : '🧤'}</div>
+              <div style="font-size:0.75rem;color:${userScored?'#44ff88':'#ff4466'};font-weight:700">
+                TÚ: ${userScored ? '¡Gol!' : 'Atajado'}
+              </div>
+            </div>
+            <div>
+              <div style="font-size:2rem">${cpuScored ? '⚽' : '✋'}</div>
+              <div style="font-size:0.75rem;color:${cpuScored?'#ff8844':'#44ff88'};font-weight:700">
+                CPU: ${cpuScored ? 'Gol' : '¡Atajaste!'}
+              </div>
+            </div>
+          </div>
+          <div style="font-size:1.6rem;font-family:'Bebas Neue',cursive;margin:0.5rem 0">
+            ${userGoals} — ${cpuGoals}
+          </div>
+          <button class="btn btn-primary" style="margin-top:1rem;width:100%" id="next-penalty-btn">
+            ${round < totalRounds ? `Ronda ${round+1} →` : 'Ver resultado →'}
+          </button>
+        </div>
+      `);
+      setTimeout(() => {
+        document.getElementById('next-penalty-btn')?.addEventListener('click', () => {
+          Modal.close();
+          setTimeout(onNext, 200);
+        });
+      }, 50);
+    };
+
+    // Fase B: Usuario ataja el disparo de la CPU
+    const doCpuShoot = (onDone) => {
+      const cpuShotDir = Math.floor(Math.random() * 3); // 0=izq, 1=centro, 2=der
+      const cpuDirLabels = ['⬅️ Izquierda', '⬆️ Centro', '➡️ Derecha'];
+      Modal.open(`
+        <div style="text-align:center;padding:0.5rem 0">
+          <div style="font-size:1.8rem;margin-bottom:0.3rem">🥅</div>
+          <p style="font-size:0.85rem;color:var(--text-secondary);margin-bottom:1rem">
+            <strong>¡La CPU va a disparar!</strong><br>
+            Elige hacia dónde tirarte:
+          </p>
+          <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:0.6rem;max-width:240px;margin:0 auto">
+            ${cpuDirLabels.map((label, i) => `
+              <button class="penalty-save-btn btn btn-secondary" data-dir="${i}"
+                style="padding:0.8rem 0.3rem;font-size:0.8rem">
+                ${label}
+              </button>
+            `).join('')}
+          </div>
+        </div>
+      `);
+      setTimeout(() => {
+        document.querySelectorAll('.penalty-save-btn').forEach(btn => {
+          btn.addEventListener('click', () => {
+            const userSaveDir = parseInt(btn.dataset.dir);
+            const cpuScored = (userSaveDir !== cpuShotDir); // ataja si acierta dirección
+            if (cpuScored) cpuGoals++;
+            Modal.close();
+            setTimeout(() => onDone(cpuScored), 200);
+          });
+        });
+      }, 50);
+    };
 
     const doRound = () => {
       if (round >= totalRounds) {
@@ -348,21 +420,23 @@ const Battle = {
       }
       round++;
 
+      // Fase A: Usuario dispara
       Modal.open(`
         <div style="text-align:center;padding:0.5rem 0">
           <div style="font-family:'Bebas Neue',cursive;font-size:1.2rem;color:var(--text-muted);margin-bottom:0.5rem">
-            PENAL ${round} DE ${totalRounds}
+            RONDA ${round} DE ${totalRounds}
           </div>
-          <div style="font-size:2.5rem;margin:0.5rem 0">🥅</div>
-          <div style="font-size:0.9rem;color:var(--text-muted);margin-bottom:1rem">
+          <div style="font-size:2rem;margin:0.3rem 0">⚽ Tu turno de disparar</div>
+          <div style="font-size:0.85rem;color:var(--text-muted);margin-bottom:0.8rem">
             Marcador: <strong>${userGoals}</strong> - <strong>${cpuGoals}</strong>
           </div>
-          <p style="font-size:0.85rem;color:var(--text-secondary);margin-bottom:1rem">
-            Elige hacia dónde patear:
+          <p style="font-size:0.82rem;color:var(--text-secondary);margin-bottom:0.8rem">
+            ¿Hacia dónde pateas?
           </p>
-          <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:0.5rem;max-width:280px;margin:0 auto">
-            ${['↖️ Izq. arriba','⬆️ Centro','↗️ Der. arriba','↙️ Izq. abajo','⬇️ Raso centro','↘️ Der. abajo'].map((dir, i) => `
-              <button class="penalty-dir-btn btn btn-secondary" data-dir="${i}" style="padding:0.6rem 0.3rem;font-size:0.75rem">
+          <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:0.4rem;max-width:280px;margin:0 auto">
+            ${DIRS.map((dir, i) => `
+              <button class="penalty-dir-btn btn btn-secondary" data-dir="${i}"
+                style="padding:0.5rem 0.2rem;font-size:0.72rem">
                 ${dir}
               </button>
             `).join('')}
@@ -373,40 +447,17 @@ const Battle = {
       setTimeout(() => {
         document.querySelectorAll('.penalty-dir-btn').forEach(btn => {
           btn.addEventListener('click', () => {
-            const userDir = parseInt(btn.dataset.dir);
-            const cpuDir  = Math.floor(Math.random() * 6); // portero CPU elige dir
-            const shot    = Math.floor(Math.random() * 6); // dirección disparo CPU
-            const userScored = userDir !== cpuDir || Math.random() > 0.3; // 70% si falla portero
-            const cpuScored  = shot !== Math.floor(Math.random() * 6) || Math.random() > 0.4;
-
+            const userDir    = parseInt(btn.dataset.dir);
+            const cpuSaveDir = Math.floor(Math.random() * 6);
+            const userScored = (userDir !== cpuSaveDir) || Math.random() > 0.25;
             if (userScored) userGoals++;
-            if (cpuScored)  cpuGoals++;
-
             Modal.close();
+
+            // Después del disparo del usuario, la CPU dispara
             setTimeout(() => {
-              Modal.open(`
-                <div style="text-align:center;padding:1rem 0">
-                  <div style="font-size:2.5rem">${userScored ? '⚽' : '🧤'}</div>
-                  <h3 style="margin:0.5rem 0;color:${userScored ? '#44ff88' : '#ff4466'}">
-                    ${userScored ? '¡Gooool! 🔥' : '¡Atajado! 🧤'}
-                  </h3>
-                  <div style="font-size:0.8rem;color:var(--text-muted);margin-bottom:0.5rem">
-                    CPU: ${cpuScored ? '⚽ GOL' : '❌ Falló'}
-                  </div>
-                  <div style="font-size:1.5rem;font-family:'Bebas Neue',cursive">
-                    ${userGoals} — ${cpuGoals}
-                  </div>
-                  <button class="btn btn-primary" style="margin-top:1rem;width:100%" id="next-penalty-btn">
-                    ${round < totalRounds ? `Penal ${round+1} →` : 'Ver resultado →'}
-                  </button>
-                </div>
-              `);
-              setTimeout(() => {
-                document.getElementById('next-penalty-btn')?.addEventListener('click', () => {
-                  Modal.close();
-                  setTimeout(doRound, 200);
-                });
-              }, 50);
+              doCpuShoot((cpuScored) => {
+                showResult(userScored, cpuScored, doRound);
+              });
             }, 200);
           });
         });
@@ -577,6 +628,7 @@ const Battle = {
 
     await Auth.updateUser(user);
     await DB.logActivity(user.email, 'battle', `${won?'victoria':'derrota'} +${tiradas}🎴 +${monedas}💰`);
+    if (typeof App !== 'undefined') await App.refreshHeader();
     if (tiradas > 0) Toast.success(`⚔️ Batalla terminada! +${tiradas} tirada${tiradas>1?'s':''}${monedas>0?` +${monedas}💰`:''}`);
   }
 };

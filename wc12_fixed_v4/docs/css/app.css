@@ -43,6 +43,7 @@ input, button { font-family: inherit; }
   --rare:      #4aa8ff;
   --epic:      #b44fff;
   --legendary: #ffd700;
+  --goat:      #ff2244;
 
   --radius-sm: 6px;
   --radius-md: 12px;
@@ -556,6 +557,24 @@ input, button { font-family: inherit; }
   50%      { box-shadow: 0 0 40px rgba(255,215,0,0.6); }
 }
 
+.figurita-card.goat {
+  border-color: var(--goat);
+  box-shadow: 0 0 30px rgba(255,34,68,0.7);
+  animation: goatPulse 1.5s ease-in-out infinite;
+}
+.figurita-card.goat .fig-rarity-glow { background: var(--goat); opacity: 0.18; }
+@keyframes goatPulse {
+  0%,100% { box-shadow: 0 0 25px rgba(255,34,68,0.6); }
+  50%      { box-shadow: 0 0 55px rgba(255,34,68,0.9), 0 0 80px rgba(255,100,50,0.4); }
+}
+.badge-goat {
+  background: linear-gradient(135deg, #ff2244, #ff6622);
+  color: white;
+  font-weight: 900;
+  letter-spacing: 0.05em;
+  text-shadow: 0 1px 2px rgba(0,0,0,0.4);
+}
+
 /* Foto del jugador */
 .fig-photo-wrap {
   width: 100%;
@@ -652,6 +671,7 @@ input, button { font-family: inherit; }
 .badge-rare     { background: var(--rare); color: #080c14; }
 .badge-epic     { background: var(--epic); color: white; }
 .badge-legendary { background: var(--legendary); color: #080c14; }
+.badge-goat     { background: linear-gradient(135deg,#ff2244,#ff6622); color: white; font-weight:900; }
 
 .figurita-new {
   position: absolute; bottom: 0; left: 0; right: 0;

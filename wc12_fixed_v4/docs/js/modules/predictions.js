@@ -110,6 +110,9 @@ const Predictions = {
         const card = btn.closest('.prediction-card');
         card.querySelectorAll('.pred-btn').forEach(b => b.classList.remove('selected'));
         btn.classList.add('selected');
+        // Mostrar hint de empate si se selecciona "Empate"
+        const hint = card.querySelector('.draw-score-hint');
+        if (hint) hint.style.display = btn.dataset.pick === 'draw' ? 'block' : 'none';
       });
     });
 
@@ -153,6 +156,9 @@ const Predictions = {
           pattern="[0-9]+-[0-9]+"
           maxlength="7"
           title="Formato: goles_local-goles_visitante (ej: 2-1)">
+        <div class="draw-score-hint" style="display:none;font-size:0.75rem;color:#ffaa44;margin-top:4px">
+          ⚠️ Para empate el marcador debe ser igualado: 0-0, 1-1, 2-2…
+        </div>
       </div>
       <div class="pred-rewards-info">
         <span>🎴 Acertar ganador: <strong>+1 tirada</strong></span>
@@ -265,6 +271,15 @@ const Predictions = {
     if (exact && !/^\d+-\d+$/.test(exact)) {
       Toast.warn('Formato de marcador inválido. Usa: 2-1');
       return;
+    }
+
+    // Validar que empate tenga marcador igualado
+    if (pick === 'draw' && exact) {
+      const [g1, g2] = exact.split('-').map(Number);
+      if (g1 !== g2) {
+        Toast.warn('En un empate ambos equipos deben tener los mismos goles. Ej: 1-1');
+        return;
+      }
     }
 
     const user = await Auth.currentUser();

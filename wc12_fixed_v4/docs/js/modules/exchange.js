@@ -165,6 +165,7 @@ const Exchange = {
     user.figuritas = owned;
     await Auth.updateUser(user);
     await DB.logActivity(user.email, 'exchange', `${rule.label} → ${picked.name}`);
+    if (typeof App !== 'undefined') await App.refreshHeader();
 
     // Mostrar resultado con animación gacha
     await this._showExchangeResult(picked, isNew, rule);

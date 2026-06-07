@@ -41,17 +41,18 @@ const Auth = {
     const hash = await this.hashPassword(password);
     const user = {
       email,
-      name:          name.trim(),
-      passwordHash:  hash,
-      createdAt:     new Date().toISOString(),
-      tiradas:       5,
-      monedas:       0,
-      figuritas:     [],
-      favoritos:     [],
-      predicciones:  [],
-      aciertos:      0,
-      pityCount:     0,
-      equipo_ideal:  null
+      name:             name.trim(),
+      passwordHash:     hash,
+      createdAt:        new Date().toISOString(),
+      tiradas:          5,
+      freeSpinsClaimed: true,   // marca permanente: tiradas iniciales ya entregadas
+      monedas:          0,
+      figuritas:        [],
+      favoritos:        [],
+      predicciones:     [],
+      aciertos:         0,
+      pityCount:        0,
+      equipo_ideal:     null
     };
 
     await DB.saveUser(user);

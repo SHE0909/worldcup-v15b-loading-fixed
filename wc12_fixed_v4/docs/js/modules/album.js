@@ -50,13 +50,19 @@ function getFormationRows(name) {
 }
 
 const PLAYER_STATS = {
-  'fig_l001':{goals:18,assists:12,apps:26,saves:null},
-  'fig_l002':{goals:24,assists:8, apps:28,saves:null},
-  'fig_l003':{goals:16,assists:14,apps:30,saves:null},
-  'fig_l004':{goals:28,assists:6, apps:25,saves:null},
+  /* GOATS */
+  'fig_g001':{goals:21,assists:14,apps:26,saves:null},
+  'fig_g002':{goals:19,assists:8, apps:24,saves:null},
+  'fig_g003':{goals:14,assists:16,apps:18,saves:null},
+  /* LEGENDARY */
+  'fig_l001':{goals:24,assists:8, apps:28,saves:null},
+  'fig_l002':{goals:16,assists:14,apps:30,saves:null},
+  'fig_l003':{goals:28,assists:6, apps:25,saves:null},
+  'fig_l004':{goals:20,assists:5, apps:27,saves:null},
+  /* EPIC */
   'fig_e001':{goals:8, assists:11,apps:24,saves:null},
   'fig_e002':{goals:14,assists:9, apps:27,saves:null},
-  'fig_e003':{goals:4, assists:6, apps:26,saves:null},
+  'fig_e003':{goals:5, assists:8, apps:28,saves:null},
   'fig_e004':{goals:7, assists:10,apps:29,saves:null},
   'fig_e005':{goals:12,assists:8, apps:28,saves:null},
   'fig_e006':{goals:15,assists:10,apps:22,saves:null},
@@ -64,6 +70,11 @@ const PLAYER_STATS = {
   'fig_e008':{goals:5, assists:9, apps:20,saves:null},
   'fig_e009':{goals:11,assists:13,apps:30,saves:null},
   'fig_e010':{goals:9, assists:7, apps:27,saves:null},
+  'fig_e011':{goals:11,assists:13,apps:30,saves:null},
+  'fig_e012':{goals:6, assists:7, apps:26,saves:null},
+  'fig_e013':{goals:13,assists:9, apps:24,saves:null},
+  'fig_e014':{goals:18,assists:4, apps:28,saves:null},
+  /* RARE */
   'fig_r001':{goals:2, assists:1, apps:24,saves:null},
   'fig_r002':{goals:3, assists:1, apps:28,saves:null},
   'fig_r003':{goals:2, assists:0, apps:26,saves:null},
@@ -76,6 +87,13 @@ const PLAYER_STATS = {
   'fig_r010':{goals:7, assists:8, apps:20,saves:null},
   'fig_r011':{goals:6, assists:7, apps:24,saves:null},
   'fig_r012':{goals:5, assists:9, apps:22,saves:null},
+  'fig_r013':{goals:0, assists:0, apps:22,saves:85},
+  'fig_r014':{goals:4, assists:8, apps:27,saves:null},
+  'fig_r015':{goals:3, assists:4, apps:25,saves:null},
+  'fig_r016':{goals:16,assists:5, apps:28,saves:null},
+  'fig_r017':{goals:12,assists:4, apps:24,saves:null},
+  'fig_r018':{goals:0, assists:0, apps:25,saves:73},
+  /* COMMON */
   'fig_c001':{goals:4, assists:5, apps:20,saves:null},
   'fig_c002':{goals:8, assists:4, apps:22,saves:null},
   'fig_c003':{goals:13,assists:3, apps:24,saves:null},
@@ -90,6 +108,16 @@ const PLAYER_STATS = {
   'fig_c012':{goals:14,assists:2, apps:21,saves:null},
   'fig_c013':{goals:9, assists:3, apps:24,saves:null},
   'fig_c014':{goals:3, assists:4, apps:20,saves:null},
+  'fig_c015':{goals:2, assists:3, apps:22,saves:null},
+  'fig_c016':{goals:8, assists:7, apps:24,saves:null},
+  'fig_c017':{goals:9, assists:8, apps:23,saves:null},
+  'fig_c018':{goals:5, assists:8, apps:26,saves:null},
+  'fig_c019':{goals:4, assists:9, apps:25,saves:null},
+  'fig_c020':{goals:11,assists:3, apps:22,saves:null},
+  'fig_c021':{goals:9, assists:10,apps:23,saves:null},
+  'fig_c022':{goals:8, assists:7, apps:21,saves:null},
+  'fig_c023':{goals:2, assists:2, apps:22,saves:null},
+  'fig_c024':{goals:5, assists:4, apps:20,saves:null},
 };
 
 /* Fotos: usar API.getPhotoById(fig.id, fig.sdbName||fig.name) — localStorage */
@@ -342,11 +370,22 @@ const Album = {
 
     /* ── Evento delegado en el modal-box (no en overlay para no interferir con cerrar) ── */
     const box = document.getElementById('modal-box');
+    const overlay = document.getElementById('modal-overlay');
+
+    const cleanupListeners = () => {
+      box.removeEventListener('click', handler);
+      if (overlay) overlay.removeEventListener('click', onOverlayClose);
+    };
+
     const handler = async (e) => {
       const card = e.target.closest('[data-pick]');
       if (!card) return;
-      if (e.target.closest('#modal-close')) return;
-      box.removeEventListener('click', handler);
+      if (e.target.closest('#modal-close')) {
+        // X button: no changes, just close
+        cleanupListeners();
+        return;
+      }
+      cleanupListeners();
       const pick = card.dataset.pick;
       if (pick === '__clear__') delete saved[key];
       else {
@@ -361,7 +400,14 @@ const Album = {
       await this.renderIdealTeam();
       Toast.success('Alineación actualizada ✅');
     };
+
+    // Si el usuario cierra el modal sin elegir (overlay o botón X), no cambiar nada
+    const onOverlayClose = () => {
+      cleanupListeners();
+    };
+
     box.addEventListener('click', handler);
+    if (overlay) overlay.addEventListener('click', onOverlayClose);
 
     // Precargar fotos disponibles en bg
     available.forEach(f => {

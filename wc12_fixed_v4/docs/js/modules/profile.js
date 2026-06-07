@@ -265,14 +265,16 @@ const Profile = {
           : null;
       }).filter(Boolean);
 
-      user.figuritas    = merged;
-      user.tiradas      = Number(data.tiradas)   || user.tiradas;
-      user.aciertos     = Number(data.aciertos)  || user.aciertos;
-      user.monedas      = Number(data.monedas)   || user.monedas || 0;
-      user.pityCount    = Number(data.pityCount) || 0;
-      user.favoritos    = data.favoritos    || user.favoritos;
-      user.predicciones = data.predicciones || user.predicciones;
-      user.equipo_ideal = data.equipo_ideal || user.equipo_ideal;
+      user.figuritas        = merged;
+      // Restaurar tiradas exactas del export; freeSpinsClaimed se mantiene siempre en true
+      user.tiradas          = typeof data.tiradas === 'number' ? data.tiradas : (user.tiradas ?? 0);
+      user.freeSpinsClaimed = true;   // nunca volver a entregar las 5 iniciales
+      user.aciertos         = Number(data.aciertos)  || user.aciertos;
+      user.monedas          = typeof data.monedas === 'number' ? data.monedas : (user.monedas ?? 0);
+      user.pityCount        = Number(data.pityCount) || 0;
+      user.favoritos        = data.favoritos    || user.favoritos;
+      user.predicciones     = data.predicciones || user.predicciones;
+      user.equipo_ideal     = data.equipo_ideal || user.equipo_ideal;
       if (data.lastDailyPull) user.lastDailyPull = data.lastDailyPull;
 
       await Auth.updateUser(user);
