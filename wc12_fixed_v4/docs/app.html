@@ -230,12 +230,28 @@
 
       <!-- PROFILE -->
       <section id="tab-profile" class="tab-section">
-        <div class="section-header"><h2>👤 Mi Perfil</h2></div>
+        <div class="section-header"><h2>Mi Perfil</h2></div>
         <div class="profile-card" id="profile-card">
-          <div class="profile-avatar" id="profile-avatar">👤</div>
+          <div class="profile-avatar-wrap">
+            <div class="profile-avatar" id="profile-avatar"></div>
+            <button class="btn-avatar-edit" id="btn-edit-avatar" title="Cambiar foto">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
+            </button>
+            <input type="file" id="input-avatar-file" accept="image/*" style="display:none">
+          </div>
           <div class="profile-info">
-            <h3 id="profile-name">Jugador</h3>
-            <p id="profile-email">-</p>
+            <div class="profile-field-row">
+              <h3 id="profile-name">Jugador</h3>
+              <button class="btn-field-edit" id="btn-edit-name" title="Editar nombre">
+                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
+              </button>
+            </div>
+            <div class="profile-field-row">
+              <p id="profile-email">-</p>
+              <button class="btn-field-edit" id="btn-edit-email" title="Editar correo">
+                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
+              </button>
+            </div>
             <p id="profile-date">Registrado: -</p>
           </div>
           <div class="profile-stats">
@@ -245,8 +261,8 @@
             <div class="pstat"><span id="ps-monedas">0</span><label>Monedas</label></div>
           </div>
           <div class="profile-battle-stats">
-            <div class="pstat"><span id="ps-wins">0</span><label>🏆 Victorias</label></div>
-            <div class="pstat"><span id="ps-losses">0</span><label>💀 Derrotas</label></div>
+            <div class="pstat"><span id="ps-wins">0</span><label>Victorias</label></div>
+            <div class="pstat"><span id="ps-losses">0</span><label>Derrotas</label></div>
           </div>
         </div>
         <div class="profile-section">
@@ -260,6 +276,29 @@
         <div class="profile-section">
           <h3>Historial de Predicciones</h3>
           <div id="bet-history" class="bet-history"></div>
+        </div>
+        <div class="profile-section" id="api-config-section">
+          <h3>⚙️ Configuración de API</h3>
+          <p style="font-size:0.75rem;color:var(--text-muted);margin-bottom:0.75rem">
+            Conecta tu propia key de <strong>API-Football</strong> para obtener partidos y resultados en tiempo real. Sin key, la app usa datos estáticos de respaldo.
+          </p>
+          <div id="api-status-banner" style="margin-bottom:0.75rem"></div>
+          <div style="display:flex;flex-direction:column;gap:0.5rem">
+            <label style="font-size:0.7rem;color:var(--text-secondary);letter-spacing:1px;text-transform:uppercase">API-Football Key (RapidAPI)</label>
+            <div style="display:flex;gap:0.5rem">
+              <input type="password" id="input-af-key" placeholder="Pega tu x-rapidapi-key aquí"
+                style="flex:1;background:var(--bg-surface);border:1px solid var(--border);border-radius:6px;padding:0.5rem 0.75rem;color:var(--text-primary);font-size:0.8rem;outline:none"/>
+              <button class="btn btn-sm" id="btn-save-af-key" style="white-space:nowrap">Guardar</button>
+            </div>
+            <div style="display:flex;gap:0.5rem;flex-wrap:wrap">
+              <button class="btn btn-secondary btn-sm" id="btn-test-af-key">🔍 Verificar key</button>
+              <button class="btn btn-secondary btn-sm" id="btn-clear-api-cache">🗑️ Limpiar caché</button>
+              <button class="btn btn-secondary btn-sm" id="btn-remove-af-key">❌ Quitar key</button>
+            </div>
+            <p style="font-size:0.68rem;color:var(--text-muted)">
+              Obtén una key gratis en <a href="https://rapidapi.com/api-sports/api/api-football" target="_blank" style="color:var(--accent)">rapidapi.com</a> (plan Free: 100 req/día).
+            </p>
+          </div>
         </div>
         <div class="profile-section">
           <h3>Datos</h3>

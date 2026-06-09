@@ -310,6 +310,8 @@ const Predictions = {
   /**
    * evaluatePredictions(finishedMatches)
    * Llama desde dashboard al actualizar stats.
+   * También acepta partidos recién terminados del live feed para
+   * actualizar predicciones en tiempo real sin esperar a "Actualizar stats".
    */
   async evaluatePredictions(finishedMatches) {
     const user = await Auth.currentUser();
@@ -322,9 +324,22 @@ const Predictions = {
     for (const pred of preds) {
       if (pred.result !== 'pending') continue;
       const match = finishedMatches.find(m => String(m.id) === String(pred.matchId));
-      if (!match || !match.finalResult) continue;
+      if (!match) continue;
 
-      if (pred.pick === match.finalResult) {
+      // Aceptar tanto finalResult (campo legado) como marcador directo del live feed
+      let finalResult = match.finalResult;
+      if (!finalResult && match.scoreHome !== undefined && match.scoreAway !== undefined
+          && match.status === 'finished') {
+        const sh = Number(match.scoreHome), sa = Number(match.scoreAway);
+        finalResult = sh > sa ? 'home' : sa > sh ? 'away' : 'draw';
+        // Guardar marcador final en la predicción para mostrarlo en el historial
+        pred.finalScore = `${sh}–${sa}`;
+        pred.finalHome  = match.home  || '';
+        pred.finalAway  = match.away  || '';
+      }
+      if (!finalResult) continue;
+
+      if (pred.pick === finalResult) {
         pred.result = 'win';
         tirasGanadas += 1;
         newWins++;
@@ -332,7 +347,8 @@ const Predictions = {
         pred.result = 'loss';
       }
 
-      if (pred.exact && match.exactScore && pred.exact === match.exactScore) {
+      const exactScore = match.exactScore || pred.finalScore;
+      if (pred.exact && exactScore && pred.exact === exactScore) {
         pred.exactCorrect = true;
         tirasGanadas += 3;
       }
@@ -344,11 +360,35 @@ const Predictions = {
       user.predicciones = preds;
       await Auth.updateUser(user);
       await DB.logActivity(user.email, 'pred_reward', `+${tirasGanadas} tiradas por predicciones`);
-      Toast.success(`🎉 ¡Acertaste predicciones! +${tirasGanadas} tiradas`);
+      Toast.success(`¡Predicciones acertadas! +${tirasGanadas} tiradas`);
+    } else {
+      // Guardar igualmente para registrar marcadores finales aunque no haya premio
+      const hadPending = (user.predicciones || []).some(p => p.result === 'pending'
+        && finishedMatches.some(m => String(m.id) === String(p.matchId)));
+      if (hadPending) {
+        user.predicciones = preds;
+        await Auth.updateUser(user);
+      }
     }
 
-    user.predicciones = preds;
-    await Auth.updateUser(user);
     return tirasGanadas;
+  },
+
+  /**
+   * checkLiveFinished — llama desde el timer de live cada vez que renderUpcoming
+   * detecta partidos que acaban de cambiar a 'finished'. Evalúa predicciones
+   * automáticamente sin intervención del usuario.
+   */
+  async checkLiveFinished(allMatches) {
+    if (!Array.isArray(allMatches) || !allMatches.length) return;
+    const finished = allMatches.filter(m => m.status === 'finished'
+      && m.scoreHome !== undefined && m.scoreAway !== undefined);
+    if (!finished.length) return;
+    await this.evaluatePredictions(finished);
+    // Refrescar panel si está visible
+    const el = document.getElementById('predictions-list');
+    if (el && document.getElementById('tab-predictions')?.classList.contains('active')) {
+      await this.render();
+    }
   }
 };

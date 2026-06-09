@@ -1,6 +1,6 @@
 /**
- * profile.js — Perfil de usuario, favoritos, export/import  v2
- * Mejoras: stats correctas, monedas visibles, actividad reciente
+ * profile.js — Perfil de usuario, favoritos, export/import  v3
+ * v3: Edición de nombre, correo y foto de perfil
  */
 
 const Profile = {
@@ -9,62 +9,146 @@ const Profile = {
     const user = await Auth.currentUser();
     if (!user) return;
 
-    // BUG FIX: usar helper para no crashear si el DOM no tiene el elemento
     const setEl = (id, val) => { const el = document.getElementById(id); if (el) el.textContent = val; };
     setEl('profile-name',  user.name  || 'Jugador');
     setEl('profile-email', user.email || '-');
-    // BUG FIX: user.createdAt puede ser undefined en cuentas antiguas -> crash silencioso
     const fechaStr = user.createdAt
       ? new Date(user.createdAt).toLocaleDateString('es-SV', { dateStyle: 'long' })
       : '-';
     setEl('profile-date', 'Registrado: ' + fechaStr);
 
-    // Stats correctas
+    // Avatar: foto guardada o iniciales
+    const avatarEl = document.getElementById('profile-avatar');
+    if (avatarEl) {
+      if (user.photoURL) {
+        avatarEl.innerHTML = `<img src="${user.photoURL}" alt="Avatar" style="width:100%;height:100%;object-fit:cover;border-radius:50%">`;
+      } else {
+        const initials = (user.name || 'J').split(' ').map(w => w[0]).join('').substring(0,2).toUpperCase();
+        avatarEl.textContent = initials;
+      }
+    }
+
+    // Stats
     const figuritas   = user.figuritas || [];
-    const unicas      = figuritas.length;                              // figuritas distintas
-    const totalCards  = figuritas.reduce((s, f) => s + 1 + (f.duplicados||0), 0); // total incluyendo dupes
+    const unicas      = figuritas.length;
     const total       = Gacha.getTotalFiguritas();
     const pct         = total > 0 ? Math.round((unicas / total) * 100) : 0;
     const monedas     = user.monedas || 0;
     const duplicados  = figuritas.reduce((s, f) => s + (f.duplicados||0), 0);
 
-    // BUG FIX: todos los setEl con helper seguro
     setEl('ps-figuritas', `${unicas}/${total}`);
     setEl('ps-tiradas',   user.tiradas ?? 0);
     setEl('ps-wins',      user.battleWins || 0);
     setEl('ps-losses',    user.battleLosses || 0);
     setEl('ps-aciertos',  user.aciertos ?? 0);
 
-    // Pity counter (si existe el elemento)
     const pityEl = document.getElementById('ps-pity');
     if (pityEl) pityEl.textContent = `${user.pityCount || 0}/${50}`;
 
-    // Monedas + duplicados
     const monedasEl = document.getElementById('ps-monedas');
     if (monedasEl) monedasEl.textContent = monedas;
 
-    // Barra de progreso del álbum en perfil
     const pctEl = document.getElementById('ps-album-pct');
     if (pctEl) pctEl.textContent = `${pct}%`;
 
     this.renderFavorites(user);
     this.renderBetHistory(user);
+    this._bindEditEvents();
 
-    // Botón convertir duplicados (si existe)
     const btnConvert = document.getElementById('btn-convert-dupes');
     if (btnConvert) {
-      btnConvert.textContent = `🔄 Convertir duplicados (${duplicados}) → monedas`;
+      btnConvert.textContent = `Convertir duplicados (${duplicados}) en monedas`;
       btnConvert.disabled = duplicados === 0;
       btnConvert.onclick = async () => {
         const { coins, converted } = await Gacha.convertDuplicates();
         if (coins > 0) {
-          Toast.success(`💰 ¡+${coins} monedas! (${converted} duplicados convertidos)`);
-          await this.render(); // Refrescar
+          Toast.success(`+${coins} monedas obtenidas (${converted} duplicados)`);
+          await this.render();
         } else {
           Toast.warn('No tienes duplicados para convertir');
         }
       };
     }
+  },
+
+  _bindEditEvents() {
+    // Editar nombre
+    const btnName = document.getElementById('btn-edit-name');
+    if (btnName && !btnName._bound) {
+      btnName._bound = true;
+      btnName.addEventListener('click', () => this._editField('name', 'Nuevo nombre', 'text'));
+    }
+    // Editar correo
+    const btnEmail = document.getElementById('btn-edit-email');
+    if (btnEmail && !btnEmail._bound) {
+      btnEmail._bound = true;
+      btnEmail.addEventListener('click', () => this._editField('email', 'Nuevo correo', 'email'));
+    }
+    // Editar avatar (botón sobre la foto)
+    const btnAvatar = document.getElementById('btn-edit-avatar');
+    const inputFile = document.getElementById('input-avatar-file');
+    if (btnAvatar && inputFile && !btnAvatar._bound) {
+      btnAvatar._bound = true;
+      btnAvatar.addEventListener('click', () => inputFile.click());
+      inputFile.addEventListener('change', async (e) => {
+        const file = e.target.files[0];
+        if (!file) return;
+        await this._updateAvatar(file);
+        e.target.value = '';
+      });
+    }
+  },
+
+  async _editField(field, placeholder, type = 'text') {
+    const user = await Auth.currentUser();
+    if (!user) return;
+
+    const currentVal = user[field] || '';
+    const newVal = prompt(`${placeholder}:`, currentVal);
+    if (newVal === null || newVal.trim() === '') return;
+
+    if (type === 'email' && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(newVal.trim())) {
+      Toast.error('Correo no válido');
+      return;
+    }
+
+    user[field] = newVal.trim();
+    await Auth.updateUser(user);
+    Toast.success(`${field === 'name' ? 'Nombre' : 'Correo'} actualizado`);
+    await this.render();
+  },
+
+  async _updateAvatar(file) {
+    if (!file.type.startsWith('image/')) { Toast.error('El archivo debe ser una imagen'); return; }
+    if (file.size > 2 * 1024 * 1024) { Toast.error('La imagen no debe superar 2 MB'); return; }
+
+    // Comprimir/redimensionar a 200×200 antes de guardar en base64
+    const dataURL = await new Promise((resolve, reject) => {
+      const img = new Image();
+      const url = URL.createObjectURL(file);
+      img.onload = () => {
+        URL.revokeObjectURL(url);
+        const SIZE = 200;
+        const canvas = document.createElement('canvas');
+        canvas.width = canvas.height = SIZE;
+        const ctx = canvas.getContext('2d');
+        // Crop centrado
+        const s = Math.min(img.width, img.height);
+        const sx = (img.width  - s) / 2;
+        const sy = (img.height - s) / 2;
+        ctx.drawImage(img, sx, sy, s, s, 0, 0, SIZE, SIZE);
+        resolve(canvas.toDataURL('image/jpeg', 0.82));
+      };
+      img.onerror = reject;
+      img.src = url;
+    });
+
+    const user = await Auth.currentUser();
+    if (!user) return;
+    user.photoURL = dataURL;
+    await Auth.updateUser(user);
+    Toast.success('Foto de perfil actualizada');
+    await this.render();
   },
 
   renderFavorites(user) {
@@ -119,12 +203,17 @@ const Profile = {
 
     history.innerHTML = preds.slice(0, 10).map(p => {
       const icon  = p.result === 'win' ? '✅' : p.result === 'loss' ? '❌' : '⏳';
-      const extra = p.exactCorrect ? ' +3🎴' : p.result === 'win' ? ' +1🎴' : '';
+      const extra = p.exactCorrect ? ' +3 tiradas' : p.result === 'win' ? ' +1 tirada' : '';
+      // Mostrar marcador final si está disponible
+      const scoreHtml = p.finalScore
+        ? `<span class="bet-score">${p.finalHome || ''} ${p.finalScore} ${p.finalAway || ''}</span>`
+        : '';
       return `
         <div class="bet-item">
           <div class="bet-left">
             <span class="bet-match">${p.matchId}</span>
             <span class="bet-pick">${this._labelPick(p.pick)}${p.exact ? ' · ' + p.exact : ''}</span>
+            ${scoreHtml}
           </div>
           <span class="bet-result ${p.result}">
             ${icon}${extra}
@@ -285,5 +374,122 @@ const Profile = {
       console.error('[Profile.importData]', err);
       Toast.error('Error al leer el archivo: ' + err.message);
     }
+  }
+};
+
+/* ══════════════════════════════════════════
+   API CONFIG — gestión de key y estado
+══════════════════════════════════════════ */
+const ApiConfig = {
+  _LS_KEY: 'wcc_af_api_key',
+
+  init() {
+    // Mostrar key guardada (enmascarada)
+    const saved = localStorage.getItem(this._LS_KEY);
+    const input = document.getElementById('input-af-key');
+    if (input && saved) input.placeholder = '••••••••' + saved.slice(-6);
+
+    document.getElementById('btn-save-af-key')?.addEventListener('click', () => this.saveKey());
+    document.getElementById('btn-test-af-key')?.addEventListener('click', () => this.testKey());
+    document.getElementById('btn-remove-af-key')?.addEventListener('click', () => this.removeKey());
+    document.getElementById('btn-clear-api-cache')?.addEventListener('click', () => this.clearCache());
+
+    this.renderStatus();
+  },
+
+  saveKey() {
+    const val = document.getElementById('input-af-key')?.value?.trim();
+    if (!val) { Toast.error('Ingresa una key primero'); return; }
+    localStorage.setItem(this._LS_KEY, val);
+    document.getElementById('input-af-key').value = '';
+    document.getElementById('input-af-key').placeholder = '••••••••' + val.slice(-6);
+    // Limpiar caché para forzar nueva consulta con la key nueva
+    this.clearCache(false);
+    Toast.success('✅ Key guardada. Recargando datos...');
+    setTimeout(() => location.reload(), 1200);
+  },
+
+  removeKey() {
+    localStorage.removeItem(this._LS_KEY);
+    const input = document.getElementById('input-af-key');
+    if (input) { input.value = ''; input.placeholder = 'Pega tu x-rapidapi-key aquí'; }
+    this.clearCache(false);
+    Toast.info('Key eliminada. Usando key por defecto.');
+    this.renderStatus();
+  },
+
+  clearCache(showToast = true) {
+    const keys = ['wcc_af_today_ts','wcc_af_next_ts','wcc_cache_upcoming_today',
+                  'wcc_cache_upcoming_next','wcc_upcoming_day','wcc_af_standings_ts',
+                  'wcc_af_req_count','wcc_af_req_day','wcc_shared_live'];
+    keys.forEach(k => localStorage.removeItem(k));
+    if (showToast) Toast.success('🗑️ Caché limpiada. Los datos se recargarán.');
+  },
+
+  async testKey() {
+    const btn = document.getElementById('btn-test-af-key');
+    if (btn) btn.textContent = '⏳ Verificando...';
+    const key = localStorage.getItem(this._LS_KEY) || 'e1317aae745eba2daea7870d948b8e8f';
+    try {
+      const res = await fetch('https://v3.football.api-sports.io/status', {
+        headers: { 'x-rapidapi-key': key, 'x-rapidapi-host': 'v3.football.api-sports.io' },
+        signal: AbortSignal.timeout(8000)
+      });
+      if (!res.ok) throw new Error(`HTTP ${res.status}`);
+      const data = await res.json();
+      const plan  = data?.response?.subscription?.plan || 'Free';
+      const used  = data?.response?.requests?.current  ?? '?';
+      const limit = data?.response?.requests?.limit_day ?? '?';
+      Toast.success(`✅ Key válida · Plan: ${plan} · Requests hoy: ${used}/${limit}`);
+      API_STATUS.lastError = null;
+    } catch(err) {
+      if (err.message.includes('403') || err.message.includes('401')) {
+        Toast.error('❌ Key inválida o sin acceso a este endpoint');
+        API_STATUS.lastError = 'auth';
+      } else if (err.message.includes('429')) {
+        Toast.error('⚠️ Límite diario alcanzado (429)');
+        API_STATUS.lastError = 'rate_limit';
+      } else {
+        Toast.error('❌ Error de red: ' + err.message);
+        API_STATUS.lastError = 'network';
+      }
+    } finally {
+      if (btn) btn.textContent = '🔍 Verificar key';
+      this.renderStatus();
+    }
+  },
+
+  renderStatus() {
+    const banner = document.getElementById('api-status-banner');
+    if (!banner) return;
+    const hasCustomKey = !!localStorage.getItem(this._LS_KEY);
+    const err = API_STATUS.lastError;
+    const usingMock = API_STATUS.usingMock;
+    const reqToday  = API_STATUS.requestsToday;
+
+    let html = '';
+    if (err === 'auth') {
+      html = `<div style="background:rgba(255,68,68,0.1);border:1px solid #ff4444;border-radius:6px;padding:0.5rem 0.75rem;font-size:0.72rem;color:#ff8888">
+        ❌ <strong>Key inválida</strong> — Verifica que sea correcta y que hayas suscrito la API en RapidAPI.
+      </div>`;
+    } else if (err === 'rate_limit') {
+      html = `<div style="background:rgba(255,170,0,0.1);border:1px solid #ffaa00;border-radius:6px;padding:0.5rem 0.75rem;font-size:0.72rem;color:#ffcc44">
+        ⚠️ <strong>Límite diario alcanzado</strong> — Los datos se actualizarán mañana. Requests usados hoy: ${reqToday}.
+      </div>`;
+    } else if (usingMock) {
+      html = `<div style="background:rgba(255,170,0,0.1);border:1px solid #ffaa00;border-radius:6px;padding:0.5rem 0.75rem;font-size:0.72rem;color:#ffcc44">
+        ⚠️ <strong>Datos estáticos</strong> — La API no respondió. Agrega una key válida para datos en tiempo real.
+      </div>`;
+    } else if (API_STATUS.lastSuccess) {
+      const ago = Math.round((Date.now() - API_STATUS.lastSuccess) / 60000);
+      html = `<div style="background:rgba(68,255,136,0.08);border:1px solid #44ff88;border-radius:6px;padding:0.5rem 0.75rem;font-size:0.72rem;color:#44cc88">
+        ✅ <strong>API activa</strong>${hasCustomKey ? ' (key propia)' : ' (key por defecto)'} · Última sync: hace ${ago} min · Requests hoy: ${reqToday}
+      </div>`;
+    } else {
+      html = `<div style="background:rgba(100,100,100,0.1);border:1px solid var(--border);border-radius:6px;padding:0.5rem 0.75rem;font-size:0.72rem;color:var(--text-muted)">
+        ℹ️ ${hasCustomKey ? 'Usando key propia guardada' : 'Usando key por defecto — añade la tuya para más control'}
+      </div>`;
+    }
+    banner.innerHTML = html;
   }
 };

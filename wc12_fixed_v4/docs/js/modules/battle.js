@@ -1,5 +1,5 @@
 /**
- * battle.js — Sistema de Batallas de Alineaciones  v7
+ * battle.js — Sistema de Batallas de Alineaciones  v8
  *
  * Flujo:
  * 1. El usuario tiene su equipo ideal guardado (o se genera uno random de sus figuritas)
@@ -9,7 +9,65 @@
  *    - Tiro libre (timing)
  *    - Jugador vs Jugador (comparar ratings + azar)
  * 4. Recompensas: tiradas + monedas
+ *
+ * v8: Límite de 3 intentos por categoría por día.
+ *     Cada intento se consume siempre, gane o pierda.
  */
+
+/* ─── Límite diario de intentos por categoría ──────────────────────────────
+   Cada categoría (classic, penalties, quiz) tiene máx. 3 intentos por día.
+   El intento se consume al INICIAR el juego, no al terminar.
+   Almacenado en localStorage: { date, counts: { classic:0, penalties:0, quiz:0 } }
+─────────────────────────────────────────────────────────────────────────── */
+const BattleAttempts = {
+  MAX_DAILY: 3,
+  LS_KEY: 'wcc_battle_attempts',
+
+  _todayStr() {
+    const d = new Date();
+    return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
+  },
+
+  _load() {
+    try {
+      const raw = localStorage.getItem(this.LS_KEY);
+      if (!raw) return null;
+      const parsed = JSON.parse(raw);
+      if (parsed.date !== this._todayStr()) return null; // nuevo día
+      return parsed;
+    } catch(_) { return null; }
+  },
+
+  _save(data) {
+    try { localStorage.setItem(this.LS_KEY, JSON.stringify(data)); } catch(_) {}
+  },
+
+  /** Devuelve cuántos intentos quedan para la categoría hoy. */
+  remaining(category) {
+    const data = this._load();
+    if (!data) return this.MAX_DAILY;
+    return Math.max(0, this.MAX_DAILY - (data.counts[category] || 0));
+  },
+
+  /** Consume un intento. Devuelve false si ya no hay intentos disponibles. */
+  consume(category) {
+    let data = this._load() || { date: this._todayStr(), counts: {} };
+    const used = data.counts[category] || 0;
+    if (used >= this.MAX_DAILY) return false;
+    data.counts[category] = used + 1;
+    this._save(data);
+    return true;
+  },
+
+  /** Resumen legible de intentos restantes para la UI. */
+  summaryHTML() {
+    return ['classic','penalties','quiz'].map(cat => {
+      const rem = this.remaining(cat);
+      const label = { classic:'Clásica', penalties:'Penales', quiz:'Quiz' }[cat];
+      return `<span class="battle-attempts-badge ${rem === 0 ? 'exhausted' : ''}">${label}: ${rem}/${this.MAX_DAILY}</span>`;
+    }).join('');
+  }
+};
 
 const FORMATIONS_DEF = {
   '4-3-3': {
@@ -137,23 +195,26 @@ const Battle = {
       </div>
 
       <div class="battle-modes">
-        <div class="battle-mode-card" id="bmode-classic">
-          <div class="bmode-icon">⚔️</div>
+        <div class="battle-mode-card ${BattleAttempts.remaining('classic') === 0 ? 'bmode-exhausted' : ''}" id="bmode-classic">
+          <div class="bmode-icon">⚔</div>
           <div class="bmode-title">Batalla Clásica</div>
           <div class="bmode-desc">Compara ratings con factor suerte. Rápido y emocionante.</div>
-          <div class="bmode-reward">🎴 +1 tirada al ganar</div>
+          <div class="bmode-reward">+1 tirada al ganar</div>
+          <div class="bmode-attempts">Intentos hoy: ${BattleAttempts.remaining('classic')}/${BattleAttempts.MAX_DAILY}</div>
         </div>
-        <div class="battle-mode-card" id="bmode-penalties">
+        <div class="battle-mode-card ${BattleAttempts.remaining('penalties') === 0 ? 'bmode-exhausted' : ''}" id="bmode-penalties">
           <div class="bmode-icon">🥅</div>
           <div class="bmode-title">Tanda de Penales</div>
-          <div class="bmode-desc">3 penales cada uno. Minijuego de timing. ¡Nerviante!</div>
-          <div class="bmode-reward">🎴 +2 tiradas al ganar</div>
+          <div class="bmode-desc">3 penales cada uno. Minijuego de timing.</div>
+          <div class="bmode-reward">+2 tiradas al ganar</div>
+          <div class="bmode-attempts">Intentos hoy: ${BattleAttempts.remaining('penalties')}/${BattleAttempts.MAX_DAILY}</div>
         </div>
-        <div class="battle-mode-card" id="bmode-quiz">
+        <div class="battle-mode-card ${BattleAttempts.remaining('quiz') === 0 ? 'bmode-exhausted' : ''}" id="bmode-quiz">
           <div class="bmode-icon">🧠</div>
           <div class="bmode-title">Quiz Mundialista</div>
-          <div class="bmode-desc">5 preguntas sobre el Mundial. Cada acierto suma puntos a tu equipo.</div>
-          <div class="bmode-reward">🎴 +2 tiradas + 💰 monedas</div>
+          <div class="bmode-desc">5 preguntas sobre el Mundial. Cada acierto suma puntos.</div>
+          <div class="bmode-reward">+2 tiradas + monedas</div>
+          <div class="bmode-attempts">Intentos hoy: ${BattleAttempts.remaining('quiz')}/${BattleAttempts.MAX_DAILY}</div>
         </div>
       </div>
 
@@ -191,10 +252,28 @@ const Battle = {
     };
     this._renderTeamPanels();
 
-    // Eventos
-    document.getElementById('bmode-classic').addEventListener('click', () => this.startClassicBattle());
-    document.getElementById('bmode-penalties').addEventListener('click', () => this.startPenaltyBattle());
-    document.getElementById('bmode-quiz').addEventListener('click', () => this.startQuizBattle());
+    // Eventos — verificar límite de intentos antes de iniciar
+    document.getElementById('bmode-classic').addEventListener('click', () => {
+      if (!BattleAttempts.consume('classic')) {
+        Toast.warn('Ya usaste los 3 intentos de Batalla Clásica hoy. Vuelve mañana.');
+        return;
+      }
+      this.startClassicBattle();
+    });
+    document.getElementById('bmode-penalties').addEventListener('click', () => {
+      if (!BattleAttempts.consume('penalties')) {
+        Toast.warn('Ya usaste los 3 intentos de Penales hoy. Vuelve mañana.');
+        return;
+      }
+      this.startPenaltyBattle();
+    });
+    document.getElementById('bmode-quiz').addEventListener('click', () => {
+      if (!BattleAttempts.consume('quiz')) {
+        Toast.warn('Ya usaste los 3 intentos de Quiz hoy. Vuelve mañana.');
+        return;
+      }
+      this.startQuizBattle();
+    });
     document.getElementById('btn-battle-random-team').addEventListener('click', () => {
       if (this._state.usingIdeal) {
         // Switch to random
@@ -381,8 +460,8 @@ const Battle = {
 
     // Fase B: Usuario ataja el disparo de la CPU
     const doCpuShoot = (onDone) => {
-      const cpuShotDir = Math.floor(Math.random() * 3); // 0=izq, 1=centro, 2=der
-      const cpuDirLabels = ['⬅️ Izquierda', '⬆️ Centro', '➡️ Derecha'];
+      const cpuShotDir = Math.floor(Math.random() * 6); // 0-5, igual que el tirador
+      const cpuDirLabels = ['↖️ Izq. arriba', '⬆️ Centro', '↗️ Der. arriba', '↙️ Izq. abajo', '⬇️ Raso centro', '↘️ Der. abajo'];
       Modal.open(`
         <div style="text-align:center;padding:0.5rem 0">
           <div style="font-size:1.8rem;margin-bottom:0.3rem">🥅</div>
@@ -390,10 +469,10 @@ const Battle = {
             <strong>¡La CPU va a disparar!</strong><br>
             Elige hacia dónde tirarte:
           </p>
-          <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:0.6rem;max-width:240px;margin:0 auto">
+          <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:0.4rem;max-width:280px;margin:0 auto">
             ${cpuDirLabels.map((label, i) => `
               <button class="penalty-save-btn btn btn-secondary" data-dir="${i}"
-                style="padding:0.8rem 0.3rem;font-size:0.8rem">
+                style="padding:0.5rem 0.2rem;font-size:0.72rem">
                 ${label}
               </button>
             `).join('')}

@@ -1,10 +1,20 @@
 /**
- * api.js — v14
- * NUEVAS APIs:
- *   1. api-football (RapidAPI)  ✅ key: e1317aae745eba2daea7870d948b8e8f
- *   2. football-data.org        ✅ key: 3bec1d9c3a5d418ebed176fdaaafe7e0
- *   3. thesportsdb              ✅ fotos jugadores (FUENTE PRINCIPAL)
- *   4. Mock                     ✅ fallback
+ * api.js — v16  (Opción A — Live scores inteligentes)
+ * ESTRATEGIA:
+ *   1. getLiveMatches():
+ *      - Si NO hay partido activo por hora → devuelve [] (0 requests a api-football)
+ *      - Si HAY partido activo → llama api-football en vivo cada 2 minutos
+ *      - Máximo consumo: 90 min partido ÷ 2 min = ~45 req. Con 1-2 partidos/día ≤ 90 req.
+ *      - TheSportsDB livescores son Premium → no se usa para live
+ *   2. getUpcomingMatches():
+ *      - TheSportsDB /eventsday.php para partidos de hoy
+ *      - api-football como fallback con cooldown 6h
+ *      - MOCK como fallback final
+ *   3. Fotos: TheSportsDB /searchplayers.php (sin cambios, funciona bien)
+ *   4. Standings/Finished: api-football con cooldown 12h
+ *
+ * Consumo estimado sin Mundial activo: ≤ 10 req/día
+ * Consumo estimado con partido en curso: ≤ 55 req/día (seguro)
  *
  * CAMBIOS v13:
  *   - MOCK actualizado: Portugal vs Chile (06-jun), más amistosos correctos
@@ -30,10 +40,36 @@
  *   - precachePhotos() llama _migrateLegacyPhotoCache() en primer uso
  */
 
+/* ── Clave de API-Football: prioridad localStorage → fallback hardcoded ── */
+const _AF_KEY_LS = 'wcc_af_api_key';
+const _AF_KEY_DEFAULT = 'e1317aae745eba2daea7870d948b8e8f';
+
+function getAfKey() {
+  try { return localStorage.getItem(_AF_KEY_LS) || _AF_KEY_DEFAULT; } catch(_) { return _AF_KEY_DEFAULT; }
+}
+
+/* Estado global de la API — permite mostrar banner en el perfil */
+const API_STATUS = {
+  usingMock:   false,
+  lastError:   null,     // 'rate_limit' | 'auth' | 'network' | null
+  lastSuccess: null,     // timestamp
+  requestsToday: parseInt(localStorage.getItem('wcc_af_req_count') || '0'),
+  _resetDay: localStorage.getItem('wcc_af_req_day') || '',
+  _bumpCount() {
+    const today = new Date().toISOString().slice(0,10);
+    if (this._resetDay !== today) { this.requestsToday = 0; this._resetDay = today; }
+    this.requestsToday++;
+    try {
+      localStorage.setItem('wcc_af_req_count', String(this.requestsToday));
+      localStorage.setItem('wcc_af_req_day',   today);
+    } catch(_) {}
+  }
+};
+
 const API_CONFIG = {
   apiFootball: {
     base:    'https://v3.football.api-sports.io',
-    key:     'e1317aae745eba2daea7870d948b8e8f',
+    get key() { return getAfKey(); },
     enabled: true
   },
   footballData: {
@@ -105,8 +141,9 @@ function yesterdayStr() {
 ══════════════════════════════════════════════ */
 /* ══════════════════════════════════════════════════════════════════
    _mockStatus(date, time) — calcula estado dinámicamente a partir
-   de la fecha/hora del partido vs. hora actual del navegador.
-   Se llama en tiempo de ejecución, así el mock nunca queda desactualizado.
+   de la fecha/hora del partido (en UTC) vs. hora actual.
+   IMPORTANTE: los horarios del MOCK están en UTC para evitar bugs
+   de zona horaria en usuarios de El Salvador (UTC-6) u otras zonas.
    Duración estimada de un partido: 105 min (90 + 15 extra).
 ══════════════════════════════════════════════════════════════════ */
 function _mockStatus(date, time, scoreHome, scoreAway) {
@@ -114,7 +151,8 @@ function _mockStatus(date, time, scoreHome, scoreAway) {
   // Si ya tiene marcador fijo → siempre finished
   if (scoreHome !== null && scoreHome !== undefined &&
       scoreAway !== null && scoreAway !== undefined) return 'finished';
-  const start = new Date(`${date}T${time}:00`);
+  // Parsear como UTC (agregar 'Z' para forzar interpretación UTC)
+  const start = new Date(`${date}T${time}:00Z`);
   const now   = Date.now();
   const diffMin = (now - start.getTime()) / 60000; // minutos transcurridos (neg = futuro)
   if (diffMin < 0)    return 'scheduled';          // aún no empieza
@@ -129,30 +167,39 @@ const MOCK = {
      scoreHome/scoreAway = null  → pendiente (estado calculado por hora)
      scoreHome/scoreAway = número → resultado final conocido
   ──────────────────────────────────────────────────────────────────── */
+  /* ── Todos los partidos (amistosos + Mundial) ──────────────────────
+     NOTA: todos los horarios están en UTC para cálculo correcto de estado
+     en cualquier zona horaria (El Salvador UTC-6, México UTC-5, etc.)
+     scoreHome/scoreAway = null  → pendiente (estado calculado por hora)
+     scoreHome/scoreAway = número → resultado final conocido
+  ──────────────────────────────────────────────────────────────────── */
   friendlyMatches: [
     /* ── RESULTADOS CONOCIDOS (ya terminaron) ── */
-    { id:'f001', home:'Brasil',     away:'Egipto',     homeFlag:'🇧🇷', awayFlag:'🇪🇬', date:'2026-06-03', time:'16:00', competition:'Amistoso', type:'friendly', venue:'Orlando, FL',        scoreHome:4, scoreAway:0 },
-    { id:'f009', home:'México',     away:'Ecuador',    homeFlag:'🇲🇽', awayFlag:'🇪🇨', date:'2026-06-04', time:'22:00', competition:'Amistoso', type:'friendly', venue:'Phoenix, AZ',        scoreHome:1, scoreAway:1 },
-    { id:'f010', home:'Uruguay',    away:'Austria',    homeFlag:'🇺🇾', awayFlag:'🇦🇹', date:'2026-06-05', time:'19:00', competition:'Amistoso', type:'friendly', venue:'Los Ángeles, CA',     scoreHome:2, scoreAway:1 },
-    { id:'f011', home:'Colombia',   away:'Perú',       homeFlag:'🇨🇴', awayFlag:'🇵🇪', date:'2026-06-05', time:'21:00', competition:'Amistoso', type:'friendly', venue:'Miami, FL',           scoreHome:0, scoreAway:0 },
-    /* ── 6 JUN — resultados conocidos ── */
-    { id:'f012', home:'Portugal',   away:'Chile',      homeFlag:'🇵🇹', awayFlag:'🇨🇱', date:'2026-06-06', time:'00:00', competition:'Amistoso', type:'friendly', venue:'Newark, NJ',          scoreHome:1, scoreAway:0 },
-    { id:'f002', home:'Argentina',  away:'Honduras',   homeFlag:'🇦🇷', awayFlag:'🇭🇳', date:'2026-06-06', time:'02:00', competition:'Amistoso', type:'friendly', venue:'Kyle Field, TX',      scoreHome:2, scoreAway:0 },
-    { id:'f003', home:'Inglaterra', away:'Nueva Zelanda',homeFlag:'🏴󠁧󠁢󠁥󠁮󠁧󠁿',awayFlag:'🇳🇿',date:'2026-06-06',time:'01:00',competition:'Amistoso',type:'friendly',venue:'Chicago, IL',       scoreHome:2, scoreAway:1 },
-    { id:'f013', home:'Alemania',   away:'Eslovenia',  homeFlag:'🇩🇪', awayFlag:'🇸🇮', date:'2026-06-06', time:'00:30', competition:'Amistoso', type:'friendly', venue:'Denver, CO',          scoreHome:3, scoreAway:0 },
-    { id:'f016', home:'Brasil',     away:'México',     homeFlag:'🇧🇷', awayFlag:'🇲🇽', date:'2026-06-06', time:'03:00', competition:'Amistoso', type:'friendly', venue:'Dallas, TX',          scoreHome:2, scoreAway:1 },
-    /* ── 7 JUN — HOY (hora local EE.UU. → hora UTC, estado dinámico por hora) ── */
-    { id:'f004', home:'Portugal',   away:'Nigeria',    homeFlag:'🇵🇹', awayFlag:'🇳🇬', date:'2026-06-07', time:'22:00', competition:'Amistoso', type:'friendly', venue:'Newark, NJ',          scoreHome:null, scoreAway:null },
-    { id:'f005', home:'Francia',    away:'Irlanda del N.',homeFlag:'🇫🇷',awayFlag:'🏴󠁧󠁢󠁮󠁩󠁲󠁿',date:'2026-06-08',time:'00:00',competition:'Amistoso',type:'friendly',venue:'East Rutherford',   scoreHome:null, scoreAway:null },
-    { id:'f008', home:'Marruecos',  away:'Noruega',    homeFlag:'🇲🇦', awayFlag:'🇳🇴', date:'2026-06-07', time:'23:00', competition:'Amistoso', type:'friendly', venue:'Washington D.C.',     scoreHome:null, scoreAway:null },
-    { id:'f017', home:'Japón',      away:'Islandia',   homeFlag:'🇯🇵', awayFlag:'🇮🇸', date:'2026-06-07', time:'22:00', competition:'Amistoso', type:'friendly', venue:'San José, CA',        scoreHome:null, scoreAway:null },
-    { id:'f018', home:'Corea del Sur',away:'Australia',homeFlag:'🇰🇷', awayFlag:'🇦🇺', date:'2026-06-07', time:'22:30', competition:'Amistoso', type:'friendly', venue:'Houston, TX',         scoreHome:null, scoreAway:null },
-    /* ── 8 JUN ── */
+    { id:'f001', home:'Brasil',     away:'Egipto',     homeFlag:'🇧🇷', awayFlag:'🇪🇬', date:'2026-06-03', time:'21:00', competition:'Amistoso', type:'friendly', venue:'Orlando, FL',        scoreHome:4, scoreAway:0 },
+    { id:'f009', home:'México',     away:'Ecuador',    homeFlag:'🇲🇽', awayFlag:'🇪🇨', date:'2026-06-05', time:'03:00', competition:'Amistoso', type:'friendly', venue:'Phoenix, AZ',        scoreHome:1, scoreAway:1 },
+    { id:'f010', home:'Uruguay',    away:'Austria',    homeFlag:'🇺🇾', awayFlag:'🇦🇹', date:'2026-06-06', time:'01:00', competition:'Amistoso', type:'friendly', venue:'Los Ángeles, CA',     scoreHome:2, scoreAway:1 },
+    { id:'f011', home:'Colombia',   away:'Costa Rica', homeFlag:'🇨🇴', awayFlag:'🇨🇷', date:'2026-06-05', time:'23:00', competition:'Amistoso', type:'friendly', venue:'Miami, FL',           scoreHome:3, scoreAway:0 },
+    /* ── 6 JUN — resultados conocidos (UTC) ── */
+    { id:'f012', home:'Portugal',   away:'Chile',      homeFlag:'🇵🇹', awayFlag:'🇨🇱', date:'2026-06-06', time:'21:45', competition:'Amistoso', type:'friendly', venue:'Newark, NJ',          scoreHome:2, scoreAway:1 },
+    { id:'f002', home:'Argentina',  away:'Honduras',   homeFlag:'🇦🇷', awayFlag:'🇭🇳', date:'2026-06-07', time:'01:00', competition:'Amistoso', type:'friendly', venue:'Kyle Field, TX',      scoreHome:2, scoreAway:0 },
+    { id:'f003', home:'Inglaterra', away:'Nueva Zelanda',homeFlag:'🏴󠁧󠁢󠁥󠁮󠁧󠁿',awayFlag:'🇳🇿',date:'2026-06-06',time:'23:00',competition:'Amistoso',type:'friendly',venue:'Chicago, IL',       scoreHome:2, scoreAway:1 },
+    { id:'f013', home:'Alemania',   away:'EE.UU.',     homeFlag:'🇩🇪', awayFlag:'🇺🇸', date:'2026-06-07', time:'01:00', competition:'Amistoso', type:'friendly', venue:'Denver, CO',          scoreHome:2, scoreAway:1 },
+    { id:'f016', home:'Brasil',     away:'México',     homeFlag:'🇧🇷', awayFlag:'🇲🇽', date:'2026-06-07', time:'02:00', competition:'Amistoso', type:'friendly', venue:'Dallas, TX',          scoreHome:2, scoreAway:1 },
+    /* ── 7 JUN — HOY (horarios UTC) ── */
+    { id:'f008', home:'Marruecos',  away:'Noruega',    homeFlag:'🇲🇦', awayFlag:'🇳🇴', date:'2026-06-07', time:'19:00', competition:'Amistoso', type:'friendly', venue:'Red Bull Arena, NJ',  scoreHome:1, scoreAway:1 },
+    { id:'f004', home:'Colombia',   away:'Jordania',   homeFlag:'🇨🇴', awayFlag:'🇯🇴', date:'2026-06-07', time:'23:00', competition:'Amistoso', type:'friendly', venue:'San Diego, CA',       scoreHome:2, scoreAway:0 },
+    { id:'f017', home:'Japón',      away:'Islandia',   homeFlag:'🇯🇵', awayFlag:'🇮🇸', date:'2026-05-31', time:'10:25', competition:'Amistoso', type:'friendly', venue:'Tokio, Japón',        scoreHome:1, scoreAway:0 },
+    { id:'f018', home:'Corea del Sur',away:'El Salvador',homeFlag:'🇰🇷', awayFlag:'🇸🇻', date:'2026-06-04', time:'02:00', competition:'Amistoso', type:'friendly', venue:'Salt Lake City, UT',  scoreHome:1, scoreAway:0 },
+    { id:'f019', home:'Ecuador',    away:'Guatemala',  homeFlag:'🇪🇨', awayFlag:'🇬🇹', date:'2026-06-08', time:'01:00', competition:'Amistoso', type:'friendly', venue:'EE.UU.',              scoreHome:3, scoreAway:0 },
+    /* ── 8 JUN (UTC) ── */
+    { id:'f005', home:'Francia',    away:'Irlanda del N.',homeFlag:'🇫🇷',awayFlag:'🏴󠁧󠁢󠁮󠁩󠁲󠁿',date:'2026-06-08',time:'23:00',competition:'Amistoso',type:'friendly',venue:'East Rutherford, NJ', scoreHome:null, scoreAway:null },
     { id:'f014', home:'Bélgica',    away:'Escocia',    homeFlag:'🇧🇪', awayFlag:'🏴󠁧󠁢󠁳󠁣󠁴󠁿', date:'2026-06-09', time:'00:00', competition:'Amistoso', type:'friendly', venue:'Atlanta, GA',       scoreHome:null, scoreAway:null },
-    /* ── 9 JUN ── */
-    { id:'f006', home:'España',     away:'Perú',       homeFlag:'🇪🇸', awayFlag:'🇵🇪', date:'2026-06-10', time:'00:00', competition:'Amistoso', type:'friendly', venue:'Filadelfia, PA',      scoreHome:null, scoreAway:null },
+    /* ── 9 JUN (UTC) — España vs Perú 02:00 UTC = 21:00 hora Puebla ── */
+    { id:'f006', home:'España',     away:'Perú',       homeFlag:'🇪🇸', awayFlag:'🇵🇪', date:'2026-06-09', time:'02:00', competition:'Amistoso', type:'friendly', venue:'Puebla, México',      scoreHome:null, scoreAway:null },
+    /* ── 10 JUN (UTC) ── */
     { id:'f007', home:'Argentina',  away:'Islandia',   homeFlag:'🇦🇷', awayFlag:'🇮🇸', date:'2026-06-10', time:'01:30', competition:'Amistoso', type:'friendly', venue:'Tuscaloosa, AL',      scoreHome:null, scoreAway:null },
     { id:'f015', home:'Brasil',     away:'Paraguay',   homeFlag:'🇧🇷', awayFlag:'🇵🇾', date:'2026-06-10', time:'02:00', competition:'Amistoso', type:'friendly', venue:'Fort Worth, TX',      scoreHome:null, scoreAway:null },
+    { id:'f020', home:'Portugal',   away:'Nigeria',    homeFlag:'🇵🇹', awayFlag:'🇳🇬', date:'2026-06-10', time:'14:45', competition:'Amistoso', type:'friendly', venue:'Leiria, Portugal',    scoreHome:null, scoreAway:null },
   ],
 
   /* ── Partidos del Mundial 2026 (inicio: 11 Jun) ── */
@@ -174,17 +221,19 @@ const MOCK = {
   finishedMatches: [],
 
   predictableMatches: [
-    /* 7 Jun — hoy */
-    { id:'f004', home:'Portugal',    away:'Nigeria',        homeFlag:'🇵🇹', awayFlag:'🇳🇬', date:'2026-06-07', time:'22:00', competition:'Amistoso', type:'friendly' },
-    { id:'f008', home:'Marruecos',   away:'Noruega',        homeFlag:'🇲🇦', awayFlag:'🇳🇴', date:'2026-06-07', time:'23:00', competition:'Amistoso', type:'friendly' },
-    { id:'f017', home:'Japón',       away:'Islandia',       homeFlag:'🇯🇵', awayFlag:'🇮🇸', date:'2026-06-07', time:'22:00', competition:'Amistoso', type:'friendly' },
-    { id:'f018', home:'Corea del Sur',away:'Australia',     homeFlag:'🇰🇷', awayFlag:'🇦🇺', date:'2026-06-07', time:'22:30', competition:'Amistoso', type:'friendly' },
-    /* 8-9 Jun */
-    { id:'f005', home:'Francia',     away:'Irlanda del N.', homeFlag:'🇫🇷', awayFlag:'🏴󠁧󠁢󠁮󠁩󠁲󠁿', date:'2026-06-08', time:'00:00', competition:'Amistoso', type:'friendly' },
+    /* 7 Jun — hoy (horarios UTC) */
+    { id:'f008', home:'Marruecos',   away:'Noruega',        homeFlag:'🇲🇦', awayFlag:'🇳🇴', date:'2026-06-07', time:'19:00', competition:'Amistoso', type:'friendly' },
+    { id:'f004', home:'Colombia',    away:'Jordania',       homeFlag:'🇨🇴', awayFlag:'🇯🇴', date:'2026-06-07', time:'23:00', competition:'Amistoso', type:'friendly' },
+    { id:'f017', home:'Japón',       away:'Islandia',       homeFlag:'🇯🇵', awayFlag:'🇮🇸', date:'2026-06-08', time:'00:00', competition:'Amistoso', type:'friendly' },
+    { id:'f018', home:'Corea del Sur',away:'Australia',     homeFlag:'🇰🇷', awayFlag:'🇦🇺', date:'2026-06-08', time:'00:30', competition:'Amistoso', type:'friendly' },
+    { id:'f019', home:'Ecuador',     away:'Guatemala',      homeFlag:'🇪🇨', awayFlag:'🇬🇹', date:'2026-06-08', time:'01:00', competition:'Amistoso', type:'friendly' },
+    /* 8-9 Jun (UTC) */
+    { id:'f005', home:'Francia',     away:'Irlanda del N.', homeFlag:'🇫🇷', awayFlag:'🏴󠁧󠁢󠁮󠁩󠁲󠁿', date:'2026-06-08', time:'23:00', competition:'Amistoso', type:'friendly' },
     { id:'f014', home:'Bélgica',     away:'Escocia',        homeFlag:'🇧🇪', awayFlag:'🏴󠁧󠁢󠁳󠁣󠁴󠁿', date:'2026-06-09', time:'00:00', competition:'Amistoso', type:'friendly' },
-    { id:'f006', home:'España',      away:'Perú',           homeFlag:'🇪🇸', awayFlag:'🇵🇪', date:'2026-06-10', time:'00:00', competition:'Amistoso', type:'friendly' },
+    { id:'f006', home:'España',      away:'Perú',           homeFlag:'🇪🇸', awayFlag:'🇵🇪', date:'2026-06-09', time:'02:00', competition:'Amistoso', type:'friendly' },
     { id:'f007', home:'Argentina',   away:'Islandia',       homeFlag:'🇦🇷', awayFlag:'🇮🇸', date:'2026-06-10', time:'01:30', competition:'Amistoso', type:'friendly' },
     { id:'f015', home:'Brasil',      away:'Paraguay',       homeFlag:'🇧🇷', awayFlag:'🇵🇾', date:'2026-06-10', time:'02:00', competition:'Amistoso', type:'friendly' },
+    { id:'f020', home:'Portugal',    away:'Nigeria',        homeFlag:'🇵🇹', awayFlag:'🇳🇬', date:'2026-06-10', time:'14:45', competition:'Amistoso', type:'friendly' },
     /* Mundial */
     { id:'wc001', home:'México',     away:'Sudáfrica',      homeFlag:'🇲🇽', awayFlag:'🇿🇦', date:'2026-06-11', time:'20:00', competition:'Grupo A — J1', type:'worldcup' },
     { id:'wc002', home:'Canadá',     away:'Bosnia y Herz.', homeFlag:'🇨🇦', awayFlag:'🇧🇦', date:'2026-06-12', time:'21:00', competition:'Grupo B — J1', type:'worldcup' },
@@ -263,6 +312,103 @@ MOCK.teams = [
   { id:'t48', name:'Rumania',         flag:'🇷🇴', group:'L', pj:0,w:0,d:0,l:0,gf:0,gc:0,pts:0 },
 ];
 
+/* ══════════════════════════════════════════════════════════════════════
+   SHARED LIVE CACHE — v17
+   Propósito: con múltiples usuarios/pestañas abiertos, evitar que cada
+   instancia haga su propio request a api-football (límite 1000/día).
+   Estrategia: BroadcastChannel para compartir respuestas entre pestañas
+   + localStorage como caché compartido de 2 minutos con lock optimista.
+   • Solo UNA pestaña hace el fetch real (la que obtiene el "lock").
+   • El resto espera hasta 3 s y lee del localStorage compartido.
+   • Si localStorage no tiene dato fresco → hace su propio fetch como fallback.
+══════════════════════════════════════════════════════════════════════ */
+const SharedLiveCache = {
+  CHANNEL:     'wcc_live_sync',
+  LS_KEY:      'wcc_shared_live',
+  LOCK_KEY:    'wcc_live_lock',
+  TTL:         2 * 60 * 1000,   // 2 minutos
+  LOCK_TTL:    15 * 1000,       // 15 s — tiempo máximo que puede durar un fetch
+
+  _channel: null,
+
+  _getChannel() {
+    if (!this._channel && typeof BroadcastChannel !== 'undefined') {
+      this._channel = new BroadcastChannel(this.CHANNEL);
+    }
+    return this._channel;
+  },
+
+  /** Lee la caché compartida del localStorage. */
+  read() {
+    try {
+      const raw = localStorage.getItem(this.LS_KEY);
+      if (!raw) return null;
+      const { data, ts } = JSON.parse(raw);
+      if (Date.now() - ts > this.TTL) { localStorage.removeItem(this.LS_KEY); return null; }
+      return data;
+    } catch(_) { return null; }
+  },
+
+  /** Escribe en la caché compartida y notifica a otras pestañas. */
+  write(data) {
+    try {
+      localStorage.setItem(this.LS_KEY, JSON.stringify({ data, ts: Date.now() }));
+      this._getChannel()?.postMessage({ type: 'live_update', data });
+    } catch(_) {}
+  },
+
+  /**
+   * acquireLock — intenta obtener el "derecho de hacer el fetch".
+   * Usa un timestamp en localStorage como lock optimista.
+   * Devuelve true si adquirió el lock, false si otro lo tiene.
+   */
+  acquireLock() {
+    try {
+      const existing = localStorage.getItem(this.LOCK_KEY);
+      if (existing) {
+        const lockTs = parseInt(existing, 10);
+        if (Date.now() - lockTs < this.LOCK_TTL) return false; // otro lo tiene
+      }
+      localStorage.setItem(this.LOCK_KEY, String(Date.now()));
+      return true;
+    } catch(_) { return true; } // si falla, intentar el fetch igualmente
+  },
+
+  releaseLock() {
+    try { localStorage.removeItem(this.LOCK_KEY); } catch(_) {}
+  },
+
+  /**
+   * waitForData — espera hasta 3s a que otra pestaña publique datos.
+   * Escucha el BroadcastChannel o lee el localStorage periódicamente.
+   */
+  waitForData(timeoutMs = 3000) {
+    return new Promise(resolve => {
+      const start = Date.now();
+      const ch = this._getChannel();
+      let resolved = false;
+      const done = (data) => {
+        if (resolved) return;
+        resolved = true;
+        if (ch) ch.onmessage = null;
+        resolve(data);
+      };
+      // Escuchar broadcast inmediato
+      if (ch) {
+        ch.onmessage = (e) => {
+          if (e.data?.type === 'live_update') done(e.data.data);
+        };
+      }
+      // Polling del localStorage como fallback
+      const interval = setInterval(() => {
+        const cached = SharedLiveCache.read();
+        if (cached !== null) { clearInterval(interval); done(cached); return; }
+        if (Date.now() - start > timeoutMs) { clearInterval(interval); done(null); }
+      }, 300);
+    });
+  }
+};
+
 /* ══════════════════════════════════════════════
    API MODULE
 ══════════════════════════════════════════════ */
@@ -274,9 +420,35 @@ const API = {
       const timer = setTimeout(() => ctrl.abort(), 8000);
       const res = await fetch(url, { headers, signal: ctrl.signal });
       clearTimeout(timer);
+      if (res.status === 429) {
+        API_STATUS.lastError = 'rate_limit';
+        throw new Error(`HTTP 429 Rate limit`);
+      }
+      if (res.status === 403 || res.status === 401) {
+        API_STATUS.lastError = 'auth';
+        throw new Error(`HTTP ${res.status} Auth error`);
+      }
       if (!res.ok) throw new Error(`HTTP ${res.status}`);
-      return await res.json();
+      const data = await res.json();
+      // api-football devuelve errors:{} cuando la key no tiene acceso
+      if (data?.errors && Object.keys(data.errors).length > 0) {
+        const errMsg = JSON.stringify(data.errors);
+        if (errMsg.includes('token') || errMsg.includes('Subscription') || errMsg.includes('Access')) {
+          API_STATUS.lastError = 'auth';
+          throw new Error(`API error: ${errMsg}`);
+        }
+        if (errMsg.includes('rate') || errMsg.includes('requests')) {
+          API_STATUS.lastError = 'rate_limit';
+          throw new Error(`Rate limit: ${errMsg}`);
+        }
+      }
+      // Éxito
+      API_STATUS.lastError  = null;
+      API_STATUS.lastSuccess = Date.now();
+      if (url.includes('v3.football.api-sports.io')) API_STATUS._bumpCount();
+      return data;
     } catch (err) {
+      if (!API_STATUS.lastError) API_STATUS.lastError = 'network';
       console.warn('[API]', url.split('?')[0], '-', err.message);
       return null;
     }
@@ -314,110 +486,163 @@ const API = {
      Busca Mundial 2026 + Amistosos internacionales simultáneamente
   ══════════════════════════════════════════ */
   async getLiveMatches() {
-    // TTL corto para en vivo: 60 seg
+    // 1 — Caché en memoria (instancia actual, más rápido)
     const mem = this._memGet('live');
     if (mem) return mem;
 
-    const _afMap = f => ({
-      id:          `af_${f.fixture.id}`,
-      home:        f.teams.home.name,
-      away:        f.teams.away.name,
-      homeFlag:    getFlag(f.teams.home.name),
-      awayFlag:    getFlag(f.teams.away.name),
-      scoreHome:   f.goals.home ?? 0,
-      scoreAway:   f.goals.away ?? 0,
-      minute:      f.fixture.status.elapsed || '?',
-      status:      'live',
-      competition: f.league?.name || '',
-      type:        (f.league?.id === AF_WORLD_CUP_ID) ? 'worldcup' : 'friendly'
-    });
+    // 2 — Caché compartida entre pestañas/usuarios (SharedLiveCache)
+    //     Evita que múltiples usuarios simultáneos agoten la cuota de 1000 req/día.
+    //     Si el localStorage tiene dato fresco (< 2 min) lo usa directamente.
+    const shared = SharedLiveCache.read();
+    if (shared !== null) return this._memSet('live', shared);
 
-    /* 1. api-football — Mundial + Amistosos + todos los internacionales en vivo */
-    const [afWC, afFr, afAll] = await Promise.all([
-      this._af(`/fixtures?live=all&league=${AF_WORLD_CUP_ID}&season=${AF_SEASON_2026}`),
-      this._af(`/fixtures?live=all&league=${AF_FRIENDLIES_ID}&season=${AF_SEASON_2026}`),
-      this._af(`/fixtures?live=all&league=${AF_FRIENDLIES_ID}`)  // sin filtro de season por si el año difiere
-    ]);
-    // Deduplicar por fixture.id
-    const afSeen = new Set();
-    const afCombined = [...(afWC?.response||[]), ...(afFr?.response||[]), ...(afAll?.response||[])]
-      .filter(f => { if (afSeen.has(f.fixture.id)) return false; afSeen.add(f.fixture.id); return true; });
-    if (afCombined.length > 0) {
-      const data = afCombined.map(_afMap);
-      this._memSet('live', data);
-      return data;
+    /* ════════════════════════════════════════════════════════════════
+       ESTRATEGIA OPCIÓN A — api-football como fuente de live scores
+       ────────────────────────────────────────────────────────────────
+       • Solo se llama a api-football si hay un partido en curso según
+         el calendario (getUpcomingMatches detecta status=live por hora).
+       • Si no hay partido activo → devuelve [] sin gastar requests.
+       • Si hay partido activo → llama api-football cada 2 minutos
+         (controlado por el timer en renderLive del dashboard).
+       • Amistosos internacionales: league=10 (International Friendlies)
+       • Mundial 2026: league=1
+       • Máximo consumo estimado: partido de 90 min = ~45 requests.
+         Con 1-2 partidos/día: ≤90 requests, dentro del límite de 100.
+       • Cuando no hay partido activo = 0 requests de api-football.
+    ════════════════════════════════════════════════════════════════ */
+
+    /* ── Paso 1: ¿Hay algún partido en curso ahora mismo? ────────────
+       Revisamos el MOCK/upcoming en memoria (ya cargado, sin coste).
+       Si ningún partido está en status=live por hora, no llamamos a la API.
+    ──────────────────────────────────────────────────────────────── */
+    const upcomingMem = this._memGet('upcoming');
+    const hasLiveByTime = (upcomingMem || []).some(m => m.status === 'live');
+
+    if (!hasLiveByTime) {
+      // No hay partido activo → devolver vacío sin gastar requests
+      const empty = [];
+      SharedLiveCache.write(empty);
+      return this._memSet('live', empty);
     }
 
-    /* 2. football-data.org — Mundial + cualquier partido en juego */
-    const [fdWC, fdAny] = await Promise.all([
-      this._fd('/competitions/2000/matches?status=LIVE'),
-      this._fd('/matches?status=IN_PLAY&limit=15')
-    ]);
-    const fdAll = [...(fdWC?.matches||[]), ...(fdAny?.matches||[])];
-    const seen = new Set();
-    const fdUniq = fdAll.filter(m => { if(seen.has(m.id)) return false; seen.add(m.id); return true; });
-    if (fdUniq.length > 0) {
-      const data = fdUniq.map(m => ({
-        id:          `fd_${m.id}`,
-        home:        m.homeTeam.shortName || m.homeTeam.name,
-        away:        m.awayTeam.shortName || m.awayTeam.name,
-        homeFlag:    getFlag(m.homeTeam.name),
-        awayFlag:    getFlag(m.awayTeam.name),
-        scoreHome:   m.score.fullTime.home ?? m.score.halfTime.home ?? 0,
-        scoreAway:   m.score.fullTime.away ?? m.score.halfTime.away ?? 0,
-        minute:      m.minute || '?',
+    /* ── Paso 2: Hay partido en curso → intentar ser la pestaña que hace el fetch
+       Sistema de lock optimista: solo UNA pestaña llama a api-football;
+       las demás esperan el resultado publicado en localStorage/BroadcastChannel.
+       Esto reduce el consumo de la cuota de 1000 req/día cuando varios usuarios
+       tienen la app abierta simultáneamente durante un partido.
+    ──────────────────────────────────────────────────────────────── */
+    const gotLock = SharedLiveCache.acquireLock();
+    if (!gotLock) {
+      // Otra pestaña/usuario está haciendo el fetch ahora mismo → esperar su resultado
+      const waited = await SharedLiveCache.waitForData(3500);
+      if (waited !== null) return this._memSet('live', waited);
+      // Si expiró el timeout, hacer el propio fetch como fallback
+    }
+
+    /* ── Paso 3: Llamar api-football (esta instancia tiene el lock) ──────────
+       Buscamos en TODAS las ligas internacionales disponibles.
+       Usamos Promise.allSettled para que si una falla no rompa todo.
+    ──────────────────────────────────────────────────────────────── */
+    let result = [];
+    try {
+      const [resWC, resFr] = await Promise.allSettled([
+        this._af(`/fixtures?live=all&league=${AF_WORLD_CUP_ID}&season=${AF_SEASON_2026}`),
+        this._af(`/fixtures?live=all&league=${AF_FRIENDLIES_ID}`)
+      ]);
+
+      const _afMap = f => ({
+        id:          `af_${f.fixture.id}`,
+        home:        f.teams.home.name,
+        away:        f.teams.away.name,
+        homeFlag:    getFlag(f.teams.home.name),
+        awayFlag:    getFlag(f.teams.away.name),
+        scoreHome:   f.goals.home ?? 0,
+        scoreAway:   f.goals.away ?? 0,
+        minute:      f.fixture.status.elapsed || f.fixture.status.short || '?',
         status:      'live',
-        competition: m.competition?.name || '',
-        type:        m.competition?.id === 2000 ? 'worldcup' : 'friendly'
-      }));
-      this._memSet('live', data);
-      return data;
+        competition: f.league?.name || '',
+        type:        f.league?.id === AF_WORLD_CUP_ID ? 'worldcup' : 'friendly'
+      });
+
+      const wcFixtures = resWC.status === 'fulfilled' ? (resWC.value?.response || []) : [];
+      const frFixtures = resFr.status === 'fulfilled' ? (resFr.value?.response || []) : [];
+
+      // Deduplicar por fixture id
+      const seen = new Set();
+      const combined = [...wcFixtures, ...frFixtures].filter(f => {
+        if (seen.has(f.fixture.id)) return false;
+        seen.add(f.fixture.id);
+        return true;
+      });
+
+      if (combined.length > 0) result = combined.map(_afMap);
+    } finally {
+      SharedLiveCache.releaseLock();
     }
 
-    /* 3. Si las APIs no devuelven nada en vivo → lista vacía. NO mostrar "hoy" aquí,
-       eso le corresponde a getUpcomingMatches / renderUpcoming */
-    return [];
+    // Publicar en caché compartida para otras pestañas/usuarios
+    SharedLiveCache.write(result);
+    return this._memSet('live', result);
   },
+
 
   /* ══════════════════════════════════════════
      PRÓXIMOS PARTIDOS — v12
      Mundial 2026 + Amistosos internacionales pre-mundial
   ══════════════════════════════════════════ */
   async getUpcomingMatches() {
-    // Invalidar caché si cambió el día (para que "hoy" siempre sea correcto)
+    /* ══════════════════════════════════════════════════════════════════
+       getUpcomingMatches — v17 DINÁMICA
+       ESTRATEGIA:
+         • Fuente principal: api-football (amistosos league=10 + Mundial league=1)
+         • Busca: partidos de HOY (con scores) + próximos 14 días
+         • Cache por capas:
+             - Partidos de HOY: caché 30 min (se actualizan scores durante el día)
+             - Próximos días:   caché 6h (raramente cambian)
+             - Al cambiar de día: caché de "hoy" se invalida automáticamente
+         • MOCK: solo fallback de emergencia si api-football falla
+         • Partidos de AYER: NO se muestran (ya pasó el día)
+    ════════════════════════════════════════════════════════════════════ */
     const todayStr = localDateStr();
-    const lastDay  = localStorage.getItem('wcc_upcoming_day');
+
+    // ── Invalidar caché del día anterior ──────────────────────────────
+    const lastDay = localStorage.getItem('wcc_upcoming_day');
     if (lastDay !== todayStr) {
-      // Nuevo día → limpiar cachés para forzar recálculo de estados
       this._memCache = Object.fromEntries(
         Object.entries(this._memCache).filter(([k]) => !k.startsWith('upcoming'))
       );
       localStorage.removeItem('wcc_cache_upcoming');
+      localStorage.removeItem('wcc_cache_upcoming_today');
       localStorage.setItem('wcc_upcoming_day', todayStr);
     }
 
+    // ── Caché en memoria (más rápido, vive 30 min) ────────────────────
     const mem = this._memGet('upcoming');
     if (mem) return mem;
-    const lsCached = this._lsGet('upcoming');
-    if (lsCached) return this._memSet('upcoming', lsCached);
-    const cached = await DB.getCacheStats('upcoming');
-    if (cached) return this._memSet('upcoming', cached);
 
-    const _afMap = (f, type) => {
-      const sc = f.fixture?.status?.short || '';
+    // ── Helper: mapear fixture de api-football al formato interno ─────
+    const _afMap = (f) => {
+      const sc         = f.fixture?.status?.short || '';
       const isLive     = ['1H','2H','HT','ET','P','BT','INT'].includes(sc);
       const isFinished = ['FT','AET','PEN'].includes(sc);
+      const isWC       = f.league?.id === AF_WORLD_CUP_ID;
+      // Convertir fecha UTC a fecha local del usuario para mostrar correctamente
+      const fixtureUTC = new Date(f.fixture.date);
+      const localDate  = localDateStr(fixtureUTC);
+      // Hora local en formato HH:MM
+      const localHH    = String(fixtureUTC.getHours()).padStart(2,'0');
+      const localMM    = String(fixtureUTC.getMinutes()).padStart(2,'0');
       return {
         id:          `af_${f.fixture.id}`,
         home:        f.teams.home.name,
         away:        f.teams.away.name,
         homeFlag:    getFlag(f.teams.home.name),
         awayFlag:    getFlag(f.teams.away.name),
-        date:        f.fixture.date?.split('T')[0],
-        time:        f.fixture.date?.split('T')[1]?.substring(0,5),
-        competition: f.league?.round || f.league?.name || (type==='worldcup'?'Mundial 2026':'Amistoso'),
-        venue:       f.fixture.venue?.name || '',
-        type,
+        date:        localDate,
+        time:        `${localHH}:${localMM}`,
+        competition: f.league?.round || f.league?.name || (isWC ? 'Mundial 2026' : 'Amistoso Internacional'),
+        venue:       f.fixture.venue?.city ? `${f.fixture.venue.name}, ${f.fixture.venue.city}` : (f.fixture.venue?.name || ''),
+        type:        isWC ? 'worldcup' : 'friendly',
         status:      isLive ? 'live' : isFinished ? 'finished' : 'scheduled',
         scoreHome:   (isLive || isFinished) ? (f.goals?.home ?? null) : null,
         scoreAway:   (isLive || isFinished) ? (f.goals?.away ?? null) : null,
@@ -425,107 +650,171 @@ const API = {
       };
     };
 
-    /* 1. api-football: partidos de HOY (todos los estados) + proximos programados */
-    const [afWCtoday, afFrToday, afWCnext, afFrNext] = await Promise.all([
-      this._af(`/fixtures?league=${AF_WORLD_CUP_ID}&season=${AF_SEASON_2026}&date=${todayStr}`),
-      this._af(`/fixtures?league=${AF_FRIENDLIES_ID}&date=${todayStr}`),
-      this._af(`/fixtures?league=${AF_WORLD_CUP_ID}&season=${AF_SEASON_2026}&status=NS&next=12`),
-      this._af(`/fixtures?league=${AF_FRIENDLIES_ID}&season=${AF_SEASON_2026}&status=NS&next=8`),
-    ]);
+    // ── Calcular fecha límite (hoy + 14 días) ─────────────────────────
+    const limitDate = new Date();
+    limitDate.setDate(limitDate.getDate() + 14);
+    const limitStr = localDateStr(limitDate);
 
-    const afSeen = new Set();
-    const afAllRaw = [
-      ...(afWCtoday?.response||[]).map(f=>({...f,_type:'worldcup'})),
-      ...(afFrToday?.response||[]).map(f=>({...f,_type:'friendly'})),
-      ...(afWCnext?.response||[]).map(f=>({...f,_type:'worldcup'})),
-      ...(afFrNext?.response||[]).map(f=>({...f,_type:'friendly'})),
-    ].filter(f => { if (afSeen.has(f.fixture.id)) return false; afSeen.add(f.fixture.id); return true; });
+    /* ── CAPA 1: api-football — fuente principal dinámica ────────────
+       Lanzamos en paralelo:
+         a) Partidos de HOY en amistosos y Mundial (con scores actualizados)
+         b) Próximos partidos del Mundial (status=NS, siguiente 20)
+         c) Próximos amistosos (status=NS, siguiente 20)
+       Cache para HOY: 30 minutos (se re-consulta durante el día)
+       Cache para próximos: 6 horas
+    ──────────────────────────────────────────────────────────────── */
+    const AF_TODAY_KEY  = 'wcc_af_today_ts';
+    const AF_NEXT_KEY   = 'wcc_af_next_ts';
+    const AF_TODAY_COOL = 30 * 60 * 1000;       // 30 minutos
+    const AF_NEXT_COOL  = 6  * 60 * 60 * 1000;  // 6 horas
 
-    if (afAllRaw.length > 0) {
-      const data = afAllRaw
-        .map(f => _afMap(f, f._type))
-        .filter(m => (m.date||'') >= todayStr)
-        .sort((a,b) => ((a.date||'')+(a.time||'')) < ((b.date||'')+(b.time||'')) ? -1 : 1);
-      await DB.setCacheStats('upcoming', data);
-      this._lsSet('upcoming', data);
-      return this._memSet('upcoming', data);
+    const lastAfToday = parseInt(localStorage.getItem(AF_TODAY_KEY) || '0');
+    const lastAfNext  = parseInt(localStorage.getItem(AF_NEXT_KEY)  || '0');
+
+    const needsToday = Date.now() - lastAfToday > AF_TODAY_COOL;
+    const needsNext  = Date.now() - lastAfNext  > AF_NEXT_COOL;
+
+    // Leer caché de próximos (puede estar vigente aunque hoy ya no lo esté)
+    let cachedNext = null;
+    try {
+      const raw = localStorage.getItem('wcc_cache_upcoming_next');
+      if (raw) {
+        const parsed = JSON.parse(raw);
+        if (Date.now() - parsed.ts < AF_NEXT_COOL) cachedNext = parsed.data;
+      }
+    } catch(_) {}
+
+    let todayFixtures  = [];
+    let nextFixtures   = cachedNext || [];
+
+    // Consultar api-football solo lo que necesita refresh
+    const requests = [];
+    if (needsToday) {
+      requests.push(
+        this._af(`/fixtures?league=${AF_FRIENDLIES_ID}&date=${todayStr}`),
+        this._af(`/fixtures?league=${AF_WORLD_CUP_ID}&season=${AF_SEASON_2026}&date=${todayStr}`)
+      );
+    }
+    if (needsNext && !cachedNext) {
+      requests.push(
+        this._af(`/fixtures?league=${AF_WORLD_CUP_ID}&season=${AF_SEASON_2026}&status=NS&next=20`),
+        this._af(`/fixtures?league=${AF_FRIENDLIES_ID}&status=NS&next=20`)
+      );
     }
 
-    /* 2. football-data.org: partidos de hoy + proximos */
-    const [fdToday, fdNext] = await Promise.all([
-      this._fd(`/matches?dateFrom=${todayStr}&dateTo=${todayStr}`),
-      this._fd('/competitions/2000/matches?status=SCHEDULED'),
-    ]);
-    const fdAll = [...(fdToday?.matches||[]), ...(fdNext?.matches||[])];
-    const fdSeen = new Set();
-    const fdUniq = fdAll.filter(m => { if(fdSeen.has(m.id)) return false; fdSeen.add(m.id); return true; });
-    if (fdUniq.length > 0) {
-      const data = fdUniq.map(m => {
-        const s = m.status;
-        const isLive     = ['IN_PLAY','HALF_TIME','PAUSED'].includes(s);
-        const isFinished = ['FINISHED'].includes(s);
-        return {
-          id:          `fd_${m.id}`,
-          home:        m.homeTeam.shortName || m.homeTeam.name,
-          away:        m.awayTeam.shortName || m.awayTeam.name,
-          homeFlag:    getFlag(m.homeTeam.name || m.homeTeam.shortName),
-          awayFlag:    getFlag(m.awayTeam.name || m.awayTeam.shortName),
-          date:        m.utcDate?.split('T')[0],
-          time:        m.utcDate?.split('T')[1]?.substring(0,5),
-          competition: m.stage?.replace(/_/g,' ') || m.competition?.name || 'Amistoso',
-          venue:       m.venue || '',
-          type:        m.competition?.id === 2000 ? 'worldcup' : 'friendly',
-          status:      isLive ? 'live' : isFinished ? 'finished' : 'scheduled',
-          scoreHome:   (isLive || isFinished) ? (m.score?.fullTime?.home ?? m.score?.halfTime?.home ?? null) : null,
-          scoreAway:   (isLive || isFinished) ? (m.score?.fullTime?.away ?? m.score?.halfTime?.away ?? null) : null,
-        };
-      }).filter(m => (m.date||'') >= todayStr)
-        .sort((a,b) => ((a.date||'')+(a.time||'')) < ((b.date||'')+(b.time||'')) ? -1 : 1);
-      if (data.length) {
-        await DB.setCacheStats('upcoming', data);
+    const results = requests.length > 0
+      ? await Promise.allSettled(requests)
+      : [];
+
+    let rIdx = 0;
+    if (needsToday) {
+      const rFriendlyToday = results[rIdx++];
+      const rWCtoday       = results[rIdx++];
+      const ftd = rFriendlyToday.status === 'fulfilled' ? (rFriendlyToday.value?.response || []) : [];
+      const wtd = rWCtoday.status       === 'fulfilled' ? (rWCtoday.value?.response       || []) : [];
+      todayFixtures = [...ftd, ...wtd];
+      if (todayFixtures.length > 0) {
+        localStorage.setItem(AF_TODAY_KEY, String(Date.now()));
+        try {
+          localStorage.setItem('wcc_cache_upcoming_today', JSON.stringify({ data: todayFixtures, ts: Date.now() }));
+        } catch(_) {}
+      } else {
+        // Si la API no devolvió nada hoy, intentar leer caché corta anterior
+        try {
+          const raw = localStorage.getItem('wcc_cache_upcoming_today');
+          if (raw) {
+            const parsed = JSON.parse(raw);
+            todayFixtures = parsed.data || [];
+          }
+        } catch(_) {}
+      }
+    } else {
+      // Leer caché corta de "hoy"
+      try {
+        const raw = localStorage.getItem('wcc_cache_upcoming_today');
+        if (raw) {
+          const parsed = JSON.parse(raw);
+          todayFixtures = parsed.data || [];
+        }
+      } catch(_) {}
+    }
+
+    if (needsNext && !cachedNext) {
+      const rWCnext       = results[rIdx++];
+      const rFriendlyNext = results[rIdx++];
+      const wn = rWCnext.status       === 'fulfilled' ? (rWCnext.value?.response       || []) : [];
+      const fn = rFriendlyNext.status === 'fulfilled' ? (rFriendlyNext.value?.response || []) : [];
+      nextFixtures = [...wn, ...fn];
+      if (nextFixtures.length > 0) {
+        localStorage.setItem(AF_NEXT_KEY, String(Date.now()));
+        try {
+          localStorage.setItem('wcc_cache_upcoming_next', JSON.stringify({ data: nextFixtures, ts: Date.now() }));
+        } catch(_) {}
+      }
+    }
+
+    // Combinar y deduplicar por fixture id
+    const seen = new Set();
+    const allFixtures = [...todayFixtures, ...nextFixtures].filter(f => {
+      if (!f?.fixture?.id) return false;
+      if (seen.has(f.fixture.id)) return false;
+      seen.add(f.fixture.id);
+      return true;
+    });
+
+    if (allFixtures.length > 0) {
+      const data = allFixtures
+        .map(_afMap)
+        .filter(m => {
+          // Solo mostrar: partidos de HOY (cualquier status) + futuros (no finished)
+          if (m.date === todayStr) return true;
+          if (m.date > todayStr && m.status !== 'finished') return true;
+          return false;
+        })
+        .filter(m => m.date <= limitStr) // no más de 14 días adelante
+        .sort((a, b) => {
+          // En vivo primero, luego por fecha+hora
+          if (a.status === 'live' && b.status !== 'live') return -1;
+          if (b.status === 'live' && a.status !== 'live') return  1;
+          return ((a.date||'')+(a.time||'')) < ((b.date||'')+(b.time||'')) ? -1 : 1;
+        });
+
+      if (data.length > 0) {
         this._lsSet('upcoming', data);
         return this._memSet('upcoming', data);
       }
     }
 
-    /* 3. MOCK fallback — estado calculado dinámicamente por hora real */
-    const todayLocal     = localDateStr();
+    /* ── CAPA 2: MOCK fallback — solo si api-football falla totalmente ──
+       Estado calculado dinámicamente por hora (no hardcodeado).
+       Nunca muestra partidos de días anteriores.
+    ──────────────────────────────────────────────────────────────────── */
+    console.warn('[API] Usando MOCK como fallback para upcoming');
+    API_STATUS.usingMock = true;
     const yesterdayLocal = yesterdayStr();
     const allMock = [...MOCK.friendlyMatches, ...MOCK.upcomingMatches]
       .filter(m => {
         const d = m.date || '';
-        // Incluir:
-        //   - Partidos de HOY (aunque ya terminaron)
-        //   - Partidos FUTUROS
-        //   - Partidos de AYER que tienen resultado (para mostrar "ayer" mientras no sea medianoche UTC)
-        if (d === todayLocal) return true;
-        if (d > todayLocal)   return true;
-        // Ayer con resultado → incluir para que no desaparezcan de golpe
-        if (d === yesterdayLocal && m.scoreHome !== null) return true;
-        return false;
+        return d === todayStr || d > todayStr;
       })
       .map(m => {
         const dynStatus = _mockStatus(m.date, m.time, m.scoreHome, m.scoreAway);
         return {
           ...m,
           status:    dynStatus,
-          scoreHome: (dynStatus === 'finished' || dynStatus === 'live') ? (m.scoreHome ?? null) : null,
-          scoreAway: (dynStatus === 'finished' || dynStatus === 'live') ? (m.scoreAway ?? null) : null,
-          isYesterday: m.date === yesterdayLocal,
+          scoreHome: dynStatus !== 'scheduled' ? (m.scoreHome ?? null) : null,
+          scoreAway: dynStatus !== 'scheduled' ? (m.scoreAway ?? null) : null,
         };
       })
-      .sort((a,b) => {
-        // Orden: live primero, luego por fecha+hora
+      .sort((a, b) => {
         if (a.status === 'live' && b.status !== 'live') return -1;
-        if (b.status === 'live' && a.status !== 'live') return 1;
+        if (b.status === 'live' && a.status !== 'live') return  1;
         return ((a.date||'')+(a.time||'')) < ((b.date||'')+(b.time||'')) ? -1 : 1;
       });
     return this._memSet('upcoming', allMock);
   },
 
-  /* ══════════════════════════════════════════
-     TABLA DE POSICIONES
-  ══════════════════════════════════════════ */
+
   async getStandings() {
     const mem = this._memGet('standings');
     if (mem) return mem;
@@ -534,8 +823,14 @@ const API = {
     const cached = await DB.getCacheStats('standings');
     if (cached) return this._memSet('standings', cached);
 
-    // api-football standings
-    const af = await this._af(`/standings?league=${AF_WORLD_CUP_ID}&season=${AF_SEASON_2026}`);
+    // api-football standings — con cooldown de 12h para ahorrar cuota
+    const AF_ST_LS_KEY = 'wcc_af_standings_ts';
+    const AF_ST_COOL   = 12 * 60 * 60 * 1000;
+    const lastAfSt     = parseInt(localStorage.getItem(AF_ST_LS_KEY) || '0');
+    const af = (Date.now() - lastAfSt > AF_ST_COOL)
+      ? await this._af(`/standings?league=${AF_WORLD_CUP_ID}&season=${AF_SEASON_2026}`)
+      : null;
+    if (af) localStorage.setItem(AF_ST_LS_KEY, String(Date.now()));
     if (af?.response?.[0]?.league?.standings?.length > 0) {
       const rows = [];
       af.response[0].league.standings.forEach(group => {
@@ -589,12 +884,12 @@ const API = {
 
   /* TTLs diferenciados por tipo de dato */
   _TTL: {
-    live:      60  * 1000,           // 60 segundos
-    upcoming:  5   * 60 * 1000,      // 5 minutos (era 30, reducido para que el estado se recalcule)
-    standings: 6   * 60 * 60 * 1000, // 6 horas
-    scorers:   6   * 60 * 60 * 1000, // 6 horas
-    finished:  6   * 60 * 60 * 1000, // 6 horas
-    default:   10  * 60 * 1000       // 10 minutos
+    live:      2   * 60 * 1000,      // 2 minutos
+    upcoming:  30  * 60 * 1000,      // 30 minutos (se re-consulta scores del día)
+    standings: 12  * 60 * 60 * 1000, // 12 horas
+    scorers:   12  * 60 * 60 * 1000, // 12 horas
+    finished:  12  * 60 * 60 * 1000, // 12 horas
+    default:   15  * 60 * 1000       // 15 minutos
   },
 
   _ttlFor(key) {
@@ -732,7 +1027,13 @@ const API = {
     const cached = await DB.getCacheStats('finished');
     if (cached) return this._memSet('finished', cached);
 
-    const af = await this._af(`/fixtures?league=${AF_WORLD_CUP_ID}&season=${AF_SEASON_2026}&status=FT`);
+    const AF_FIN_LS_KEY = 'wcc_af_finished_ts';
+    const AF_FIN_COOL   = 12 * 60 * 60 * 1000;
+    const lastAfFin     = parseInt(localStorage.getItem(AF_FIN_LS_KEY) || '0');
+    const af = (Date.now() - lastAfFin > AF_FIN_COOL)
+      ? await this._af(`/fixtures?league=${AF_WORLD_CUP_ID}&season=${AF_SEASON_2026}&status=FT`)
+      : null;
+    if (af) localStorage.setItem(AF_FIN_LS_KEY, String(Date.now()));
     if (af?.response?.length > 0) {
       const data = af.response.map(f => {
         const h = f.goals.home??0, a = f.goals.away??0;
@@ -762,16 +1063,16 @@ const API = {
 
     if (!m.date || !m.time) return 'upcoming';
 
-    // Usamos hora local del usuario. Los partidos duran ~2h,
-    // así que solo marcamos 'finished' si pasaron más de 2.5h desde el inicio.
-    const matchTs = new Date(`${m.date}T${m.time}:00`).getTime();
+    // Los horarios del MOCK están en UTC → parsear con 'Z' para evitar bugs de zona horaria
+    // (sin Z, Date lo interpreta como hora local, dando +6h de error en UTC-6)
+    const matchTs = new Date(`${m.date}T${m.time}:00Z`).getTime();
     const diffMs  = matchTs - Date.now();
-    const diffH   = diffMs / (1000 * 60 * 60);
+    const diffMin = -diffMs / 60000; // minutos transcurridos desde el inicio (positivo = ya empezó)
 
-    if (diffH < -2.5) return 'finished';      // pasaron más de 2.5h → probablemente terminó
-    if (diffH < 0)    return 'live';           // empezó hace menos de 2.5h → en curso estimado
-    if (diffH <= 1)   return 'starting_soon';  // por comenzar (≤1h)
-    if (diffH <= 3)   return 'closed';         // predicciones cerradas (≤3h antes)
+    if (diffMin > 115) return 'finished';      // pasaron más de 115 min (~90+25) → terminó
+    if (diffMin > 0)   return 'live';           // empezó hace menos de 115 min → en curso estimado
+    if (diffMin > -60) return 'starting_soon';  // por comenzar (≤1h)
+    if (diffMin > -180) return 'closed';        // predicciones cerradas (≤3h antes)
     return 'upcoming';
   },
 
@@ -913,23 +1214,37 @@ const API = {
    * Prioriza strCutout (recorte sin fondo) sobre strThumb.
    * Match exacto primero; match parcial como fallback seguro.
    * NO usa players[0] a ciegas para evitar fotos incorrectas.
+   * Fallback: Wikimedia Commons / Wikipedia si TheSportsDB no tiene foto.
    */
   async getPlayerPhoto(playerName) {
     try {
+      // Fuente 1: TheSportsDB
       const data = await this._sdb(`/searchplayers.php?p=${encodeURIComponent(playerName)}`);
       const players = data?.player;
-      if (!players?.length) return null;
-      const nameLower = playerName.toLowerCase();
-      // Match exacto primero
-      const exact = players.find(p => p.strPlayer?.toLowerCase() === nameLower);
-      // Match parcial seguro (ej: "Pedri" → "Pedri González")
-      const partial = !exact && players.find(p => {
-        const pn = p.strPlayer?.toLowerCase() || '';
-        return pn.includes(nameLower) || nameLower.includes(pn.split(' ')[0]);
-      });
-      const p = exact || partial || null; // NO usar players[0] ciegamente
-      return p?.strCutout || p?.strThumb || p?.strFanart1 || null;
-    } catch(_) { return null; }
+      if (players?.length) {
+        const nameLower = playerName.toLowerCase();
+        const exact = players.find(p => p.strPlayer?.toLowerCase() === nameLower);
+        const partial = !exact && players.find(p => {
+          const pn = p.strPlayer?.toLowerCase() || '';
+          return pn.includes(nameLower) || nameLower.includes(pn.split(' ')[0]);
+        });
+        const p = exact || partial || null;
+        const url = p?.strCutout || p?.strThumb || p?.strFanart1 || null;
+        if (url) return url;
+      }
+    } catch(_) {}
+
+    // Fuente 2: Wikipedia REST API (sin CORS issues, imagen principal del artículo)
+    try {
+      const wikiName = playerName.replace(/ /g, '_');
+      const res = await this._fetch(
+        `https://en.wikipedia.org/api/rest_v1/page/summary/${encodeURIComponent(wikiName)}`
+      );
+      const thumb = res?.thumbnail?.source || res?.originalimage?.source || null;
+      if (thumb) return thumb;
+    } catch(_) {}
+
+    return null;
   },
 
   /**
@@ -1103,14 +1418,20 @@ const API = {
   ══════════════════════════════════════════ */
   async forceRefresh() {
     await DB.clear('stats_cache');
-    this._memCache = {};   // Forzar re-consulta también en memoria
+    this._memCache = {};
+    // Limpiar cachés de upcoming para forzar re-consulta a api-football
+    localStorage.removeItem('wcc_af_today_ts');
+    localStorage.removeItem('wcc_af_next_ts');
+    localStorage.removeItem('wcc_cache_upcoming_today');
+    localStorage.removeItem('wcc_cache_upcoming_next');
+    localStorage.removeItem('wcc_cache_upcoming');
     const [live, upcoming, standings] = await Promise.all([
       this.getLiveMatches(),
       this.getUpcomingMatches(),
       this.getStandings()
     ]);
-    /* Determinar fuente: si algún dato vino de API real, indicarlo */
     const fromApi = live?.some?.(m => m.id?.startsWith?.('af_'))
+                 || upcoming?.some?.(m => m.id?.startsWith?.('af_'))
                  || standings?.some?.(t => t._fromApi);
     return { live, upcoming, standings, source: fromApi ? 'API Football' : 'mock' };
   },

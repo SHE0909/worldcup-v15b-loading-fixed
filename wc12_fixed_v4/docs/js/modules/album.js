@@ -49,76 +49,28 @@ function getFormationRows(name) {
   return FORMATIONS[name] || FORMATIONS['4-3-3'];
 }
 
-const PLAYER_STATS = {
-  /* GOATS */
-  'fig_g001':{goals:21,assists:14,apps:26,saves:null},
-  'fig_g002':{goals:19,assists:8, apps:24,saves:null},
-  'fig_g003':{goals:14,assists:16,apps:18,saves:null},
-  /* LEGENDARY */
-  'fig_l001':{goals:24,assists:8, apps:28,saves:null},
-  'fig_l002':{goals:16,assists:14,apps:30,saves:null},
-  'fig_l003':{goals:28,assists:6, apps:25,saves:null},
-  'fig_l004':{goals:20,assists:5, apps:27,saves:null},
-  /* EPIC */
-  'fig_e001':{goals:8, assists:11,apps:24,saves:null},
-  'fig_e002':{goals:14,assists:9, apps:27,saves:null},
-  'fig_e003':{goals:5, assists:8, apps:28,saves:null},
-  'fig_e004':{goals:7, assists:10,apps:29,saves:null},
-  'fig_e005':{goals:12,assists:8, apps:28,saves:null},
-  'fig_e006':{goals:15,assists:10,apps:22,saves:null},
-  'fig_e007':{goals:10,assists:12,apps:25,saves:null},
-  'fig_e008':{goals:5, assists:9, apps:20,saves:null},
-  'fig_e009':{goals:11,assists:13,apps:30,saves:null},
-  'fig_e010':{goals:9, assists:7, apps:27,saves:null},
-  'fig_e011':{goals:11,assists:13,apps:30,saves:null},
-  'fig_e012':{goals:6, assists:7, apps:26,saves:null},
-  'fig_e013':{goals:13,assists:9, apps:24,saves:null},
-  'fig_e014':{goals:18,assists:4, apps:28,saves:null},
-  /* RARE */
-  'fig_r001':{goals:2, assists:1, apps:24,saves:null},
-  'fig_r002':{goals:3, assists:1, apps:28,saves:null},
-  'fig_r003':{goals:2, assists:0, apps:26,saves:null},
-  'fig_r004':{goals:0, assists:0, apps:30,saves:78},
-  'fig_r005':{goals:0, assists:0, apps:27,saves:82},
-  'fig_r006':{goals:9, assists:11,apps:29,saves:null},
-  'fig_r007':{goals:10,assists:5, apps:26,saves:null},
-  'fig_r008':{goals:8, assists:6, apps:23,saves:null},
-  'fig_r009':{goals:11,assists:4, apps:22,saves:null},
-  'fig_r010':{goals:7, assists:8, apps:20,saves:null},
-  'fig_r011':{goals:6, assists:7, apps:24,saves:null},
-  'fig_r012':{goals:5, assists:9, apps:22,saves:null},
-  'fig_r013':{goals:0, assists:0, apps:22,saves:85},
-  'fig_r014':{goals:4, assists:8, apps:27,saves:null},
-  'fig_r015':{goals:3, assists:4, apps:25,saves:null},
-  'fig_r016':{goals:16,assists:5, apps:28,saves:null},
-  'fig_r017':{goals:12,assists:4, apps:24,saves:null},
-  'fig_r018':{goals:0, assists:0, apps:25,saves:73},
-  /* COMMON */
-  'fig_c001':{goals:4, assists:5, apps:20,saves:null},
-  'fig_c002':{goals:8, assists:4, apps:22,saves:null},
-  'fig_c003':{goals:13,assists:3, apps:24,saves:null},
-  'fig_c004':{goals:9, assists:2, apps:18,saves:null},
-  'fig_c005':{goals:1, assists:2, apps:25,saves:null},
-  'fig_c006':{goals:5, assists:7, apps:21,saves:null},
-  'fig_c007':{goals:2, assists:3, apps:23,saves:null},
-  'fig_c008':{goals:2, assists:1, apps:22,saves:null},
-  'fig_c009':{goals:0, assists:0, apps:19,saves:54},
-  'fig_c010':{goals:7, assists:5, apps:24,saves:null},
-  'fig_c011':{goals:3, assists:6, apps:19,saves:null},
-  'fig_c012':{goals:14,assists:2, apps:21,saves:null},
-  'fig_c013':{goals:9, assists:3, apps:24,saves:null},
-  'fig_c014':{goals:3, assists:4, apps:20,saves:null},
-  'fig_c015':{goals:2, assists:3, apps:22,saves:null},
-  'fig_c016':{goals:8, assists:7, apps:24,saves:null},
-  'fig_c017':{goals:9, assists:8, apps:23,saves:null},
-  'fig_c018':{goals:5, assists:8, apps:26,saves:null},
-  'fig_c019':{goals:4, assists:9, apps:25,saves:null},
-  'fig_c020':{goals:11,assists:3, apps:22,saves:null},
-  'fig_c021':{goals:9, assists:10,apps:23,saves:null},
-  'fig_c022':{goals:8, assists:7, apps:21,saves:null},
-  'fig_c023':{goals:2, assists:2, apps:22,saves:null},
-  'fig_c024':{goals:5, assists:4, apps:20,saves:null},
-};
+/**
+ * PLAYER_STATS — generado dinámicamente desde FIGURITAS_POOL (gacha.js)
+ * Garantiza que album y dashboard siempre muestren los mismos datos.
+ * Se construye una sola vez al cargar la página.
+ */
+function buildPlayerStats() {
+  const map = {};
+  const pool = (typeof FIGURITAS_POOL !== 'undefined') ? FIGURITAS_POOL : [];
+  for (const f of pool) {
+    map[f.id] = {
+      goals:   f.goals   ?? 0,
+      assists: f.assists ?? 0,
+      apps:    f.apps    ?? 0,
+      saves:   f.saves   ?? null,
+      rating:  f.rating  ?? null,
+    };
+  }
+  return map;
+}
+const PLAYER_STATS = buildPlayerStats();
+
+
 
 /* Fotos: usar API.getPhotoById(fig.id, fig.sdbName||fig.name) — localStorage */
 

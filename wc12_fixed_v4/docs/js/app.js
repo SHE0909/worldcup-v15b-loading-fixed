@@ -119,7 +119,7 @@ const App = {
       case 'predictions': await Predictions.render(); break;
       case 'battle':      await Battle.render(); break;
       case 'exchange':    await Exchange.render(); break;
-      case 'profile':     await Profile.render(); break;
+      case 'profile':     await Profile.render(); ApiConfig.init(); break;
     }
   },
 

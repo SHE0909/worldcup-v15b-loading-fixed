@@ -7,16 +7,17 @@
 const Dashboard = {
 
   async render() {
+    // Cargar upcoming PRIMERO para que getLiveMatches pueda detectar si hay partido activo
+    await this.renderUpcoming();
     await Promise.all([
       this.renderLive(),
-      this.renderUpcoming(),
       this.renderStandings(),
       this.renderFavorites()
     ]);
 
     // Actualizar próximos partidos cada 30 minutos (pausa si pestaña oculta)
     if (!this._upcomingRefreshTimer) {
-      this._upcomingRefreshTimer = API.registerTimer(() => this.renderUpcoming(), 30 * 60 * 1000);
+      this._upcomingRefreshTimer = API.registerTimer(() => this.renderUpcoming(), 5 * 60 * 1000);
     }
     // Actualizar posiciones cada 6 horas (pausa si pestaña oculta)
     if (!this._standingsRefreshTimer) {
@@ -29,15 +30,35 @@ const Dashboard = {
     const el = document.getElementById('live-matches');
     if (!el) return;
 
-    // Solo mostrar "consultando" en primer render, no en cada refresh
     if (!el.dataset.initialized) {
       el.innerHTML = '<p class="empty-state" style="opacity:.4;font-size:0.7rem">Consultando partidos en vivo...</p>';
       el.dataset.initialized = '1';
     }
-    const matches = await API.getLiveMatches();
 
-    // Solo mostrar partidos que REALMENTE están en curso (status === 'live')
-    const liveOnly = (matches || []).filter(m => m.status === 'live');
+    // Consultar ambas fuentes en paralelo
+    const [liveFromApi, upcomingAll] = await Promise.all([
+      API.getLiveMatches(),
+      API.getUpcomingMatches()
+    ]);
+
+    // Partidos en vivo reales de la API
+    const liveSet = new Set((liveFromApi||[]).map(m => m.id));
+    const liveOnly = [...(liveFromApi||[]).filter(m => m.status === 'live')];
+
+    // Agregar partidos del upcoming que el sistema detectó como live por hora
+    // pero que la API de live no reportó (ej: MOCK o TheSportsDB sin cobertura)
+    // Sanitizar: solo agregar si realmente están dentro del tiempo estimado (<115 min)
+    for (const m of (upcomingAll||[])) {
+      if (m.status === 'live' && !liveSet.has(m.id)) {
+        // Verificar que no haya pasado más de 115 min desde el inicio
+        if (m.date && m.time) {
+          const start   = new Date(`${m.date}T${m.time}:00Z`);
+          const diffMin = (Date.now() - start.getTime()) / 60000;
+          if (diffMin > 115) continue; // ya terminó, no mostrar como live
+        }
+        liveOnly.push(m);
+      }
+    }
 
     if (liveOnly.length === 0) {
       el.innerHTML = '<p class="empty-state">No hay partidos en vivo ahora mismo</p>';
@@ -45,10 +66,12 @@ const Dashboard = {
     }
 
     el.innerHTML = liveOnly.map(m => {
-      const isFriendly = m.type === 'friendly';
+      const isFriendly = m.type === 'friendly' || m.type !== 'worldcup';
       const badgeStyle = isFriendly
         ? 'background:rgba(74,168,255,0.2);color:#4aa8ff;border:1px solid rgba(74,168,255,0.4)'
         : 'background:rgba(255,215,0,0.15);color:var(--gold);border:1px solid rgba(255,215,0,0.35)';
+      const scoreH = m.scoreHome ?? 0;
+      const scoreA = m.scoreAway ?? 0;
       return `
       <div class="match-item match-live-item has-bar" style="border-left-color:#ff4466;display:block">
         <div style="display:flex;gap:4px;margin-bottom:4px;align-items:center">
@@ -61,19 +84,31 @@ const Dashboard = {
         </div>
         <div class="match-teams-row">
           <span>${m.homeFlag||''} ${m.home}</span>
-          <span class="match-score">${m.scoreHome??0} — ${m.scoreAway??0}</span>
+          <span class="match-score" style="color:#ff4466;font-weight:800">${scoreH} — ${scoreA}</span>
           <span>${m.away} ${m.awayFlag||''}</span>
         </div>
         ${m.competition ? `<div style="font-size:0.62rem;color:var(--text-muted);margin-top:2px;text-align:center">${m.competition}</div>` : ''}
+        ${m.venue ? `<div style="font-size:0.58rem;color:var(--text-muted);text-align:center">📍 ${m.venue}</div>` : ''}
       </div>`;
     }).join('');
 
-    // Auto-refresh cada 60 seg mientras haya partidos vivos — pausa si pestaña oculta
+    // Auto-refresh cada 2 minutos siempre activo para mantener el estado sincronizado
+    // (antes solo se creaba cuando había partidos vivos, dejando el caché stale al terminar)
     if (!this._liveRefreshTimer) {
-      this._liveRefreshTimer = API.registerTimer(() => {
+      this._liveRefreshTimer = API.registerTimer(async () => {
+        // Limpiar caché de ambos paneles para que los marcadores estén sincronizados
         delete API._memCache['live'];
+        delete API._memCache['upcoming'];
         this.renderLive();
-      }, 60000);
+        this.renderUpcoming();
+        // Evaluar predicciones automáticamente cuando un partido termina
+        try {
+          const allMatches = await API.getUpcomingMatches();
+          if (typeof Predictions !== 'undefined') {
+            await Predictions.checkLiveFinished(allMatches || []);
+          }
+        } catch(_) {}
+      }, 2 * 60 * 1000);
     }
   },
   /* ── Próximos y resultados del día — v15 ─────────────────────────
@@ -110,6 +145,13 @@ const Dashboard = {
       if (liveMatch) {
         return { ...m, status:'live', scoreHome:liveMatch.scoreHome, scoreAway:liveMatch.scoreAway, minute:liveMatch.minute };
       }
+      // Sanitizar: si el caché dice 'live' pero ya pasaron más de 115 min → forzar finished
+      // Esto evita que partidos terminados sigan apareciendo como "en vivo" por caché stale
+      if (m.status === 'live' && m.date && m.time) {
+        const start   = new Date(`${m.date}T${m.time}:00Z`);
+        const diffMin = (Date.now() - start.getTime()) / 60000;
+        if (diffMin > 115) return { ...m, status: 'finished' };
+      }
       return m;
     });
 
@@ -123,8 +165,21 @@ const Dashboard = {
     const todayStr = `${now.getFullYear()}-${String(now.getMonth()+1).padStart(2,'0')}-${String(now.getDate()).padStart(2,'0')}`;
     const yestDate = new Date(now); yestDate.setDate(yestDate.getDate()-1);
     const yestStr  = `${yestDate.getFullYear()}-${String(yestDate.getMonth()+1).padStart(2,'0')}-${String(yestDate.getDate()).padStart(2,'0')}`;
+    // Partidos con date UTC del día siguiente pero hora UTC que en local corresponde a hoy
+    // (por ej. 2026-06-08T00:00Z = 2026-06-07 18:00 hora El Salvador UTC-6)
+    const isTodayUTC = (m) => {
+      if (m.date === todayStr) return true;
+      // Verificar si la hora UTC del partido cae en el día local de hoy
+      if (m.time && (m.date === todayStr || m.date > todayStr)) {
+        const matchUTC = new Date(`${m.date}T${m.time}:00Z`);
+        const matchLocal = new Date(matchUTC.getFullYear(), matchUTC.getMonth(), matchUTC.getDate());
+        const todayLocal = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+        return matchUTC >= todayLocal && matchUTC < new Date(todayLocal.getTime() + 86400000);
+      }
+      return false;
+    };
     const renderMatch = m => {
-      const isToday    = m.date === todayStr;
+      const isToday    = isTodayUTC(m);
       const isYesterday= m.date === yestStr;
       const isLive     = m.status === 'live';
       const isFinished = m.status === 'finished';
@@ -176,13 +231,14 @@ const Dashboard = {
     };
 
     // Partidos de HOY: finished (con score) + live + scheduled
-    const todayFinished  = all.filter(m => m.date === todayStr && m.status === 'finished');
-    const todayLive      = all.filter(m => m.date === todayStr && m.status === 'live');
-    const todayScheduled = all.filter(m => m.date === todayStr && m.status === 'scheduled');
+    // isTodayUTC maneja partidos UTC cuya hora local cae "hoy" (ej. 00:00 UTC = 18:00 local UTC-6)
+    const todayFinished  = all.filter(m => isTodayUTC(m) && m.status === 'finished');
+    const todayLive      = all.filter(m => isTodayUTC(m) && m.status === 'live');
+    const todayScheduled = all.filter(m => isTodayUTC(m) && m.status === 'scheduled');
     // Partidos de AYER con resultado (para que no desaparezcan hasta medianoche)
     const yesterdayDone  = all.filter(m => m.date === yestStr && m.status === 'finished');
-    // Partidos futuros (días > hoy, excluir finalizados)
-    const futureMatches  = all.filter(m => m.date > todayStr && m.status !== 'finished');
+    // Partidos futuros (días > hoy, excluir finalizados y los de hoy)
+    const futureMatches  = all.filter(m => !isTodayUTC(m) && m.date >= todayStr && m.status !== 'finished' && m.date !== yestStr);
 
     let html = '';
 
