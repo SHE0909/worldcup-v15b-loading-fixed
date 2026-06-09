@@ -3280,3 +3280,495 @@ html, body { overflow-x: hidden; width: 100%; }
 @media (max-width: 640px) {
   input, select, textarea { font-size: 16px !important; }
 }
+
+/* ── Mejoras responsive adicionales v16 ── */
+
+/* Nav bottom fija en móvil — más ergonómica */
+@media (max-width: 640px) {
+  .app-wrapper {
+    display: flex;
+    flex-direction: column;
+    min-height: 100dvh;
+  }
+  .app-nav {
+    position: fixed;
+    bottom: 0; left: 0; right: 0;
+    top: auto;
+    z-index: 200;
+    height: 60px;
+    border-top: 1px solid var(--border);
+    border-bottom: none;
+    padding-bottom: env(safe-area-inset-bottom, 0px);
+  }
+  .app-main {
+    padding-bottom: calc(60px + env(safe-area-inset-bottom, 0px) + 1rem) !important;
+  }
+  .nav-btn {
+    font-size: 0.5rem;
+    padding: 6px 0 4px;
+    min-width: 0;
+  }
+  .nav-btn > *:first-child { font-size: 1.35rem; }
+  /* Indicador activo abajo en vez de arriba */
+  .nav-btn.active::after {
+    top: auto; bottom: 0;
+    border-radius: 4px 4px 0 0;
+  }
+
+  /* Header: solo logo y stats, sin espacio desperdiciado */
+  .app-header {
+    padding: 0 0.75rem;
+    height: 52px;
+    min-height: 52px;
+  }
+  .header-logo { font-size: 1rem; letter-spacing: 1.5px; }
+  .header-stats { gap: 0.35rem; }
+  .header-stat { font-size: 0.68rem; padding: 0.18rem 0.45rem; gap: 3px; }
+
+  /* Dashboard: cards apiladas */
+  .dashboard-grid { grid-template-columns: 1fr; gap: 0.65rem; }
+  .dash-card { padding: 0.85rem; }
+
+  /* Partidos: score más visible */
+  .match-teams { font-size: 0.8rem; }
+  .match-score { font-size: 1rem; min-width: 48px; }
+  .live-badge, .match-badge { font-size: 0.55rem; padding: 1px 5px; }
+
+  /* Album: 4 columnas en móvil normal */
+  .album-grid {
+    grid-template-columns: repeat(4, 1fr);
+    gap: 0.35rem;
+  }
+  .figurita-card { border-radius: 6px; }
+  .figurita-name { font-size: 0.55rem; }
+  .figurita-team { font-size: 0.5rem; }
+
+  /* Stats: tabla horizontal con scroll */
+  .stats-section { overflow: hidden; }
+  .stats-table-wrap {
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+    border-radius: 8px;
+  }
+  .stats-table { min-width: 420px; font-size: 0.75rem; }
+  .stats-table th, .stats-table td { padding: 0.4rem 0.5rem; }
+
+  /* Battle: full width */
+  .battle-arena {
+    flex-direction: column;
+    gap: 0.5rem;
+  }
+  .battle-team-panel { width: 100%; min-width: 0; }
+  .battle-vs { font-size: 1.5rem; padding: 0.4rem 0; }
+  .battle-formation { font-size: 0.65rem; }
+
+  /* Gacha cards resultado: 2 por fila */
+  .gacha-cards-grid {
+    grid-template-columns: repeat(2, 1fr) !important;
+    gap: 0.5rem;
+  }
+  .gacha-card-result { padding: 0.6rem; }
+
+  /* Exchange: lista vertical */
+  .exchange-grid, .offers-grid {
+    grid-template-columns: 1fr !important;
+  }
+  .exchange-offer-card { padding: 0.75rem; }
+
+  /* Predictions: 1 columna */
+  .predictions-grid, .predictions-list {
+    grid-template-columns: 1fr !important;
+    gap: 0.6rem;
+  }
+  .prediction-match { padding: 0.75rem; }
+  .prediction-teams { font-size: 0.8rem; }
+
+  /* Profile */
+  .profile-header { flex-direction: column; align-items: center; text-align: center; gap: 0.75rem; }
+  .profile-card   { flex-direction: column; align-items: center; text-align: center; }
+  .profile-avatar { width: 72px !important; height: 72px !important; font-size: 1.6rem !important; }
+  .profile-stats  { justify-content: center; flex-wrap: wrap; gap: 0.5rem; }
+  .profile-stat   { min-width: 70px; text-align: center; }
+  .profile-section { padding: 1rem; }
+  .profile-section h3 { font-size: 0.7rem; }
+  #api-config-section input[type="password"] { font-size: 14px !important; }
+  #api-config-section > div > div:nth-child(3) {
+    flex-direction: column;
+    gap: 0.4rem;
+  }
+  #api-config-section .btn { width: 100%; justify-content: center; }
+
+  /* Modales: casi full screen */
+  .modal-overlay { align-items: flex-end; }
+  .modal-content {
+    margin: 0;
+    border-radius: 16px 16px 0 0;
+    max-height: 90dvh;
+    overflow-y: auto;
+  }
+
+  /* Scroll suave global */
+  * { -webkit-overflow-scrolling: touch; }
+}
+
+/* Pantallas muy pequeñas (SE, Galaxy A series) */
+@media (max-width: 360px) {
+  .album-grid { grid-template-columns: repeat(3, 1fr); }
+  .header-stat { font-size: 0.62rem; padding: 0.15rem 0.35rem; }
+  .dash-card { padding: 0.65rem; }
+  .nav-btn > *:first-child { font-size: 1.2rem; }
+  .nav-btn { font-size: 0.45rem; }
+}
+
+/* ============================================================
+   DRAWER LATERAL — v17
+   Opción B seleccionada: slide-in desde la izquierda
+   en móvil (≤1023px) y tablet (641-1023px)
+   Desktop (≥1024px): .app-nav horizontal, drawer oculto
+   ============================================================ */
+
+/* ── Hamburger button ── */
+.btn-hamburger {
+  display: none; /* oculto en desktop */
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+  gap: 5px;
+  width: 38px; height: 38px;
+  background: transparent;
+  border: none;
+  cursor: pointer;
+  padding: 4px;
+  border-radius: 8px;
+  transition: background 0.2s;
+  flex-shrink: 0;
+}
+.btn-hamburger:hover { background: rgba(0,212,255,0.08); }
+.btn-hamburger span {
+  display: block;
+  width: 20px; height: 2px;
+  background: var(--text-secondary);
+  border-radius: 2px;
+  transition: all 0.25s;
+}
+.btn-hamburger.open span:nth-child(1) { transform: translateY(7px) rotate(45deg); }
+.btn-hamburger.open span:nth-child(2) { opacity: 0; transform: scaleX(0); }
+.btn-hamburger.open span:nth-child(3) { transform: translateY(-7px) rotate(-45deg); }
+
+/* ── Overlay ── */
+.drawer-overlay {
+  display: none;
+  position: fixed; inset: 0; z-index: 299;
+  background: rgba(8,12,20,0.7);
+  backdrop-filter: blur(3px);
+  -webkit-backdrop-filter: blur(3px);
+  opacity: 0;
+  transition: opacity 0.3s;
+}
+.drawer-overlay.visible {
+  display: block;
+  opacity: 1;
+}
+
+/* ── Drawer panel ── */
+.app-drawer {
+  position: fixed;
+  top: 0; left: 0; bottom: 0;
+  width: 240px;
+  z-index: 300;
+  background: #0b1322;
+  border-right: 1px solid var(--border);
+  display: flex;
+  flex-direction: column;
+  transform: translateX(-100%);
+  transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  will-change: transform;
+  overscroll-behavior: contain;
+  overflow-y: auto;
+}
+.app-drawer.open {
+  transform: translateX(0);
+  box-shadow: 4px 0 32px rgba(0,0,0,0.5);
+}
+
+/* ── Drawer header ── */
+.drawer-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0 1rem;
+  height: 56px;
+  border-bottom: 1px solid var(--border);
+  flex-shrink: 0;
+}
+.drawer-logo {
+  font-family: 'Bebas Neue', cursive;
+  font-size: 1.25rem;
+  letter-spacing: 3px;
+  color: var(--accent);
+}
+.drawer-close {
+  background: transparent;
+  border: none;
+  color: var(--text-muted);
+  font-size: 1rem;
+  cursor: pointer;
+  width: 28px; height: 28px;
+  border-radius: 6px;
+  display: flex; align-items: center; justify-content: center;
+  transition: all 0.2s;
+}
+.drawer-close:hover { background: rgba(255,255,255,0.06); color: var(--text-primary); }
+
+/* ── Drawer user info ── */
+.drawer-user {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  padding: 0.9rem 1rem;
+  border-bottom: 1px solid var(--border);
+  flex-shrink: 0;
+}
+.drawer-avatar {
+  width: 40px; height: 40px;
+  border-radius: 50%;
+  background: var(--bg-card);
+  border: 1px solid var(--border-bright);
+  color: var(--accent);
+  display: flex; align-items: center; justify-content: center;
+  font-size: 1.1rem;
+  font-weight: 700;
+  flex-shrink: 0;
+  overflow: hidden;
+}
+.drawer-user-info {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
+.drawer-user-name {
+  font-size: 0.85rem;
+  font-weight: 600;
+  color: var(--text-primary);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.drawer-user-stats {
+  font-size: 0.7rem;
+  color: var(--text-secondary);
+}
+
+/* ── Drawer nav items ── */
+.drawer-nav {
+  flex: 1;
+  padding: 0.5rem 0;
+  overflow-y: auto;
+}
+.drawer-nav-btn {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  padding: 0.7rem 1rem;
+  background: transparent;
+  border: none;
+  border-left: 3px solid transparent;
+  color: var(--text-secondary);
+  font-family: 'Barlow', sans-serif;
+  font-size: 0.875rem;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.15s;
+  text-align: left;
+}
+.drawer-nav-btn:hover {
+  background: rgba(0,212,255,0.05);
+  color: var(--text-primary);
+  border-left-color: rgba(0,212,255,0.3);
+}
+.drawer-nav-btn.active {
+  background: rgba(0,212,255,0.1);
+  color: var(--text-primary);
+  border-left-color: var(--accent);
+}
+.drawer-nav-btn .dni {
+  font-size: 1.1rem;
+  flex-shrink: 0;
+  width: 24px;
+  text-align: center;
+}
+
+/* ── Drawer footer ── */
+.drawer-footer {
+  border-top: 1px solid var(--border);
+  padding: 0.75rem 1rem;
+  flex-shrink: 0;
+}
+.drawer-logout-btn {
+  width: 100%;
+  padding: 0.6rem 1rem;
+  background: rgba(255,85,102,0.08);
+  border: 1px solid rgba(255,85,102,0.25);
+  border-radius: 8px;
+  color: #ff8899;
+  font-family: 'Barlow', sans-serif;
+  font-size: 0.8rem;
+  cursor: pointer;
+  transition: all 0.2s;
+  text-align: left;
+}
+.drawer-logout-btn:hover {
+  background: rgba(255,85,102,0.18);
+  border-color: #ff5566;
+  color: #ff5566;
+}
+
+/* ============================================================
+   RESPONSIVE: Activar drawer en móvil y tablet (≤1023px)
+   ============================================================ */
+
+@media (max-width: 1023px) {
+
+  /* Mostrar hamburger */
+  .btn-hamburger { display: flex; }
+
+  /* Ocultar nav horizontal de escritorio */
+  .app-nav { display: none !important; }
+
+  /* Header ajustado */
+  .app-header {
+    padding: 0 0.75rem;
+    height: 52px;
+    min-height: 52px;
+  }
+  #screen-app {
+    padding-bottom: 0; /* sin nav bottom */
+    min-height: 100dvh;
+  }
+  .app-main {
+    padding: 0.875rem 0.875rem 2rem;
+  }
+
+  /* Ocultar btn logout del header en móvil (está en el drawer) */
+  #btn-logout { display: none; }
+
+  /* Header center: saludo visible */
+  .header-center {
+    font-size: 0.78rem;
+    color: var(--text-secondary);
+  }
+}
+
+/* ── Tablet específico (641–1023px) ── */
+@media (min-width: 641px) and (max-width: 1023px) {
+  .app-drawer { width: 260px; }
+  .app-main { padding: 1rem 1.25rem 2rem; }
+  .dashboard-grid { grid-template-columns: repeat(2, 1fr); gap: 1rem; }
+  .album-grid { grid-template-columns: repeat(auto-fill, minmax(88px, 1fr)); }
+  .predictions-list { grid-template-columns: repeat(2, 1fr); }
+  .header-stat { font-size: 0.8rem; }
+}
+
+/* ── Móvil (≤640px) ── */
+@media (max-width: 640px) {
+  .app-drawer { width: 220px; }
+
+  .app-header {
+    height: 52px;
+    padding: 0 0.75rem;
+    gap: 0.5rem;
+  }
+  .header-logo { font-size: 1rem; letter-spacing: 1.5px; }
+  .header-center { display: none; } /* solo logo+stats en móvil */
+  .header-stat { font-size: 0.68rem; padding: 0.18rem 0.45rem; gap: 3px; }
+
+  .app-main { padding: 0.75rem 0.75rem 1.5rem; }
+
+  /* Dashboard: 1 columna */
+  .dashboard-grid { grid-template-columns: 1fr; gap: 0.65rem; }
+  .dash-card { padding: 0.85rem; }
+
+  /* Quick actions: 2×2 */
+  .quick-actions { grid-template-columns: repeat(2, 1fr) !important; }
+  .quick-actions-grid { grid-template-columns: repeat(2, 1fr) !important; }
+
+  /* Partidos */
+  .match-teams { font-size: 0.8rem; }
+  .match-score { font-size: 1rem; min-width: 48px; }
+  .live-badge, .match-badge { font-size: 0.55rem; padding: 1px 5px; }
+
+  /* Álbum: 4 columnas */
+  .album-grid { grid-template-columns: repeat(4, 1fr); gap: 0.35rem; }
+  .figurita-card { border-radius: 6px; }
+  .figurita-name { font-size: 0.55rem; }
+  .figurita-team { font-size: 0.5rem; }
+
+  /* Stats */
+  .stats-table-wrap { overflow-x: auto; -webkit-overflow-scrolling: touch; border-radius: 8px; }
+  .stats-table { min-width: 420px; font-size: 0.75rem; }
+  .stats-table th, .stats-table td { padding: 0.4rem 0.5rem; }
+
+  /* Batalla */
+  .battle-arena { flex-direction: column; gap: 0.5rem; }
+  .battle-team-panel { width: 100%; min-width: 0; }
+  .battle-vs { font-size: 1.5rem; padding: 0.4rem 0; }
+  .battle-formation { font-size: 0.65rem; }
+
+  /* Gacha resultado */
+  .gacha-cards-grid { grid-template-columns: repeat(2, 1fr) !important; gap: 0.5rem; }
+  .gacha-card-result { padding: 0.6rem; }
+
+  /* Canje */
+  .exchange-grid, .offers-grid { grid-template-columns: 1fr !important; }
+  .exchange-offer-card { padding: 0.75rem; }
+
+  /* Predicciones */
+  .predictions-grid, .predictions-list { grid-template-columns: 1fr !important; gap: 0.6rem; }
+  .prediction-match { padding: 0.75rem; }
+  .prediction-teams { font-size: 0.8rem; }
+
+  /* Perfil */
+  .profile-header { flex-direction: column; align-items: center; text-align: center; gap: 0.75rem; }
+  .profile-card { flex-direction: column; align-items: center; text-align: center; }
+  .profile-avatar { width: 72px !important; height: 72px !important; font-size: 1.6rem !important; }
+  .profile-stats { justify-content: center; flex-wrap: wrap; gap: 0.5rem; }
+  .profile-stat { min-width: 70px; text-align: center; }
+  .profile-section { padding: 1rem; }
+  .profile-section h3 { font-size: 0.7rem; }
+  #api-config-section > div > div:nth-child(3) { flex-direction: column; gap: 0.4rem; }
+  #api-config-section .btn { width: 100%; justify-content: center; }
+
+  /* Modales: sheet desde abajo */
+  .modal-overlay { align-items: flex-end; }
+  .modal-content {
+    margin: 0;
+    border-radius: 16px 16px 0 0;
+    max-height: 90dvh;
+    overflow-y: auto;
+  }
+
+  /* Tabs internos */
+  .tab-btns { flex-wrap: wrap; gap: 0.25rem; }
+  .tab-btn { font-size: 0.65rem; padding: 0.3rem 0.6rem; }
+
+  /* Input zoom fix iOS */
+  input, select, textarea { font-size: 16px !important; }
+}
+
+/* ── Móviles muy pequeños (≤360px) ── */
+@media (max-width: 360px) {
+  .album-grid { grid-template-columns: repeat(3, 1fr); }
+  .header-stat { font-size: 0.62rem; padding: 0.15rem 0.35rem; }
+  .dash-card { padding: 0.65rem; }
+  .app-drawer { width: 200px; }
+}
+
+/* ── Desktop (≥1024px): drawer oculto, nav horizontal visible ── */
+@media (min-width: 1024px) {
+  .btn-hamburger { display: none !important; }
+  .app-drawer, .drawer-overlay { display: none !important; }
+  .app-nav { display: flex !important; }
+  #btn-logout { display: flex !important; }
+}

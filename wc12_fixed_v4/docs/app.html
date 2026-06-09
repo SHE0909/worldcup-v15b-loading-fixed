@@ -31,9 +31,43 @@
   <!-- MAIN APP -->
   <div id="screen-app" class="screen active">
 
+    <!-- DRAWER OVERLAY (mobile/tablet) -->
+    <div id="drawer-overlay" class="drawer-overlay"></div>
+
+    <!-- SIDE DRAWER (mobile/tablet nav) -->
+    <nav id="app-drawer" class="app-drawer" role="navigation" aria-label="Menú principal">
+      <div class="drawer-header">
+        <span class="drawer-logo">⚽ WCC</span>
+        <button class="drawer-close" id="btn-drawer-close" aria-label="Cerrar menú">✕</button>
+      </div>
+      <div class="drawer-user" id="drawer-user">
+        <div class="drawer-avatar" id="drawer-avatar">?</div>
+        <div class="drawer-user-info">
+          <span class="drawer-user-name" id="drawer-name">Jugador</span>
+          <span class="drawer-user-stats" id="drawer-stats">🎴 0 · 💰 0</span>
+        </div>
+      </div>
+      <div class="drawer-nav">
+        <button class="drawer-nav-btn active" data-tab="dashboard"><span class="dni">🏠</span><span>Inicio</span></button>
+        <button class="drawer-nav-btn" data-tab="stats"><span class="dni">📊</span><span>Stats</span></button>
+        <button class="drawer-nav-btn" data-tab="gacha"><span class="dni">🎴</span><span>Sobres</span></button>
+        <button class="drawer-nav-btn" data-tab="album"><span class="dni">📖</span><span>Álbum</span></button>
+        <button class="drawer-nav-btn" data-tab="battle"><span class="dni">⚔️</span><span>Batalla</span></button>
+        <button class="drawer-nav-btn" data-tab="exchange"><span class="dni">🔄</span><span>Canje</span></button>
+        <button class="drawer-nav-btn" data-tab="predictions"><span class="dni">🎯</span><span>Predicciones</span></button>
+        <button class="drawer-nav-btn" data-tab="profile"><span class="dni">👤</span><span>Perfil</span></button>
+      </div>
+      <div class="drawer-footer">
+        <button class="drawer-logout-btn" id="btn-drawer-logout">⏏ Cerrar sesión</button>
+      </div>
+    </nav>
+
     <!-- TOP HEADER -->
     <header class="app-header">
       <div class="header-left">
+        <button class="btn-hamburger" id="btn-drawer-open" aria-label="Abrir menú">
+          <span></span><span></span><span></span>
+        </button>
         <span class="header-logo">⚽ WCC</span>
       </div>
       <div class="header-center">
@@ -46,7 +80,7 @@
       </div>
     </header>
 
-    <!-- TOP NAV -->
+    <!-- TOP NAV (desktop only, hidden on mobile/tablet) -->
     <nav class="app-nav">
       <button class="nav-btn active" data-tab="dashboard">🏠<span>Inicio</span></button>
       <button class="nav-btn" data-tab="stats">📊<span>Stats</span></button>
@@ -284,9 +318,9 @@
           </p>
           <div id="api-status-banner" style="margin-bottom:0.75rem"></div>
           <div style="display:flex;flex-direction:column;gap:0.5rem">
-            <label style="font-size:0.7rem;color:var(--text-secondary);letter-spacing:1px;text-transform:uppercase">API-Football Key (RapidAPI)</label>
+            <label style="font-size:0.7rem;color:var(--text-secondary);letter-spacing:1px;text-transform:uppercase">API-Football Key (api-football.com)</label>
             <div style="display:flex;gap:0.5rem">
-              <input type="password" id="input-af-key" placeholder="Pega tu x-rapidapi-key aquí"
+              <input type="password" id="input-af-key" placeholder="Tu key de api-football.com (32 chars hex)"
                 style="flex:1;background:var(--bg-surface);border:1px solid var(--border);border-radius:6px;padding:0.5rem 0.75rem;color:var(--text-primary);font-size:0.8rem;outline:none"/>
               <button class="btn btn-sm" id="btn-save-af-key" style="white-space:nowrap">Guardar</button>
             </div>
@@ -296,7 +330,7 @@
               <button class="btn btn-secondary btn-sm" id="btn-remove-af-key">❌ Quitar key</button>
             </div>
             <p style="font-size:0.68rem;color:var(--text-muted)">
-              Obtén una key gratis en <a href="https://rapidapi.com/api-sports/api/api-football" target="_blank" style="color:var(--accent)">rapidapi.com</a> (plan Free: 100 req/día).
+              Obtén tu key en <a href="https://www.api-football.com/dashboard" target="_blank" style="color:var(--accent)">api-football.com</a> → My Account → API Key. Plan Free: 100 req/día. <strong>No uses RapidAPI</strong>, usa el dashboard directo.
             </p>
           </div>
         </div>
@@ -342,6 +376,99 @@
   <script src="js/modules/battle.js"></script>
   <script src="js/modules/exchange.js"></script>
   <script src="js/app.js"></script>
+  <script>
+  /* ── DRAWER LATERAL ── */
+  (function() {
+    const drawer  = document.getElementById('app-drawer');
+    const overlay = document.getElementById('drawer-overlay');
+    const btnOpen = document.getElementById('btn-drawer-open');
+    const btnClose= document.getElementById('btn-drawer-close');
+    const btnLogoutDrawer = document.getElementById('btn-drawer-logout');
+
+    function openDrawer() {
+      drawer.classList.add('open');
+      overlay.classList.add('visible');
+      btnOpen?.setAttribute('aria-expanded', 'true');
+      document.body.style.overflow = 'hidden';
+    }
+    function closeDrawer() {
+      drawer.classList.remove('open');
+      overlay.classList.remove('visible');
+      btnOpen?.setAttribute('aria-expanded', 'false');
+      document.body.style.overflow = '';
+    }
+
+    btnOpen?.addEventListener('click', openDrawer);
+    btnClose?.addEventListener('click', closeDrawer);
+    overlay?.addEventListener('click', closeDrawer);
+
+    // Cerrar al navegar
+    drawer?.querySelectorAll('.drawer-nav-btn').forEach(btn => {
+      btn.addEventListener('click', () => {
+        // Sync active state
+        drawer.querySelectorAll('.drawer-nav-btn').forEach(b => b.classList.remove('active'));
+        btn.classList.add('active');
+        closeDrawer();
+        App.navigateTo(btn.dataset.tab);
+      });
+    });
+
+    // Logout desde drawer
+    btnLogoutDrawer?.addEventListener('click', async () => {
+      closeDrawer();
+      document.getElementById('btn-logout')?.click();
+    });
+
+    // Swipe para cerrar (deslizar izq)
+    let touchStartX = 0;
+    drawer?.addEventListener('touchstart', e => { touchStartX = e.touches[0].clientX; }, { passive: true });
+    drawer?.addEventListener('touchend', e => {
+      if (touchStartX - e.changedTouches[0].clientX > 60) closeDrawer();
+    }, { passive: true });
+
+    // Swipe para abrir (desde borde izq)
+    document.addEventListener('touchstart', e => {
+      if (e.touches[0].clientX < 20) touchStartX = e.touches[0].clientX;
+    }, { passive: true });
+    document.addEventListener('touchend', e => {
+      if (touchStartX < 20 && e.changedTouches[0].clientX - touchStartX > 60) openDrawer();
+    }, { passive: true });
+
+    // Sincronizar estado activo del drawer con la nav de escritorio
+    const origNavigateTo = App?.navigateTo?.bind(App);
+    if (origNavigateTo) {
+      App.navigateTo = function(tab) {
+        drawer?.querySelectorAll('.drawer-nav-btn').forEach(b => {
+          b.classList.toggle('active', b.dataset.tab === tab);
+        });
+        return origNavigateTo(tab);
+      };
+    }
+
+    // Rellenar info del usuario en el drawer
+    async function fillDrawerUser() {
+      try {
+        const u = await Auth.currentUser();
+        if (!u) return;
+        const nameEl  = document.getElementById('drawer-name');
+        const statsEl = document.getElementById('drawer-stats');
+        const avatarEl= document.getElementById('drawer-avatar');
+        if (nameEl)  nameEl.textContent  = u.name || u.email || 'Jugador';
+        if (statsEl) statsEl.textContent = `🎴 ${u.tiradas ?? 0} · 💰 ${u.monedas ?? 0}`;
+        if (avatarEl) {
+          if (u.avatar) {
+            avatarEl.innerHTML = `<img src="${u.avatar}" style="width:100%;height:100%;border-radius:50%;object-fit:cover">`;
+          } else {
+            avatarEl.textContent = (u.name || u.email || '?')[0].toUpperCase();
+          }
+        }
+      } catch(e) {}
+    }
+    // Rellenar cuando la app esté lista
+    window.addEventListener('app:ready', fillDrawerUser);
+    setTimeout(fillDrawerUser, 800);
+  })();
+  </script>
 
   <!-- Service Worker PWA -->
   <script>

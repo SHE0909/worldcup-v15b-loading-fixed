@@ -307,3 +307,11 @@ body {
 .toast.show { transform: translateX(-50%) translateY(0); }
 .toast.success { border-color: var(--accent); color: var(--accent); }
 .toast.error { border-color: #ff5566; color: #ff5566; }
+
+/* ── Transfer form responsive ── */
+@media (max-width: 480px) {
+  .auth-container { padding: 1.25rem 1rem 2rem; }
+  .auth-form h2 { font-size: 1.3rem; }
+  .btn.btn-primary { font-size: 0.9rem; padding: 0.75rem; }
+  .file-drop { padding: 0.7rem; font-size: 0.75rem; }
+}

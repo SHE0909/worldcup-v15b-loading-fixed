@@ -267,16 +267,18 @@ const Profile = {
     if (!user) return;
 
     const exportObj = {
-      version:      '2.0',
+      version:      '2.1',
       exportedAt:   new Date().toISOString(),
       app:          'World Cup Collector UES',
       usuario:      user.name,
       email:        user.email,
+      photoURL:     user.photoURL || null,
       tiradas:      user.tiradas,
       aciertos:     user.aciertos,
       monedas:      user.monedas || 0,
       pityCount:    user.pityCount || 0,
       lastDailyPull: user.lastDailyPull || null,
+      lastDailySpin: user.lastDailySpin || null,
       figuritas: (user.figuritas || []).map(f => ({
         id:         f.id,
         nombre:     f.name,
@@ -355,16 +357,21 @@ const Profile = {
       }).filter(Boolean);
 
       user.figuritas        = merged;
-      // Restaurar tiradas exactas del export; freeSpinsClaimed se mantiene siempre en true
+      // Restaurar tiradas exactas; freeSpinsClaimed siempre true para no re-entregar las iniciales
       user.tiradas          = typeof data.tiradas === 'number' ? data.tiradas : (user.tiradas ?? 0);
-      user.freeSpinsClaimed = true;   // nunca volver a entregar las 5 iniciales
+      user.freeSpinsClaimed = true;
       user.aciertos         = Number(data.aciertos)  || user.aciertos;
       user.monedas          = typeof data.monedas === 'number' ? data.monedas : (user.monedas ?? 0);
       user.pityCount        = Number(data.pityCount) || 0;
       user.favoritos        = data.favoritos    || user.favoritos;
       user.predicciones     = data.predicciones || user.predicciones;
       user.equipo_ideal     = data.equipo_ideal || user.equipo_ideal;
+      // Restaurar nombre y foto de perfil si están en el export
+      if (data.usuario)  user.name     = data.usuario;
+      if (data.photoURL) user.photoURL = data.photoURL;
+      // Restaurar marcas de tiradas diarias para no resetear el límite al importar en otro navegador
       if (data.lastDailyPull) user.lastDailyPull = data.lastDailyPull;
+      if (data.lastDailySpin) user.lastDailySpin = data.lastDailySpin;
 
       await Auth.updateUser(user);
       await DB.logActivity(user.email, 'import', `JSON import v${data.version || '1.0'}`);
@@ -400,11 +407,21 @@ const ApiConfig = {
   saveKey() {
     const val = document.getElementById('input-af-key')?.value?.trim();
     if (!val) { Toast.error('Ingresa una key primero'); return; }
+    // Validar formato básico: debe ser hexadecimal de 32 chars (api-football.com)
+    // Las keys de api-football son hashes hex de 32 caracteres
+    if (!/^[a-f0-9]{32}$/i.test(val)) {
+      Toast.error('❌ Formato inválido. La key de api-football.com tiene 32 caracteres hexadecimales (ej: a1b2c3...d4e5f6). Cópiala desde el dashboard en api-football.com → My Account → API Key');
+      return;
+    }
     localStorage.setItem(this._LS_KEY, val);
     document.getElementById('input-af-key').value = '';
     document.getElementById('input-af-key').placeholder = '••••••••' + val.slice(-6);
-    // Limpiar caché para forzar nueva consulta con la key nueva
+    // Limpiar estado anterior para que el banner refleje la nueva situación
+    API_STATUS.usingMock  = false;
+    API_STATUS.lastError  = null;
+    API_STATUS.lastSuccess = null;
     this.clearCache(false);
+    this.renderStatus();
     Toast.success('✅ Key guardada. Recargando datos...');
     setTimeout(() => location.reload(), 1200);
   },
@@ -429,28 +446,48 @@ const ApiConfig = {
   async testKey() {
     const btn = document.getElementById('btn-test-af-key');
     if (btn) btn.textContent = '⏳ Verificando...';
-    const key = localStorage.getItem(this._LS_KEY) || 'e1317aae745eba2daea7870d948b8e8f';
+    const key = localStorage.getItem(this._LS_KEY) || '';
+    if (!key) {
+      Toast.error('No hay key guardada. Ingresa una key primero.');
+      if (btn) btn.textContent = '🔍 Verificar key';
+      return;
+    }
+    if (!/^[a-f0-9]{32}$/i.test(key)) {
+      Toast.error('❌ Formato inválido. La key debe tener 32 caracteres hexadecimales.');
+      if (btn) btn.textContent = '🔍 Verificar key';
+      return;
+    }
     try {
+      // api-football.com usa header 'x-apisports-key' (no RapidAPI)
       const res = await fetch('https://v3.football.api-sports.io/status', {
-        headers: { 'x-rapidapi-key': key, 'x-rapidapi-host': 'v3.football.api-sports.io' },
+        headers: {
+          'x-apisports-key': key,
+          'x-rapidapi-key':  key,
+          'x-rapidapi-host': 'v3.football.api-sports.io'
+        },
         signal: AbortSignal.timeout(8000)
       });
       if (!res.ok) throw new Error(`HTTP ${res.status}`);
       const data = await res.json();
+      if (data?.errors && Object.keys(data.errors).length > 0) {
+        const msg = JSON.stringify(data.errors);
+        throw new Error(msg.includes('token') || msg.includes('Access') ? 'auth' : msg);
+      }
       const plan  = data?.response?.subscription?.plan || 'Free';
       const used  = data?.response?.requests?.current  ?? '?';
       const limit = data?.response?.requests?.limit_day ?? '?';
       Toast.success(`✅ Key válida · Plan: ${plan} · Requests hoy: ${used}/${limit}`);
       API_STATUS.lastError = null;
     } catch(err) {
-      if (err.message.includes('403') || err.message.includes('401')) {
-        Toast.error('❌ Key inválida o sin acceso a este endpoint');
+      const msg = err.message;
+      if (msg === 'auth' || msg.includes('403') || msg.includes('401') || msg.includes('token')) {
+        Toast.error('❌ Key inválida. Verifica que la copiaste bien desde api-football.com → My Account');
         API_STATUS.lastError = 'auth';
-      } else if (err.message.includes('429')) {
-        Toast.error('⚠️ Límite diario alcanzado (429)');
+      } else if (msg.includes('429')) {
+        Toast.error('⚠️ Límite diario alcanzado. Vuelve mañana.');
         API_STATUS.lastError = 'rate_limit';
       } else {
-        Toast.error('❌ Error de red: ' + err.message);
+        Toast.error('❌ Sin conexión o error de red: ' + msg);
         API_STATUS.lastError = 'network';
       }
     } finally {
@@ -463,31 +500,41 @@ const ApiConfig = {
     const banner = document.getElementById('api-status-banner');
     if (!banner) return;
     const hasCustomKey = !!localStorage.getItem(this._LS_KEY);
-    const err = API_STATUS.lastError;
-    const usingMock = API_STATUS.usingMock;
-    const reqToday  = API_STATUS.requestsToday;
+    const err        = API_STATUS.lastError;
+    const usingMock  = API_STATUS.usingMock;
+    const reqToday   = API_STATUS.requestsToday;
+    const hadSuccess = !!API_STATUS.lastSuccess;
 
     let html = '';
+
     if (err === 'auth') {
       html = `<div style="background:rgba(255,68,68,0.1);border:1px solid #ff4444;border-radius:6px;padding:0.5rem 0.75rem;font-size:0.72rem;color:#ff8888">
-        ❌ <strong>Key inválida</strong> — Verifica que sea correcta y que hayas suscrito la API en RapidAPI.
+        ❌ <strong>Key inválida</strong> — Verifica que la copiaste bien desde <a href="https://dashboard.api-football.com" target="_blank" style="color:#ff8888;text-decoration:underline">api-football.com → My Account</a>.
       </div>`;
     } else if (err === 'rate_limit') {
       html = `<div style="background:rgba(255,170,0,0.1);border:1px solid #ffaa00;border-radius:6px;padding:0.5rem 0.75rem;font-size:0.72rem;color:#ffcc44">
-        ⚠️ <strong>Límite diario alcanzado</strong> — Los datos se actualizarán mañana. Requests usados hoy: ${reqToday}.
+        ⚠️ <strong>Límite diario alcanzado</strong> — Se resetea a medianoche. Requests usados hoy: ${reqToday}/100.
       </div>`;
-    } else if (usingMock) {
-      html = `<div style="background:rgba(255,170,0,0.1);border:1px solid #ffaa00;border-radius:6px;padding:0.5rem 0.75rem;font-size:0.72rem;color:#ffcc44">
-        ⚠️ <strong>Datos estáticos</strong> — La API no respondió. Agrega una key válida para datos en tiempo real.
-      </div>`;
-    } else if (API_STATUS.lastSuccess) {
+    } else if (hadSuccess) {
+      /* API respondió bien en esta sesión */
       const ago = Math.round((Date.now() - API_STATUS.lastSuccess) / 60000);
       html = `<div style="background:rgba(68,255,136,0.08);border:1px solid #44ff88;border-radius:6px;padding:0.5rem 0.75rem;font-size:0.72rem;color:#44cc88">
-        ✅ <strong>API activa</strong>${hasCustomKey ? ' (key propia)' : ' (key por defecto)'} · Última sync: hace ${ago} min · Requests hoy: ${reqToday}
+        ✅ <strong>API activa</strong> ${hasCustomKey ? '· key propia' : '· key por defecto'} · Sync hace ${ago} min · Requests hoy: ${reqToday}
+      </div>`;
+    } else if (hasCustomKey && usingMock) {
+      /* Tiene key guardada pero la API falló esta sesión — probablemente CORS o red */
+      html = `<div style="background:rgba(255,170,0,0.1);border:1px solid #ffaa00;border-radius:6px;padding:0.5rem 0.75rem;font-size:0.72rem;color:#ffcc44">
+        ⚠️ <strong>Key guardada, API sin respuesta</strong> — Puede ser error de red temporal. Usa <em>Verificar key</em> para comprobar que sea válida.
+      </div>`;
+    } else if (!hasCustomKey && usingMock) {
+      /* Sin key propia y la key por defecto falló */
+      html = `<div style="background:rgba(255,170,0,0.1);border:1px solid #ffaa00;border-radius:6px;padding:0.5rem 0.75rem;font-size:0.72rem;color:#ffcc44">
+        ⚠️ <strong>Usando datos estáticos</strong> — Agrega tu key de <a href="https://dashboard.api-football.com" target="_blank" style="color:#ffcc44;text-decoration:underline">api-football.com</a> para datos en tiempo real.
       </div>`;
     } else {
+      /* Estado inicial antes de que la app haga cualquier llamada */
       html = `<div style="background:rgba(100,100,100,0.1);border:1px solid var(--border);border-radius:6px;padding:0.5rem 0.75rem;font-size:0.72rem;color:var(--text-muted)">
-        ℹ️ ${hasCustomKey ? 'Usando key propia guardada' : 'Usando key por defecto — añade la tuya para más control'}
+        ℹ️ ${hasCustomKey ? '🔑 Key propia guardada — usa <em>Verificar key</em> para confirmar que funciona.' : 'Sin key propia — añade la tuya para más control.'}
       </div>`;
     }
     banner.innerHTML = html;

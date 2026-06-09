@@ -85,11 +85,14 @@ const App = {
     this._currentTab = tab;
     document.querySelectorAll('.tab-section').forEach(s => s.classList.remove('active'));
     document.querySelectorAll('.nav-btn').forEach(b => b.classList.remove('active'));
+    document.querySelectorAll('.drawer-nav-btn').forEach(b => b.classList.remove('active'));
 
-    const section = document.getElementById(`tab-${tab}`);
-    const navBtn  = document.querySelector(`.nav-btn[data-tab="${tab}"]`);
-    if (section) section.classList.add('active');
-    if (navBtn)  navBtn.classList.add('active');
+    const section    = document.getElementById(`tab-${tab}`);
+    const navBtn     = document.querySelector(`.nav-btn[data-tab="${tab}"]`);
+    const drawerBtn  = document.querySelector(`.drawer-nav-btn[data-tab="${tab}"]`);
+    if (section)   section.classList.add('active');
+    if (navBtn)    navBtn.classList.add('active');
+    if (drawerBtn) drawerBtn.classList.add('active');
 
     return this._renderTab(tab);
   },
