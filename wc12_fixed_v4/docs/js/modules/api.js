@@ -42,7 +42,7 @@
 
 /* ── Clave de API-Football: prioridad localStorage → fallback hardcoded ── */
 const _AF_KEY_LS = 'wcc_af_api_key';
-const _AF_KEY_DEFAULT = 'e1317aae745eba2daea7870d948b8e8f';
+const _AF_KEY_DEFAULT = 'f264864c0d817398888229950e2297';  // key de Jeferson — api-sports.io
 
 function getAfKey() {
   try { return localStorage.getItem(_AF_KEY_LS) || _AF_KEY_DEFAULT; } catch(_) { return _AF_KEY_DEFAULT; }
@@ -75,7 +75,7 @@ const API_CONFIG = {
   footballData: {
     base:    'https://api.football-data.org/v4',
     key:     '3bec1d9c3a5d418ebed176fdaaafe7e0',
-    enabled: true
+    enabled: false  // deshabilitado — CORS bloqueado fuera de localhost
   },
   sportsDB: {
     /* Clave pública gratuita "3" — suficiente para buscar jugadores */
