@@ -1,30 +1,28 @@
-/**
- * Service Worker — World Cup Collector UES v7 PWA
- */
-const CACHE_NAME = 'wcc-ues-v14';
+const CACHE_NAME = 'wcc-ues-v15';
+const BASE = '/worldcup-v15b-loading-fixed';
 const STATIC_ASSETS = [
-  '/',
-  '/index.html',
-  '/app.html',
-  '/login.html',
-  '/css/app.css',
-  '/css/main.css',
-  '/css/auth.css',
-  '/js/utils/db.js',
-  '/js/utils/auth.js',
-  '/js/utils/toast.js',
-  '/js/utils/modal.js',
-  '/js/modules/api.js',
-  '/js/modules/gacha.js',
-  '/js/modules/album.js',
-  '/js/modules/predictions.js',
-  '/js/modules/profile.js',
-  '/js/modules/stats.js',
-  '/js/modules/dashboard.js',
-  '/js/modules/battle.js',
-  '/js/modules/exchange.js',
-  '/js/app.js',
-  '/manifest.json'
+  BASE + '/',
+  BASE + '/index.html',
+  BASE + '/app.html',
+  BASE + '/login.html',
+  BASE + '/css/app.css',
+  BASE + '/css/main.css',
+  BASE + '/css/auth.css',
+  BASE + '/js/utils/db.js',
+  BASE + '/js/utils/auth.js',
+  BASE + '/js/utils/toast.js',
+  BASE + '/js/utils/modal.js',
+  BASE + '/js/modules/api.js',
+  BASE + '/js/modules/gacha.js',
+  BASE + '/js/modules/album.js',
+  BASE + '/js/modules/predictions.js',
+  BASE + '/js/modules/profile.js',
+  BASE + '/js/modules/stats.js',
+  BASE + '/js/modules/dashboard.js',
+  BASE + '/js/modules/battle.js',
+  BASE + '/js/modules/exchange.js',
+  BASE + '/js/app.js',
+  BASE + '/manifest.json'
 ];
 
 self.addEventListener('install', e => {
@@ -59,7 +57,7 @@ self.addEventListener('fetch', e => {
           caches.open(CACHE_NAME).then(cache => cache.put(e.request, clone));
         }
         return response;
-      }).catch(() => caches.match('/app.html'));
+      }).catch(() => caches.match(BASE + '/app.html'));
     })
   );
 });
