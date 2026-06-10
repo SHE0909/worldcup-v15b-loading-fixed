@@ -42,7 +42,7 @@
 
 /* ── Clave de API-Football: prioridad localStorage → fallback hardcoded ── */
 const _AF_KEY_LS = 'wcc_af_api_key';
-const _AF_KEY_DEFAULT = 'f264864c0d817398888229950e2297';  // key de Jeferson — api-sports.io
+const _AF_KEY_DEFAULT = 'ff2d4db4c0d672f86666229955b22197';  // key de Jeferson — api-sports.io
 
 function getAfKey() {
   try { return localStorage.getItem(_AF_KEY_LS) || _AF_KEY_DEFAULT; } catch(_) { return _AF_KEY_DEFAULT; }

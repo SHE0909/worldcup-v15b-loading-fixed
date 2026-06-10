@@ -322,25 +322,24 @@ const App = {
       setTimeout(() => card.classList.add('card-flip-in'), i * 100);
     });
 
-    /* 7. Fotos ya incluidas en el render — este bloque queda como no-op safety net */
+    /* 7. Inyectar fotos en TODAS las cartas (incluidas duplicadas) después del render */
     pull.results.forEach(f => {
       Gacha.getPlayerPhoto(f).then(url => {
         if (!url) return;
-        // foto guardada via API.getPhotoById en localStorage
         const wrap = document.querySelector(`#gacha-grid .fig-photo-wrap[data-id="${f.id}"]`);
         if (!wrap) return;
+        if (wrap.querySelector('img.fig-photo')) return; // ya cargada
         const isCutout = url.includes('cutout') || url.includes('Cutout');
         const img = document.createElement('img');
         img.className = "fig-photo"; img.referrerPolicy = "no-referrer";
         img.alt = f.name;
         img.src = url;
         img.style.cssText = `object-fit:${isCutout?'contain':'cover'};object-position:${isCutout?'center':'top center'};`;
-        img.onerror = () => { img.remove(); };
+        img.onerror = () => { img.remove(); const em = wrap.querySelector('.fig-emoji-fallback'); if(em) em.style.display=''; };
         const em = wrap.querySelector('.fig-emoji-fallback');
         if (em) em.style.display = 'none';
         wrap.insertBefore(img, wrap.firstChild);
-        const grad = wrap.querySelector('.fig-photo-gradient');
-        if (!grad) {
+        if (!wrap.querySelector('.fig-photo-gradient')) {
           const g = document.createElement('div');
           g.className = 'fig-photo-gradient';
           wrap.appendChild(g);

@@ -3772,3 +3772,138 @@ html, body { overflow-x: hidden; width: 100%; }
   .app-nav { display: flex !important; }
   #btn-logout { display: flex !important; }
 }
+
+/* ============================================================
+   v20 — SVG Icons + Dashboard responsive fix
+   ============================================================ */
+
+/* ── Icon sizing en nav y botones ── */
+.nav-btn svg, .drawer-nav-btn svg {
+  flex-shrink: 0;
+  display: block;
+}
+.nav-btn { gap: 5px; }
+.drawer-nav-btn .dni {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 24px;
+  flex-shrink: 0;
+}
+
+/* Header stats con SVG */
+.header-stat svg {
+  vertical-align: -2px;
+  opacity: 0.7;
+}
+.btn-icon svg {
+  display: block;
+  color: var(--text-secondary);
+}
+.btn-icon:hover svg { color: var(--text-primary); }
+
+/* Quick-action buttons con SVG */
+.qa-btn svg {
+  display: block;
+  margin: 0 auto 4px;
+  color: var(--accent);
+  transition: transform 0.2s;
+}
+.qa-btn:hover svg { transform: scale(1.15); }
+
+/* Drawer logo sin emoji */
+.drawer-logo {
+  font-family: 'Bebas Neue', cursive;
+  font-size: 1.3rem;
+  letter-spacing: 4px;
+  color: var(--accent);
+}
+.header-logo {
+  font-family: 'Bebas Neue', cursive;
+  letter-spacing: 3px;
+}
+
+/* ── Dashboard responsive fix ── */
+/* El dashboard-grid en móvil: 1 columna siempre */
+@media (max-width: 640px) {
+  /* Quick actions: 4 en fila siempre (iconos pequeños) */
+  .quick-actions {
+    display: grid !important;
+    grid-template-columns: repeat(4, 1fr) !important;
+    gap: 0.5rem !important;
+  }
+  .qa-btn {
+    padding: 0.6rem 0.3rem !important;
+    font-size: 0.6rem !important;
+  }
+  .qa-btn svg {
+    width: 18px !important;
+    height: 18px !important;
+    margin-bottom: 3px !important;
+  }
+
+  /* Cards del dashboard: apiladas, sin overflow */
+  .dashboard-grid {
+    display: flex !important;
+    flex-direction: column !important;
+    gap: 0.65rem !important;
+  }
+  .dash-card {
+    width: 100% !important;
+    min-width: 0 !important;
+    overflow: hidden !important;
+  }
+
+  /* Cards compactas en móvil */
+  .dash-card h3 {
+    font-size: 0.65rem !important;
+    letter-spacing: 1px !important;
+    margin-bottom: 0.5rem !important;
+  }
+
+  /* Match items más compactos */
+  .match-item {
+    padding: 0.5rem 0.6rem !important;
+  }
+  .match-teams {
+    font-size: 0.78rem !important;
+    gap: 0.3rem !important;
+  }
+  .match-score {
+    font-size: 0.95rem !important;
+    min-width: 44px !important;
+    text-align: center !important;
+  }
+  .match-meta {
+    font-size: 0.6rem !important;
+  }
+
+  /* Standings compacto */
+  .standing-row {
+    font-size: 0.72rem !important;
+    padding: 0.3rem 0 !important;
+  }
+  .standing-name { max-width: 100px !important; }
+
+  /* Section header en móvil */
+  .section-header {
+    flex-wrap: wrap !important;
+    gap: 0.4rem !important;
+  }
+  .section-header h2 {
+    font-size: 0.85rem !important;
+  }
+  #btn-update-stats {
+    font-size: 0.65rem !important;
+    padding: 0.3rem 0.6rem !important;
+  }
+}
+
+@media (min-width: 641px) and (max-width: 1023px) {
+  .quick-actions {
+    grid-template-columns: repeat(4, 1fr) !important;
+  }
+  .dashboard-grid {
+    grid-template-columns: repeat(2, 1fr) !important;
+  }
+}

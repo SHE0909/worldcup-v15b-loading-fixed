@@ -295,7 +295,10 @@ const Profile = {
         result:       p.result,
         exactCorrect: p.exactCorrect || false
       })),
-      equipo_ideal: user.equipo_ideal || {}
+      equipo_ideal: user.equipo_ideal || {},
+      battleAttempts: (() => {
+        try { return JSON.parse(localStorage.getItem('wcc_battle_attempts') || 'null'); } catch(_) { return null; }
+      })()
     };
 
     const blob = new Blob([JSON.stringify(exportObj, null, 2)], { type: 'application/json' });
@@ -372,6 +375,10 @@ const Profile = {
       // Restaurar marcas de tiradas diarias para no resetear el límite al importar en otro navegador
       if (data.lastDailyPull) user.lastDailyPull = data.lastDailyPull;
       if (data.lastDailySpin) user.lastDailySpin = data.lastDailySpin;
+      // Restaurar intentos diarios de batalla para preservar el límite entre dispositivos
+      if (data.battleAttempts) {
+        try { localStorage.setItem('wcc_battle_attempts', JSON.stringify(data.battleAttempts)); } catch(_) {}
+      }
 
       await Auth.updateUser(user);
       await DB.logActivity(user.email, 'import', `JSON import v${data.version || '1.0'}`);
