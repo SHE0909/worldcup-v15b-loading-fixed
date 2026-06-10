@@ -369,6 +369,7 @@
   <script src="js/modules/api.js"></script>
   <script src="js/modules/gacha.js"></script>
   <script src="js/modules/album.js"></script>
+  <script src="js/modules/wc_predictor.js"></script>
   <script src="js/modules/predictions.js"></script>
   <script src="js/modules/profile.js"></script>
   <script src="js/modules/stats.js"></script>
@@ -472,12 +473,14 @@
 
   <!-- Service Worker PWA -->
   <script>
-    if ('serviceWorker' in navigator) {
+    if ('serviceWorker' in navigator && location.protocol !== 'file:') {
       window.addEventListener('load', () => {
-        navigator.serviceWorker.register('/sw.js')
+        navigator.serviceWorker.register('./sw.js')
           .then(r => console.log('[PWA] SW registrado:', r.scope))
           .catch(e => console.warn('[PWA] SW fallo:', e));
       });
+    } else if (location.protocol === 'file:') {
+      console.info('[PWA] SW desactivado en file:// — abre desde un servidor HTTP para PWA completo.');
     }
 
     // PWA Install prompt

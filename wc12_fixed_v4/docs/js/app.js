@@ -61,6 +61,23 @@ const App = {
 
     this._bindNavEvents();
     this._bindGlobalEvents();
+
+    // Mostrar estado de la API key al inicio (límite horario / key personal)
+    this._showInitialApiKeyInfo();
+  },
+
+  _showInitialApiKeyInfo() {
+    const hasCustomKey = !!localStorage.getItem('wcc_af_api_key');
+    if (!hasCustomKey) {
+      const maxPerHour = typeof _AF_DEFAULT_MAX_PER_HOUR !== 'undefined' ? _AF_DEFAULT_MAX_PER_HOUR : 10;
+      const bar = document.getElementById('api-status-bar');
+      if (bar) {
+        bar.style.display = 'flex';
+        bar.className = 'api-status-bar api-status-mock';
+        bar.innerHTML = `<span>🔒 Usando key compartida · Límite: ${maxPerHour} consultas/hora · <strong style="cursor:pointer;text-decoration:underline" onclick="App.navigateTo('profile')">Añade tu key gratis</strong> para actualizaciones ilimitadas</span>`;
+        setTimeout(() => { bar.style.display = 'none'; }, 8000);
+      }
+    }
   },
 
   async loadUserData(user = null) {
@@ -179,25 +196,40 @@ const App = {
     /* ── Actualizar stats ── */
     document.getElementById('btn-update-stats')?.addEventListener('click', async () => {
       const btn = document.getElementById('btn-update-stats');
+      const svgIcon = `<svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="23 4 23 10 17 10"/><polyline points="1 20 1 14 7 14"/><path d="M3.51 9a9 9 0 0114.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0020.49 15"/></svg>`;
       btn.disabled = true;
-      btn.textContent = '⏳ Actualizando...';
+      btn.innerHTML = '⏳ Actualizando...';
 
       try {
         Toast.show('🔄 Consultando APIs...');
         const refreshResult = await API.forceRefresh();
         this._showApiStatus(refreshResult.source);
 
-        const finished = await API.getFinishedMatches();
-        if (finished?.length > 0) await Predictions.evaluatePredictions(finished);
+        const finished = refreshResult.finished?.length
+          ? refreshResult.finished
+          : await API.getFinishedMatches();
+
+        // También sincronizar partidos finalizados que vengan en upcoming
+        const allForEval = [
+          ...(finished || []),
+          ...(refreshResult.upcoming || []).filter(m => m.status === 'finished' && m.scoreHome !== null)
+        ];
+
+        if (allForEval.length > 0) await Predictions.evaluatePredictions(allForEval);
 
         await Dashboard.render();
         await this.loadUserData();
+
+        // Actualizar banner del perfil si está visible
+        if (typeof ApiConfig !== 'undefined') ApiConfig.renderStatus();
+
         Toast.success('Estadísticas actualizadas ✅');
       } catch(err) {
+        this._showApiStatus('network_error');
         Toast.error('Error al actualizar: ' + err.message);
       } finally {
         btn.disabled = false;
-        btn.textContent = '🔄 Actualizar stats';
+        btn.innerHTML = `${svgIcon} Actualizar`;
       }
     });
 
@@ -244,17 +276,29 @@ const App = {
   _showApiStatus(source) {
     const bar = document.getElementById('api-status-bar');
     if (!bar) return;
+
+    bar.style.display = 'flex';
+
     if (source === 'mock') {
-      bar.style.display = 'flex';
       bar.className = 'api-status-bar api-status-mock';
-      bar.innerHTML = `
-        <span>⚠️ Datos de muestra (Mock) — El Mundial 2026 aún no ha comenzado</span>
-      `;
+      bar.innerHTML = `<span>⚠️ Datos de muestra (Mock) — El Mundial 2026 aún no ha comenzado</span>`;
+    } else if (source === 'hourly_limit') {
+      bar.className = 'api-status-bar api-status-mock';
+      const maxPerHour = typeof _AF_DEFAULT_MAX_PER_HOUR !== 'undefined' ? _AF_DEFAULT_MAX_PER_HOUR : 10;
+      bar.innerHTML = `<span>🕐 Límite horario (${maxPerHour} req/hora con key por defecto). Añade tu propia key en <strong>Perfil → API Key</strong> para sin límite.</span>`;
+    } else if (source === 'rate_limit') {
+      bar.className = 'api-status-bar api-status-mock';
+      bar.innerHTML = `<span>⚠️ Límite diario de la API alcanzado. Se resetea a medianoche. Añade tu propia key en <strong>Perfil → API Key</strong>.</span>`;
+    } else if (source === 'auth_error') {
+      bar.className = 'api-status-bar api-status-mock';
+      bar.innerHTML = `<span>❌ Key de API inválida — Verifica en <strong>Perfil → API Key → Verificar</strong>.</span>`;
+    } else if (source === 'network_error') {
+      bar.className = 'api-status-bar api-status-mock';
+      bar.innerHTML = `<span>❌ No se pudo conectar con la API. Comprueba tu conexión o vuelve a intentar.</span>`;
     } else {
-      bar.style.display = 'flex';
       bar.className = 'api-status-bar api-status-live';
       bar.innerHTML = `<span>✅ Datos en vivo desde <strong>${source}</strong></span>`;
-      setTimeout(() => { bar.style.display = 'none'; }, 4000);
+      setTimeout(() => { bar.style.display = 'none'; }, 5000);
     }
   },
 
@@ -322,28 +366,38 @@ const App = {
       setTimeout(() => card.classList.add('card-flip-in'), i * 100);
     });
 
-    /* 7. Inyectar fotos en TODAS las cartas (incluidas duplicadas) después del render */
+    /* 7. Inyectar fotos en TODAS las cartas (incluidas duplicadas) después del render
+          Nota: querySelectorAll captura TODAS las cartas con el mismo data-id (duplicados) */
+    /* 7b. Inyectar fotos para cartas que no tenían foto en caché al renderizar
+           (incluye duplicados de sesiones anteriores). Usa onload para fade-in. */
     pull.results.forEach(f => {
       Gacha.getPlayerPhoto(f).then(url => {
         if (!url) return;
-        const wrap = document.querySelector(`#gacha-grid .fig-photo-wrap[data-id="${f.id}"]`);
-        if (!wrap) return;
-        if (wrap.querySelector('img.fig-photo')) return; // ya cargada
-        const isCutout = url.includes('cutout') || url.includes('Cutout');
-        const img = document.createElement('img');
-        img.className = "fig-photo"; img.referrerPolicy = "no-referrer";
-        img.alt = f.name;
-        img.src = url;
-        img.style.cssText = `object-fit:${isCutout?'contain':'cover'};object-position:${isCutout?'center':'top center'};`;
-        img.onerror = () => { img.remove(); const em = wrap.querySelector('.fig-emoji-fallback'); if(em) em.style.display=''; };
-        const em = wrap.querySelector('.fig-emoji-fallback');
-        if (em) em.style.display = 'none';
-        wrap.insertBefore(img, wrap.firstChild);
-        if (!wrap.querySelector('.fig-photo-gradient')) {
-          const g = document.createElement('div');
-          g.className = 'fig-photo-gradient';
-          wrap.appendChild(g);
-        }
+        const wraps = document.querySelectorAll(`#gacha-grid .fig-photo-wrap[data-id="${f.id}"]`);
+        wraps.forEach(wrap => {
+          // Si ya hay una img con src (incluso si aún cargando), no duplicar
+          const existingImg = wrap.querySelector('img.fig-photo');
+          if (existingImg && existingImg.src) return;
+          const isCutout = url.includes('cutout') || url.includes('Cutout');
+          const img = document.createElement('img');
+          img.className = "fig-photo";
+          img.referrerPolicy = "no-referrer";
+          img.alt = f.name;
+          img.style.cssText = `object-fit:${isCutout?'contain':'cover'};object-position:${isCutout?'center':'top center'};opacity:0;transition:opacity .3s;position:relative;z-index:1;`;
+          img.onload = () => {
+            img.style.opacity = '1';
+            const em = wrap.querySelector('.fig-emoji-fallback');
+            if (em) em.style.display = 'none';
+          };
+          img.onerror = () => { img.remove(); };
+          img.src = url;
+          wrap.insertBefore(img, wrap.querySelector('.fig-emoji-fallback')?.nextSibling || wrap.firstChild);
+          if (!wrap.querySelector('.fig-photo-gradient')) {
+            const g = document.createElement('div');
+            g.className = 'fig-photo-gradient';
+            wrap.appendChild(g);
+          }
+        });
       }).catch(()=>{});
     });
 
@@ -369,16 +423,20 @@ const App = {
     const stats = Album.getPlayerStats ? (Album.getPlayerStats(f.id) || {}) : {};
     const isPOR = f.pos === 'POR';
 
-    /* Usar foto disponible de forma síncrona (mapa hardcodeado → memoria → localStorage) */
+    /* Usar foto disponible de forma síncrona (memoria → localStorage) */
     const cachedUrl = API.getPhotoSync(f) || photoUrl || null;
     const isCutout  = cachedUrl && (cachedUrl.includes('cutout') || cachedUrl.includes('Cutout'));
-    const photoSection = `<div class="fig-photo-wrap" data-id="${f.id}">
-      <span class="fig-emoji-fallback"${cachedUrl ? ' style="display:none"' : ''}>${f.emoji}</span>
+
+    /* BUG FIX duplicados: siempre mostramos el emoji de fondo; la foto se pone encima con onload.
+       Evita que duplicados queden sin foto si no estaban en memCache al renderizar. */
+    const photoSection = `<div class="fig-photo-wrap" data-id="${f.id}" style="position:relative">
+      <span class="fig-emoji-fallback" style="position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);z-index:0">${f.emoji}</span>
       ${cachedUrl
         ? `<img class="fig-photo" src="${cachedUrl}" alt="${f.name}"
-                style="object-fit:${isCutout?'contain':'cover'};object-position:${isCutout?'center':'top center'};"
+                style="object-fit:${isCutout?'contain':'cover'};object-position:${isCutout?'center':'top center'};opacity:0;transition:opacity .3s;position:relative;z-index:1;"
                 referrerpolicy="no-referrer"
-                onerror="this.remove();this.parentNode.querySelector('.fig-emoji-fallback').style.display=''">`
+                onload="this.style.opacity='1';var em=this.parentNode.querySelector('.fig-emoji-fallback');if(em)em.style.display='none';"
+                onerror="this.remove();">`
         : ''}
     </div>`;
 

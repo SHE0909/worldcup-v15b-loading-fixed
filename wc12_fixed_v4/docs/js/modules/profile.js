@@ -409,6 +409,11 @@ const ApiConfig = {
     document.getElementById('btn-clear-api-cache')?.addEventListener('click', () => this.clearCache());
 
     this.renderStatus();
+
+    // Si hay key propia guardada y no hay estado conocido aún, auto-verificar silenciosamente
+    if (saved && !API_STATUS.lastError && !API_STATUS.lastSuccess) {
+      setTimeout(() => this.testKey(), 300);
+    }
   },
 
   saveKey() {
@@ -443,9 +448,11 @@ const ApiConfig = {
   },
 
   clearCache(showToast = true) {
-    const keys = ['wcc_af_today_ts','wcc_af_next_ts','wcc_cache_upcoming_today',
-                  'wcc_cache_upcoming_next','wcc_upcoming_day','wcc_af_standings_ts',
-                  'wcc_af_req_count','wcc_af_req_day','wcc_shared_live'];
+    const keys = ['wcc_af_today_ts','wcc_af_next_ts','wcc_af_yest_ts',
+                  'wcc_cache_upcoming_today','wcc_cache_upcoming_next','wcc_cache_upcoming_yest',
+                  'wcc_upcoming_day','wcc_af_standings_ts',
+                  'wcc_af_req_count','wcc_af_req_day',
+                  'wcc_af_hour_slot','wcc_af_hour_count','wcc_shared_live'];
     keys.forEach(k => localStorage.removeItem(k));
     if (showToast) Toast.success('🗑️ Caché limpiada. Los datos se recargarán.');
   },
@@ -487,9 +494,14 @@ const ApiConfig = {
       API_STATUS.lastError = null;
     } catch(err) {
       const msg = err.message;
-      if (msg === 'auth' || msg.includes('403') || msg.includes('401') || msg.includes('token')) {
-        Toast.error('❌ Key inválida. Verifica que la copiaste bien desde api-football.com → My Account');
-        API_STATUS.lastError = 'auth';
+      if (msg === 'auth' || msg.includes('403') || msg.includes('401') || msg.includes('token') || msg.includes('Access') || msg.includes('suspended')) {
+        if (msg.includes('suspended')) {
+          Toast.error('🚫 Cuenta suspendida — Revisa tu cuenta en dashboard.api-football.com');
+          API_STATUS.lastError = 'suspended';
+        } else {
+          Toast.error('❌ Key inválida. Verifica que la copiaste bien desde api-football.com → My Account');
+          API_STATUS.lastError = 'auth';
+        }
       } else if (msg.includes('429')) {
         Toast.error('⚠️ Límite diario alcanzado. Vuelve mañana.');
         API_STATUS.lastError = 'rate_limit';
@@ -506,15 +518,22 @@ const ApiConfig = {
   renderStatus() {
     const banner = document.getElementById('api-status-banner');
     if (!banner) return;
-    const hasCustomKey = !!localStorage.getItem(this._LS_KEY);
-    const err        = API_STATUS.lastError;
-    const usingMock  = API_STATUS.usingMock;
-    const reqToday   = API_STATUS.requestsToday;
-    const hadSuccess = !!API_STATUS.lastSuccess;
+    const hasCustomKey   = !!localStorage.getItem(this._LS_KEY);
+    const err            = API_STATUS.lastError;
+    const usingMock      = API_STATUS.usingMock;
+    const reqToday       = API_STATUS.requestsToday;
+    const reqThisHour    = API_STATUS.requestsThisHour || 0;
+    const hadSuccess     = !!API_STATUS.lastSuccess;
+    const hourlyLimitHit = err === 'hourly_limit';
+    const maxPerHour     = typeof _AF_DEFAULT_MAX_PER_HOUR !== 'undefined' ? _AF_DEFAULT_MAX_PER_HOUR : 10;
 
     let html = '';
 
-    if (err === 'auth') {
+    if (err === 'suspended') {
+      html = `<div style="background:rgba(255,68,68,0.15);border:1px solid #ff4444;border-radius:6px;padding:0.5rem 0.75rem;font-size:0.72rem;color:#ff8888">
+        🚫 <strong>Cuenta suspendida</strong> — Tu cuenta en api-football.com está suspendida. Revisa tu estado en <a href="https://dashboard.api-football.com" target="_blank" style="color:#ff8888;text-decoration:underline">dashboard.api-football.com</a>.
+      </div>`;
+    } else if (err === 'auth') {
       html = `<div style="background:rgba(255,68,68,0.1);border:1px solid #ff4444;border-radius:6px;padding:0.5rem 0.75rem;font-size:0.72rem;color:#ff8888">
         ❌ <strong>Key inválida</strong> — Verifica que la copiaste bien desde <a href="https://dashboard.api-football.com" target="_blank" style="color:#ff8888;text-decoration:underline">api-football.com → My Account</a>.
       </div>`;
@@ -522,26 +541,32 @@ const ApiConfig = {
       html = `<div style="background:rgba(255,170,0,0.1);border:1px solid #ffaa00;border-radius:6px;padding:0.5rem 0.75rem;font-size:0.72rem;color:#ffcc44">
         ⚠️ <strong>Límite diario alcanzado</strong> — Se resetea a medianoche. Requests usados hoy: ${reqToday}/100.
       </div>`;
+    } else if (hourlyLimitHit || (!hasCustomKey && reqThisHour >= maxPerHour)) {
+      html = `<div style="background:rgba(255,140,0,0.12);border:1px solid #ff8c00;border-radius:6px;padding:0.5rem 0.75rem;font-size:0.72rem;color:#ffb347">
+        🕐 <strong>Límite horario alcanzado</strong> (${reqThisHour}/${maxPerHour} req esta hora con key por defecto) —
+        <a href="https://dashboard.api-football.com" target="_blank" style="color:#ffb347;text-decoration:underline">Añade tu propia key gratis</a>
+        para actualizaciones sin límite. Se resetea solo al cambiar de hora.
+      </div>`;
     } else if (hadSuccess) {
-      /* API respondió bien en esta sesión */
       const ago = Math.round((Date.now() - API_STATUS.lastSuccess) / 60000);
+      const keyLabel = hasCustomKey ? '🔑 key propia' : `🔒 key por defecto (${reqThisHour}/${maxPerHour} req/hora)`;
       html = `<div style="background:rgba(68,255,136,0.08);border:1px solid #44ff88;border-radius:6px;padding:0.5rem 0.75rem;font-size:0.72rem;color:#44cc88">
-        ✅ <strong>API activa</strong> ${hasCustomKey ? '· key propia' : '· key por defecto'} · Sync hace ${ago} min · Requests hoy: ${reqToday}
+        ✅ <strong>API activa</strong> · ${keyLabel} · Sync hace ${ago} min · Requests hoy: ${reqToday}
       </div>`;
     } else if (hasCustomKey && usingMock) {
-      /* Tiene key guardada pero la API falló esta sesión — probablemente CORS o red */
       html = `<div style="background:rgba(255,170,0,0.1);border:1px solid #ffaa00;border-radius:6px;padding:0.5rem 0.75rem;font-size:0.72rem;color:#ffcc44">
         ⚠️ <strong>Key guardada, API sin respuesta</strong> — Puede ser error de red temporal. Usa <em>Verificar key</em> para comprobar que sea válida.
       </div>`;
     } else if (!hasCustomKey && usingMock) {
-      /* Sin key propia y la key por defecto falló */
       html = `<div style="background:rgba(255,170,0,0.1);border:1px solid #ffaa00;border-radius:6px;padding:0.5rem 0.75rem;font-size:0.72rem;color:#ffcc44">
         ⚠️ <strong>Usando datos estáticos</strong> — Agrega tu key de <a href="https://dashboard.api-football.com" target="_blank" style="color:#ffcc44;text-decoration:underline">api-football.com</a> para datos en tiempo real.
       </div>`;
     } else {
-      /* Estado inicial antes de que la app haga cualquier llamada */
       html = `<div style="background:rgba(100,100,100,0.1);border:1px solid var(--border);border-radius:6px;padding:0.5rem 0.75rem;font-size:0.72rem;color:var(--text-muted)">
-        ℹ️ ${hasCustomKey ? '🔑 Key propia guardada — usa <em>Verificar key</em> para confirmar que funciona.' : 'Sin key propia — añade la tuya para más control.'}
+        ℹ️ ${hasCustomKey
+          ? '🔑 Key propia guardada — usa <em>Verificar key</em> para confirmar.'
+          : `🔒 Key por defecto (${maxPerHour} req/hora). <a href="https://dashboard.api-football.com" target="_blank" style="color:var(--text-muted);text-decoration:underline">Añade la tuya gratis</a> para sin límite.`
+        }
       </div>`;
     }
     banner.innerHTML = html;

@@ -40,29 +40,77 @@
  *   - precachePhotos() llama _migrateLegacyPhotoCache() en primer uso
  */
 
-/* ── Clave de API-Football: prioridad localStorage → fallback hardcoded ── */
-const _AF_KEY_LS = 'wcc_af_api_key';
-const _AF_KEY_DEFAULT = 'ff2d4db4c0d672f86666229955b22197';  // key de Jeferson — api-sports.io
+/* ── Clave de API-Football ──────────────────────────────────────────────────
+   Prioridad: key del usuario (localStorage) → key por defecto (compartida)
+   • Key por defecto: máx 10 requests/hora para no agotarla
+   • Key del usuario: sin límite impuesto por la app
+────────────────────────────────────────────────────────────────────────── */
+const _AF_KEY_LS      = 'wcc_af_api_key';
+const _AF_KEY_DEFAULT = 'ff2d4db4c0d672f86666229955b22197';  // key compartida — api-sports.io
+
+/* Límite horario cuando se usa la key por defecto */
+const _AF_DEFAULT_MAX_PER_HOUR = 10;
 
 function getAfKey() {
   try { return localStorage.getItem(_AF_KEY_LS) || _AF_KEY_DEFAULT; } catch(_) { return _AF_KEY_DEFAULT; }
 }
+function isUsingDefaultKey() {
+  try { const k = localStorage.getItem(_AF_KEY_LS); return !k || k === _AF_KEY_DEFAULT; } catch(_) { return true; }
+}
 
 /* Estado global de la API — permite mostrar banner en el perfil */
 const API_STATUS = {
-  usingMock:   false,
-  lastError:   null,     // 'rate_limit' | 'auth' | 'network' | null
-  lastSuccess: null,     // timestamp
+  usingMock:        false,
+  lastError:        null,       // 'rate_limit' | 'auth' | 'network' | 'hourly_limit' | null
+  lastSuccess:      null,       // timestamp
+  usingDefaultKey:  true,       // se actualiza en cada request
+  requestsThisHour: 0,
+  _hourSlot:        '',         // formato 'YYYY-MM-DDTHH'
+
+  /* Contador diario (para mostrar en perfil) */
   requestsToday: parseInt(localStorage.getItem('wcc_af_req_count') || '0'),
   _resetDay: localStorage.getItem('wcc_af_req_day') || '',
+
   _bumpCount() {
-    const today = new Date().toISOString().slice(0,10);
+    const now    = new Date();
+    const today  = now.toISOString().slice(0,10);
+    const hour   = now.toISOString().slice(0,13); // 'YYYY-MM-DDTHH'
+
+    /* Reset horario */
+    if (this._hourSlot !== hour) {
+      this._hourSlot        = hour;
+      this.requestsThisHour = 0;
+      try { localStorage.setItem('wcc_af_hour_slot', hour); localStorage.setItem('wcc_af_hour_count','0'); } catch(_){}
+    }
+    this.requestsThisHour++;
+    try {
+      localStorage.setItem('wcc_af_hour_slot',  hour);
+      localStorage.setItem('wcc_af_hour_count', String(this.requestsThisHour));
+    } catch(_){}
+
+    /* Reset diario */
     if (this._resetDay !== today) { this.requestsToday = 0; this._resetDay = today; }
     this.requestsToday++;
     try {
       localStorage.setItem('wcc_af_req_count', String(this.requestsToday));
       localStorage.setItem('wcc_af_req_day',   today);
     } catch(_) {}
+  },
+
+  /* ¿Se puede hacer otra request ahora? */
+  canRequest() {
+    if (!isUsingDefaultKey()) return true;    // key propia → sin límite app
+    /* Restaurar contador horario desde localStorage al recargar */
+    if (!this._hourSlot) {
+      try {
+        const savedSlot  = localStorage.getItem('wcc_af_hour_slot')  || '';
+        const savedCount = parseInt(localStorage.getItem('wcc_af_hour_count') || '0');
+        const curSlot    = new Date().toISOString().slice(0,13);
+        if (savedSlot === curSlot) { this._hourSlot = savedSlot; this.requestsThisHour = savedCount; }
+        else { this._hourSlot = curSlot; this.requestsThisHour = 0; }
+      } catch(_){}
+    }
+    return this.requestsThisHour < _AF_DEFAULT_MAX_PER_HOUR;
   }
 };
 
@@ -151,13 +199,15 @@ function _mockStatus(date, time, scoreHome, scoreAway) {
   // Si ya tiene marcador fijo → siempre finished
   if (scoreHome !== null && scoreHome !== undefined &&
       scoreAway !== null && scoreAway !== undefined) return 'finished';
-  // Parsear como UTC (agregar 'Z' para forzar interpretación UTC)
+  // IMPORTANTE: los tiempos del mock están almacenados en UTC directamente.
+  // Parsear sin 'Z' y sin sufijo de zona usa la hora LOCAL del navegador → incorrecto.
+  // Parsear con 'Z' asume UTC → correcto si los datos están en UTC.
   const start = new Date(`${date}T${time}:00Z`);
   const now   = Date.now();
-  const diffMin = (now - start.getTime()) / 60000; // minutos transcurridos (neg = futuro)
-  if (diffMin < 0)    return 'scheduled';          // aún no empieza
-  if (diffMin < 105)  return 'live';               // en curso (estimado)
-  return 'finished';                               // más de 105 min → terminó
+  const diffMin = (now - start.getTime()) / 60000;
+  if (diffMin < 0)    return 'scheduled';
+  if (diffMin < 115)  return 'live';   // 90 min partido + ~25 min margen extra tiempo/descanso
+  return 'finished';
 }
 
 const MOCK = {
@@ -197,9 +247,9 @@ const MOCK = {
     /* ── 9 JUN (UTC) — España vs Perú 02:00 UTC = 21:00 hora Puebla ── */
     { id:'f006', home:'España',     away:'Perú',       homeFlag:'🇪🇸', awayFlag:'🇵🇪', date:'2026-06-09', time:'02:00', competition:'Amistoso', type:'friendly', venue:'Puebla, México',      scoreHome:null, scoreAway:null },
     /* ── 10 JUN (UTC) ── */
-    { id:'f007', home:'Argentina',  away:'Islandia',   homeFlag:'🇦🇷', awayFlag:'🇮🇸', date:'2026-06-10', time:'01:30', competition:'Amistoso', type:'friendly', venue:'Tuscaloosa, AL',      scoreHome:null, scoreAway:null },
+    { id:'f007', home:'Argentina',  away:'Islandia',   homeFlag:'🇦🇷', awayFlag:'🇮🇸', date:'2026-06-10', time:'01:30', competition:'Amistoso', type:'friendly', venue:'Tuscaloosa, AL',      scoreHome:3, scoreAway:0 },
     { id:'f015', home:'Brasil',     away:'Paraguay',   homeFlag:'🇧🇷', awayFlag:'🇵🇾', date:'2026-06-10', time:'02:00', competition:'Amistoso', type:'friendly', venue:'Fort Worth, TX',      scoreHome:null, scoreAway:null },
-    { id:'f020', home:'Portugal',   away:'Nigeria',    homeFlag:'🇵🇹', awayFlag:'🇳🇬', date:'2026-06-10', time:'14:45', competition:'Amistoso', type:'friendly', venue:'Leiria, Portugal',    scoreHome:null, scoreAway:null },
+    { id:'f020', home:'Portugal',   away:'Nigeria',    homeFlag:'🇵🇹', awayFlag:'🇳🇬', date:'2026-06-10', time:'19:45', competition:'Amistoso', type:'friendly', venue:'Leiria, Portugal',    scoreHome:null, scoreAway:null },
   ],
 
   /* ── Partidos del Mundial 2026 (inicio: 11 Jun) ── */
@@ -233,7 +283,7 @@ const MOCK = {
     { id:'f006', home:'España',      away:'Perú',           homeFlag:'🇪🇸', awayFlag:'🇵🇪', date:'2026-06-09', time:'02:00', competition:'Amistoso', type:'friendly' },
     { id:'f007', home:'Argentina',   away:'Islandia',       homeFlag:'🇦🇷', awayFlag:'🇮🇸', date:'2026-06-10', time:'01:30', competition:'Amistoso', type:'friendly' },
     { id:'f015', home:'Brasil',      away:'Paraguay',       homeFlag:'🇧🇷', awayFlag:'🇵🇾', date:'2026-06-10', time:'02:00', competition:'Amistoso', type:'friendly' },
-    { id:'f020', home:'Portugal',    away:'Nigeria',        homeFlag:'🇵🇹', awayFlag:'🇳🇬', date:'2026-06-10', time:'14:45', competition:'Amistoso', type:'friendly' },
+    { id:'f020', home:'Portugal',    away:'Nigeria',        homeFlag:'🇵🇹', awayFlag:'🇳🇬', date:'2026-06-10', time:'19:45', competition:'Amistoso', type:'friendly' },
     /* Mundial */
     { id:'wc001', home:'México',     away:'Sudáfrica',      homeFlag:'🇲🇽', awayFlag:'🇿🇦', date:'2026-06-11', time:'20:00', competition:'Grupo A — J1', type:'worldcup' },
     { id:'wc002', home:'Canadá',     away:'Bosnia y Herz.', homeFlag:'🇨🇦', awayFlag:'🇧🇦', date:'2026-06-12', time:'21:00', competition:'Grupo B — J1', type:'worldcup' },
@@ -245,72 +295,93 @@ const MOCK = {
   ],
 
   standings: [
-    { pos:1, team:'Brasil',      flag:'🇧🇷', group:'C', pj:0,w:0,d:0,l:0,gf:0,gc:0,pts:0 },
-    { pos:2, team:'Argentina',   flag:'🇦🇷', group:'J', pj:0,w:0,d:0,l:0,gf:0,gc:0,pts:0 },
-    { pos:3, team:'Francia',     flag:'🇫🇷', group:'I', pj:0,w:0,d:0,l:0,gf:0,gc:0,pts:0 },
-    { pos:4, team:'España',      flag:'🇪🇸', group:'H', pj:0,w:0,d:0,l:0,gf:0,gc:0,pts:0 },
-    { pos:5, team:'Alemania',    flag:'🇩🇪', group:'E', pj:0,w:0,d:0,l:0,gf:0,gc:0,pts:0 },
-    { pos:6, team:'Portugal',    flag:'🇵🇹', group:'K', pj:0,w:0,d:0,l:0,gf:0,gc:0,pts:0 },
-    { pos:7, team:'Países Bajos',flag:'🇳🇱', group:'F', pj:0,w:0,d:0,l:0,gf:0,gc:0,pts:0 },
-    { pos:8, team:'Inglaterra',  flag:'🏴󠁧󠁢󠁥󠁮󠁧󠁿', group:'L', pj:0,w:0,d:0,l:0,gf:0,gc:0,pts:0 },
-    { pos:9, team:'Bélgica',     flag:'🇧🇪', group:'G', pj:0,w:0,d:0,l:0,gf:0,gc:0,pts:0 },
-    { pos:10,team:'Noruega',     flag:'🇳🇴', group:'F', pj:0,w:0,d:0,l:0,gf:0,gc:0,pts:0 },
-    { pos:11,team:'Colombia',    flag:'🇨🇴', group:'G', pj:0,w:0,d:0,l:0,gf:0,gc:0,pts:0 },
-    { pos:12,team:'Uruguay',     flag:'🇺🇾', group:'H', pj:0,w:0,d:0,l:0,gf:0,gc:0,pts:0 },
+    { pos:1,  team:'Brasil',       flag:'🇧🇷', group:'C', pj:0,w:0,d:0,l:0,gf:0,gc:0,pts:0 },
+    { pos:2,  team:'Argentina',    flag:'🇦🇷', group:'J', pj:0,w:0,d:0,l:0,gf:0,gc:0,pts:0 },
+    { pos:3,  team:'Francia',      flag:'🇫🇷', group:'I', pj:0,w:0,d:0,l:0,gf:0,gc:0,pts:0 },
+    { pos:4,  team:'España',       flag:'🇪🇸', group:'H', pj:0,w:0,d:0,l:0,gf:0,gc:0,pts:0 },
+    { pos:5,  team:'Alemania',     flag:'🇩🇪', group:'E', pj:0,w:0,d:0,l:0,gf:0,gc:0,pts:0 },
+    { pos:6,  team:'Portugal',     flag:'🇵🇹', group:'K', pj:0,w:0,d:0,l:0,gf:0,gc:0,pts:0 },
+    { pos:7,  team:'Países Bajos', flag:'🇳🇱', group:'F', pj:0,w:0,d:0,l:0,gf:0,gc:0,pts:0 },
+    { pos:8,  team:'Inglaterra',   flag:'🏴󠁧󠁢󠁥󠁮󠁧󠁿', group:'L', pj:0,w:0,d:0,l:0,gf:0,gc:0,pts:0 },
+    { pos:9,  team:'Bélgica',      flag:'🇧🇪', group:'G', pj:0,w:0,d:0,l:0,gf:0,gc:0,pts:0 },
+    { pos:10, team:'Noruega',      flag:'🇳🇴', group:'I', pj:0,w:0,d:0,l:0,gf:0,gc:0,pts:0 },
+    { pos:11, team:'Colombia',     flag:'🇨🇴', group:'K', pj:0,w:0,d:0,l:0,gf:0,gc:0,pts:0 },
+    { pos:12, team:'Uruguay',      flag:'🇺🇾', group:'H', pj:0,w:0,d:0,l:0,gf:0,gc:0,pts:0 },
+    { pos:13, team:'México',       flag:'🇲🇽', group:'A', pj:0,w:0,d:0,l:0,gf:0,gc:0,pts:0 },
+    { pos:14, team:'EE.UU.',       flag:'🇺🇸', group:'D', pj:0,w:0,d:0,l:0,gf:0,gc:0,pts:0 },
+    { pos:15, team:'Canadá',       flag:'🇨🇦', group:'B', pj:0,w:0,d:0,l:0,gf:0,gc:0,pts:0 },
+    { pos:16, team:'Japón',        flag:'🇯🇵', group:'F', pj:0,w:0,d:0,l:0,gf:0,gc:0,pts:0 },
+    { pos:17, team:'Marruecos',    flag:'🇲🇦', group:'C', pj:0,w:0,d:0,l:0,gf:0,gc:0,pts:0 },
+    { pos:18, team:'Senegal',      flag:'🇸🇳', group:'I', pj:0,w:0,d:0,l:0,gf:0,gc:0,pts:0 },
+    { pos:19, team:'Croacia',      flag:'🇭🇷', group:'L', pj:0,w:0,d:0,l:0,gf:0,gc:0,pts:0 },
+    { pos:20, team:'Ecuador',      flag:'🇪🇨', group:'E', pj:0,w:0,d:0,l:0,gf:0,gc:0,pts:0 },
   ]
 };
 
 // MOCK.teams: lista completa de selecciones del Mundial 2026 (48 equipos)
+// Grupos según sorteo oficial del 5 de diciembre de 2025, Washington D.C.
 MOCK.teams = [
-  { id:'t01', name:'Brasil',          flag:'🇧🇷', group:'C', pj:0,w:0,d:0,l:0,gf:0,gc:0,pts:0 },
-  { id:'t02', name:'Argentina',       flag:'🇦🇷', group:'J', pj:0,w:0,d:0,l:0,gf:0,gc:0,pts:0 },
-  { id:'t03', name:'Francia',         flag:'🇫🇷', group:'I', pj:0,w:0,d:0,l:0,gf:0,gc:0,pts:0 },
-  { id:'t04', name:'España',          flag:'🇪🇸', group:'H', pj:0,w:0,d:0,l:0,gf:0,gc:0,pts:0 },
-  { id:'t05', name:'Alemania',        flag:'🇩🇪', group:'E', pj:0,w:0,d:0,l:0,gf:0,gc:0,pts:0 },
-  { id:'t06', name:'Portugal',        flag:'🇵🇹', group:'K', pj:0,w:0,d:0,l:0,gf:0,gc:0,pts:0 },
-  { id:'t07', name:'Países Bajos',    flag:'🇳🇱', group:'F', pj:0,w:0,d:0,l:0,gf:0,gc:0,pts:0 },
-  { id:'t08', name:'Inglaterra',      flag:'🏴󠁧󠁢󠁥󠁮󠁧󠁿', group:'L', pj:0,w:0,d:0,l:0,gf:0,gc:0,pts:0 },
-  { id:'t09', name:'Bélgica',         flag:'🇧🇪', group:'G', pj:0,w:0,d:0,l:0,gf:0,gc:0,pts:0 },
-  { id:'t10', name:'Noruega',         flag:'🇳🇴', group:'F', pj:0,w:0,d:0,l:0,gf:0,gc:0,pts:0 },
-  { id:'t11', name:'Colombia',        flag:'🇨🇴', group:'G', pj:0,w:0,d:0,l:0,gf:0,gc:0,pts:0 },
-  { id:'t12', name:'Uruguay',         flag:'🇺🇾', group:'H', pj:0,w:0,d:0,l:0,gf:0,gc:0,pts:0 },
-  { id:'t13', name:'México',          flag:'🇲🇽', group:'B', pj:0,w:0,d:0,l:0,gf:0,gc:0,pts:0 },
-  { id:'t14', name:'Estados Unidos',  flag:'🇺🇸', group:'A', pj:0,w:0,d:0,l:0,gf:0,gc:0,pts:0 },
-  { id:'t15', name:'Canadá',          flag:'🇨🇦', group:'A', pj:0,w:0,d:0,l:0,gf:0,gc:0,pts:0 },
-  { id:'t16', name:'Marruecos',       flag:'🇲🇦', group:'D', pj:0,w:0,d:0,l:0,gf:0,gc:0,pts:0 },
-  { id:'t17', name:'Japón',           flag:'🇯🇵', group:'E', pj:0,w:0,d:0,l:0,gf:0,gc:0,pts:0 },
-  { id:'t18', name:'Senegal',         flag:'🇸🇳', group:'D', pj:0,w:0,d:0,l:0,gf:0,gc:0,pts:0 },
-  { id:'t19', name:'Croacia',         flag:'🇭🇷', group:'L', pj:0,w:0,d:0,l:0,gf:0,gc:0,pts:0 },
-  { id:'t20', name:'Suiza',           flag:'🇨🇭', group:'I', pj:0,w:0,d:0,l:0,gf:0,gc:0,pts:0 },
-  { id:'t21', name:'Ecuador',         flag:'🇪🇨', group:'B', pj:0,w:0,d:0,l:0,gf:0,gc:0,pts:0 },
-  { id:'t22', name:'Australia',       flag:'🇦🇺', group:'H', pj:0,w:0,d:0,l:0,gf:0,gc:0,pts:0 },
-  { id:'t23', name:'Corea del Sur',   flag:'🇰🇷', group:'K', pj:0,w:0,d:0,l:0,gf:0,gc:0,pts:0 },
-  { id:'t24', name:'Polonia',         flag:'🇵🇱', group:'I', pj:0,w:0,d:0,l:0,gf:0,gc:0,pts:0 },
-  { id:'t25', name:'Dinamarca',       flag:'🇩🇰', group:'F', pj:0,w:0,d:0,l:0,gf:0,gc:0,pts:0 },
-  { id:'t26', name:'Serbia',          flag:'🇷🇸', group:'G', pj:0,w:0,d:0,l:0,gf:0,gc:0,pts:0 },
-  { id:'t27', name:'Turquía',         flag:'🇹🇷', group:'E', pj:0,w:0,d:0,l:0,gf:0,gc:0,pts:0 },
-  { id:'t28', name:'Austria',         flag:'🇦🇹', group:'J', pj:0,w:0,d:0,l:0,gf:0,gc:0,pts:0 },
-  { id:'t29', name:'Ghana',           flag:'🇬🇭', group:'C', pj:0,w:0,d:0,l:0,gf:0,gc:0,pts:0 },
-  { id:'t30', name:'Nigeria',         flag:'🇳🇬', group:'C', pj:0,w:0,d:0,l:0,gf:0,gc:0,pts:0 },
-  { id:'t31', name:'Camerún',         flag:'🇨🇲', group:'D', pj:0,w:0,d:0,l:0,gf:0,gc:0,pts:0 },
-  { id:'t32', name:'Costa de Marfil', flag:'🇨🇮', group:'D', pj:0,w:0,d:0,l:0,gf:0,gc:0,pts:0 },
-  { id:'t33', name:'Sudáfrica',       flag:'🇿🇦', group:'B', pj:0,w:0,d:0,l:0,gf:0,gc:0,pts:0 },
-  { id:'t34', name:'Arabia Saudita',  flag:'🇸🇦', group:'K', pj:0,w:0,d:0,l:0,gf:0,gc:0,pts:0 },
-  { id:'t35', name:'Irán',            flag:'🇮🇷', group:'L', pj:0,w:0,d:0,l:0,gf:0,gc:0,pts:0 },
-  { id:'t36', name:'Qatar',           flag:'🇶🇦', group:'A', pj:0,w:0,d:0,l:0,gf:0,gc:0,pts:0 },
-  { id:'t37', name:'Nueva Zelanda',   flag:'🇳🇿', group:'J', pj:0,w:0,d:0,l:0,gf:0,gc:0,pts:0 },
-  { id:'t38', name:'Honduras',        flag:'🇭🇳', group:'B', pj:0,w:0,d:0,l:0,gf:0,gc:0,pts:0 },
-  { id:'t39', name:'Venezuela',       flag:'🇻🇪', group:'E', pj:0,w:0,d:0,l:0,gf:0,gc:0,pts:0 },
-  { id:'t40', name:'Chile',           flag:'🇨🇱', group:'G', pj:0,w:0,d:0,l:0,gf:0,gc:0,pts:0 },
-  { id:'t41', name:'Perú',            flag:'🇵🇪', group:'H', pj:0,w:0,d:0,l:0,gf:0,gc:0,pts:0 },
-  { id:'t42', name:'Paraguay',        flag:'🇵🇾', group:'A', pj:0,w:0,d:0,l:0,gf:0,gc:0,pts:0 },
-  { id:'t43', name:'Bolivia',         flag:'🇧🇴', group:'F', pj:0,w:0,d:0,l:0,gf:0,gc:0,pts:0 },
-  { id:'t44', name:'Escocia',         flag:'🏴󠁧󠁢󠁳󠁣󠁴󠁿', group:'I', pj:0,w:0,d:0,l:0,gf:0,gc:0,pts:0 },
-  { id:'t45', name:'Albania',         flag:'🇦🇱', group:'G', pj:0,w:0,d:0,l:0,gf:0,gc:0,pts:0 },
-  { id:'t46', name:'Hungría',         flag:'🇭🇺', group:'J', pj:0,w:0,d:0,l:0,gf:0,gc:0,pts:0 },
-  { id:'t47', name:'Eslovenia',       flag:'🇸🇮', group:'K', pj:0,w:0,d:0,l:0,gf:0,gc:0,pts:0 },
-  { id:'t48', name:'Rumania',         flag:'🇷🇴', group:'L', pj:0,w:0,d:0,l:0,gf:0,gc:0,pts:0 },
-];
+  // GRUPO A: México, Sudáfrica, Corea del Sur, Rep. UEFA D*
+  { id:'t01', name:'México',            flag:'🇲🇽', group:'A', pj:0,w:0,d:0,l:0,gf:0,gc:0,pts:0 },
+  { id:'t02', name:'Sudáfrica',         flag:'🇿🇦', group:'A', pj:0,w:0,d:0,l:0,gf:0,gc:0,pts:0 },
+  { id:'t03', name:'Corea del Sur',     flag:'🇰🇷', group:'A', pj:0,w:0,d:0,l:0,gf:0,gc:0,pts:0 },
+  { id:'t04', name:'Rep. Checa',         flag:'🇨🇿', group:'A', pj:0,w:0,d:0,l:0,gf:0,gc:0,pts:0 },
+  // GRUPO B: Canadá, Rep. UEFA 1*, Qatar, Suiza
+  { id:'t05', name:'Canadá',            flag:'🇨🇦', group:'B', pj:0,w:0,d:0,l:0,gf:0,gc:0,pts:0 },
+  { id:'t06', name:'Bosnia-Herzegovina', flag:'🇧🇦', group:'B', pj:0,w:0,d:0,l:0,gf:0,gc:0,pts:0 },
+  { id:'t07', name:'Qatar',             flag:'🇶🇦', group:'B', pj:0,w:0,d:0,l:0,gf:0,gc:0,pts:0 },
+  { id:'t08', name:'Suiza',             flag:'🇨🇭', group:'B', pj:0,w:0,d:0,l:0,gf:0,gc:0,pts:0 },
+  // GRUPO C: Brasil, Marruecos, Haití, Escocia
+  { id:'t09', name:'Brasil',            flag:'🇧🇷', group:'C', pj:0,w:0,d:0,l:0,gf:0,gc:0,pts:0 },
+  { id:'t10', name:'Marruecos',         flag:'🇲🇦', group:'C', pj:0,w:0,d:0,l:0,gf:0,gc:0,pts:0 },
+  { id:'t11', name:'Haití',             flag:'🇭🇹', group:'C', pj:0,w:0,d:0,l:0,gf:0,gc:0,pts:0 },
+  { id:'t12', name:'Escocia',           flag:'🏴󠁧󠁢󠁳󠁣󠁴󠁿', group:'C', pj:0,w:0,d:0,l:0,gf:0,gc:0,pts:0 },
+  // GRUPO D: EE.UU., Paraguay, Australia, Rep. UEFA 3*
+  { id:'t13', name:'EE.UU.',            flag:'🇺🇸', group:'D', pj:0,w:0,d:0,l:0,gf:0,gc:0,pts:0 },
+  { id:'t14', name:'Paraguay',          flag:'🇵🇾', group:'D', pj:0,w:0,d:0,l:0,gf:0,gc:0,pts:0 },
+  { id:'t15', name:'Australia',         flag:'🇦🇺', group:'D', pj:0,w:0,d:0,l:0,gf:0,gc:0,pts:0 },
+  { id:'t16', name:'Turquía',            flag:'🇹🇷', group:'D', pj:0,w:0,d:0,l:0,gf:0,gc:0,pts:0 },
+  // GRUPO E: Alemania, Curazao, Costa de Marfil, Ecuador
+  { id:'t17', name:'Alemania',          flag:'🇩🇪', group:'E', pj:0,w:0,d:0,l:0,gf:0,gc:0,pts:0 },
+  { id:'t18', name:'Curazao',           flag:'🇨🇼', group:'E', pj:0,w:0,d:0,l:0,gf:0,gc:0,pts:0 },
+  { id:'t19', name:'Costa de Marfil',   flag:'🇨🇮', group:'E', pj:0,w:0,d:0,l:0,gf:0,gc:0,pts:0 },
+  { id:'t20', name:'Ecuador',           flag:'🇪🇨', group:'E', pj:0,w:0,d:0,l:0,gf:0,gc:0,pts:0 },
+  // GRUPO F: Países Bajos, Japón, Rep. UEFA 2*, Túnez
+  { id:'t21', name:'Países Bajos',      flag:'🇳🇱', group:'F', pj:0,w:0,d:0,l:0,gf:0,gc:0,pts:0 },
+  { id:'t22', name:'Japón',             flag:'🇯🇵', group:'F', pj:0,w:0,d:0,l:0,gf:0,gc:0,pts:0 },
+  { id:'t23', name:'Suecia',             flag:'🇸🇪', group:'F', pj:0,w:0,d:0,l:0,gf:0,gc:0,pts:0 },
+  { id:'t24', name:'Túnez',             flag:'🇹🇳', group:'F', pj:0,w:0,d:0,l:0,gf:0,gc:0,pts:0 },
+  // GRUPO G: Bélgica, Egipto, Irán, Nueva Zelanda
+  { id:'t25', name:'Bélgica',           flag:'🇧🇪', group:'G', pj:0,w:0,d:0,l:0,gf:0,gc:0,pts:0 },
+  { id:'t26', name:'Egipto',            flag:'🇪🇬', group:'G', pj:0,w:0,d:0,l:0,gf:0,gc:0,pts:0 },
+  { id:'t27', name:'Irán',              flag:'🇮🇷', group:'G', pj:0,w:0,d:0,l:0,gf:0,gc:0,pts:0 },
+  { id:'t28', name:'Nueva Zelanda',     flag:'🇳🇿', group:'G', pj:0,w:0,d:0,l:0,gf:0,gc:0,pts:0 },
+  // GRUPO H: España, Cabo Verde, Arabia Saudita, Uruguay
+  { id:'t29', name:'España',            flag:'🇪🇸', group:'H', pj:0,w:0,d:0,l:0,gf:0,gc:0,pts:0 },
+  { id:'t30', name:'Cabo Verde',        flag:'🇨🇻', group:'H', pj:0,w:0,d:0,l:0,gf:0,gc:0,pts:0 },
+  { id:'t31', name:'Arabia Saudita',    flag:'🇸🇦', group:'H', pj:0,w:0,d:0,l:0,gf:0,gc:0,pts:0 },
+  { id:'t32', name:'Uruguay',           flag:'🇺🇾', group:'H', pj:0,w:0,d:0,l:0,gf:0,gc:0,pts:0 },
+  // GRUPO I: Francia, Senegal, Rep. Intercont. 2*, Noruega
+  { id:'t33', name:'Francia',           flag:'🇫🇷', group:'I', pj:0,w:0,d:0,l:0,gf:0,gc:0,pts:0 },
+  { id:'t34', name:'Senegal',           flag:'🇸🇳', group:'I', pj:0,w:0,d:0,l:0,gf:0,gc:0,pts:0 },
+  { id:'t35', name:'Irak',               flag:'🇮🇶', group:'I', pj:0,w:0,d:0,l:0,gf:0,gc:0,pts:0 },
+  { id:'t36', name:'Noruega',           flag:'🇳🇴', group:'I', pj:0,w:0,d:0,l:0,gf:0,gc:0,pts:0 },
+  // GRUPO J: Argentina, Argelia, Austria, Jordania
+  { id:'t37', name:'Argentina',         flag:'🇦🇷', group:'J', pj:0,w:0,d:0,l:0,gf:0,gc:0,pts:0 },
+  { id:'t38', name:'Argelia',           flag:'🇩🇿', group:'J', pj:0,w:0,d:0,l:0,gf:0,gc:0,pts:0 },
+  { id:'t39', name:'Austria',           flag:'🇦🇹', group:'J', pj:0,w:0,d:0,l:0,gf:0,gc:0,pts:0 },
+  { id:'t40', name:'Jordania',          flag:'🇯🇴', group:'J', pj:0,w:0,d:0,l:0,gf:0,gc:0,pts:0 },
+  // GRUPO K: Portugal, Uzbekistán, Colombia, Rep. Intercont. 1*
+  { id:'t41', name:'Portugal',          flag:'🇵🇹', group:'K', pj:0,w:0,d:0,l:0,gf:0,gc:0,pts:0 },
+  { id:'t42', name:'Uzbekistán',        flag:'🇺🇿', group:'K', pj:0,w:0,d:0,l:0,gf:0,gc:0,pts:0 },
+  { id:'t43', name:'Colombia',          flag:'🇨🇴', group:'K', pj:0,w:0,d:0,l:0,gf:0,gc:0,pts:0 },
+  { id:'t44', name:'RD Congo',           flag:'🇨🇩', group:'K', pj:0,w:0,d:0,l:0,gf:0,gc:0,pts:0 },
+  // GRUPO L: Inglaterra, Croacia, Ghana, Panamá
+  { id:'t45', name:'Inglaterra',        flag:'🏴󠁧󠁢󠁥󠁮󠁧󠁿', group:'L', pj:0,w:0,d:0,l:0,gf:0,gc:0,pts:0 },
+  { id:'t46', name:'Croacia',           flag:'🇭🇷', group:'L', pj:0,w:0,d:0,l:0,gf:0,gc:0,pts:0 },
+  { id:'t47', name:'Ghana',             flag:'🇬🇭', group:'L', pj:0,w:0,d:0,l:0,gf:0,gc:0,pts:0 },
+  { id:'t48', name:'Panamá',            flag:'🇵🇦', group:'L', pj:0,w:0,d:0,l:0,gf:0,gc:0,pts:0 },
+]
 
 /* ══════════════════════════════════════════════════════════════════════
    SHARED LIVE CACHE — v17
@@ -457,6 +528,13 @@ const API = {
   /* ── api-football ── */
   async _af(endpoint) {
     if (!API_CONFIG.apiFootball.enabled) return null;
+    API_STATUS.usingDefaultKey = isUsingDefaultKey();
+    /* Límite horario: solo aplica con key por defecto */
+    if (!API_STATUS.canRequest()) {
+      console.warn('[API] Límite horario alcanzado (key por defecto). Usa tu propia API key para sin límite.');
+      API_STATUS.lastError = 'hourly_limit';
+      return null;
+    }
     return await this._fetch(
       `${API_CONFIG.apiFootball.base}${endpoint}`,
       {
@@ -665,14 +743,20 @@ const API = {
     ──────────────────────────────────────────────────────────────── */
     const AF_TODAY_KEY  = 'wcc_af_today_ts';
     const AF_NEXT_KEY   = 'wcc_af_next_ts';
-    const AF_TODAY_COOL = 30 * 60 * 1000;       // 30 minutos
-    const AF_NEXT_COOL  = 6  * 60 * 60 * 1000;  // 6 horas
+    const AF_YEST_KEY   = 'wcc_af_yest_ts';
+    const AF_TODAY_COOL = 30 * 60 * 1000;        // 30 minutos
+    const AF_NEXT_COOL  = 6  * 60 * 60 * 1000;   // 6 horas
+    const AF_YEST_COOL  = 12 * 60 * 60 * 1000;   // 12 horas (resultados de ayer no cambian)
+
+    const yestStr = yesterdayStr();
 
     const lastAfToday = parseInt(localStorage.getItem(AF_TODAY_KEY) || '0');
     const lastAfNext  = parseInt(localStorage.getItem(AF_NEXT_KEY)  || '0');
+    const lastAfYest  = parseInt(localStorage.getItem(AF_YEST_KEY)  || '0');
 
     const needsToday = Date.now() - lastAfToday > AF_TODAY_COOL;
     const needsNext  = Date.now() - lastAfNext  > AF_NEXT_COOL;
+    const needsYest  = Date.now() - lastAfYest  > AF_YEST_COOL;
 
     // Leer caché de próximos (puede estar vigente aunque hoy ya no lo esté)
     let cachedNext = null;
@@ -684,8 +768,20 @@ const API = {
       }
     } catch(_) {}
 
+    // Leer caché de ayer
+    let cachedYest = null;
+    try {
+      const raw = localStorage.getItem('wcc_cache_upcoming_yest');
+      if (raw) {
+        const parsed = JSON.parse(raw);
+        // Invalidar si cambió el día (ayer de hoy ≠ ayer cacheado)
+        if (Date.now() - parsed.ts < AF_YEST_COOL && parsed.yestStr === yestStr) cachedYest = parsed.data;
+      }
+    } catch(_) {}
+
     let todayFixtures  = [];
     let nextFixtures   = cachedNext || [];
+    let yestFixtures   = cachedYest || [];
 
     // Consultar api-football solo lo que necesita refresh
     const requests = [];
@@ -699,6 +795,12 @@ const API = {
       requests.push(
         this._af(`/fixtures?league=${AF_WORLD_CUP_ID}&season=${AF_SEASON_2026}&status=NS&next=20`),
         this._af(`/fixtures?league=${AF_FRIENDLIES_ID}&status=NS&next=20`)
+      );
+    }
+    if (needsYest && !cachedYest) {
+      requests.push(
+        this._af(`/fixtures?league=${AF_FRIENDLIES_ID}&date=${yestStr}`),
+        this._af(`/fixtures?league=${AF_WORLD_CUP_ID}&season=${AF_SEASON_2026}&date=${yestStr}`)
       );
     }
 
@@ -753,9 +855,23 @@ const API = {
       }
     }
 
+    if (needsYest && !cachedYest) {
+      const rFriendlyYest = results[rIdx++];
+      const rWCyest       = results[rIdx++];
+      const fy = rFriendlyYest?.status === 'fulfilled' ? (rFriendlyYest.value?.response || []) : [];
+      const wy = rWCyest?.status       === 'fulfilled' ? (rWCyest.value?.response       || []) : [];
+      yestFixtures = [...fy, ...wy];
+      if (yestFixtures.length > 0) {
+        localStorage.setItem(AF_YEST_KEY, String(Date.now()));
+        try {
+          localStorage.setItem('wcc_cache_upcoming_yest', JSON.stringify({ data: yestFixtures, ts: Date.now(), yestStr }));
+        } catch(_) {}
+      }
+    }
+
     // Combinar y deduplicar por fixture id
     const seen = new Set();
-    const allFixtures = [...todayFixtures, ...nextFixtures].filter(f => {
+    const allFixtures = [...yestFixtures, ...todayFixtures, ...nextFixtures].filter(f => {
       if (!f?.fixture?.id) return false;
       if (seen.has(f.fixture.id)) return false;
       seen.add(f.fixture.id);
@@ -766,7 +882,8 @@ const API = {
       const data = allFixtures
         .map(_afMap)
         .filter(m => {
-          // Solo mostrar: partidos de HOY (cualquier status) + futuros (no finished)
+          // Mostrar: partidos de AYER finalizados (con marcador) + HOY (cualquier status) + próximos (no finished)
+          if (m.date === yestStr  && m.status === 'finished') return true;
           if (m.date === todayStr) return true;
           if (m.date > todayStr && m.status !== 'finished') return true;
           return false;
@@ -795,6 +912,8 @@ const API = {
     const allMock = [...MOCK.friendlyMatches, ...MOCK.upcomingMatches]
       .filter(m => {
         const d = m.date || '';
+        // Incluir ayer (si está finished con marcador) + hoy + futuro
+        if (d === yesterdayLocal && m.scoreHome !== null && m.scoreAway !== null) return true;
         return d === todayStr || d > todayStr;
       })
       .map(m => {
@@ -1024,32 +1143,76 @@ const API = {
   async getFinishedMatches() {
     const mem = this._memGet('finished');
     if (mem) return mem;
-    const cached = await DB.getCacheStats('finished');
-    if (cached) return this._memSet('finished', cached);
 
     const AF_FIN_LS_KEY = 'wcc_af_finished_ts';
-    const AF_FIN_COOL   = 12 * 60 * 60 * 1000;
+    const AF_FIN_COOL   = 30 * 60 * 1000;  // 30 min (antes era 12h — muy lento para ver resultados)
     const lastAfFin     = parseInt(localStorage.getItem(AF_FIN_LS_KEY) || '0');
-    const af = (Date.now() - lastAfFin > AF_FIN_COOL)
-      ? await this._af(`/fixtures?league=${AF_WORLD_CUP_ID}&season=${AF_SEASON_2026}&status=FT`)
-      : null;
-    if (af) localStorage.setItem(AF_FIN_LS_KEY, String(Date.now()));
-    if (af?.response?.length > 0) {
-      const data = af.response.map(f => {
-        const h = f.goals.home??0, a = f.goals.away??0;
-        return {
-          id: `af_${f.fixture.id}`,
-          home: f.teams.home.name, away: f.teams.away.name,
-          scoreHome: h, scoreAway: a,
-          exactScore: `${h}-${a}`,
-          finalResult: h>a?'home':a>h?'away':'draw',
-          date: f.fixture.date?.split('T')[0]
-        };
-      });
-      await DB.setCacheStats('finished', data);
-      return this._memSet('finished', data);
+    const todayStr      = localDateStr();
+    const yestStr       = yesterdayStr();
+
+    if (Date.now() - lastAfFin > AF_FIN_COOL) {
+      // Buscar partidos finalizados: Mundial FT + amistosos de hoy + ayer
+      const [afWC, afFriendlyToday, afFriendlyYest] = await Promise.allSettled([
+        this._af(`/fixtures?league=${AF_WORLD_CUP_ID}&season=${AF_SEASON_2026}&status=FT`),
+        this._af(`/fixtures?league=${AF_FRIENDLIES_ID}&date=${todayStr}&status=FT`),
+        this._af(`/fixtures?league=${AF_FRIENDLIES_ID}&date=${yestStr}&status=FT`)
+      ]);
+      const wcFix   = afWC.status === 'fulfilled'            ? (afWC.value?.response || []) : [];
+      const friTod  = afFriendlyToday.status === 'fulfilled' ? (afFriendlyToday.value?.response || []) : [];
+      const friYest = afFriendlyYest.status === 'fulfilled'  ? (afFriendlyYest.value?.response || []) : [];
+      const combined = [...wcFix, ...friTod, ...friYest];
+      if (combined.length > 0) {
+        localStorage.setItem(AF_FIN_LS_KEY, String(Date.now()));
+        const seen = new Set();
+        const allFinished = combined
+          .filter(f => { if (seen.has(f.fixture.id)) return false; seen.add(f.fixture.id); return true; })
+          .map(f => {
+            const h = f.goals.home ?? 0, a = f.goals.away ?? 0;
+            return {
+              id:          `af_${f.fixture.id}`,
+              home:        f.teams.home.name,
+              away:        f.teams.away.name,
+              homeFlag:    getFlag(f.teams.home.name),
+              awayFlag:    getFlag(f.teams.away.name),
+              scoreHome:   h,
+              scoreAway:   a,
+              exactScore:  `${h}-${a}`,
+              finalResult: h > a ? 'home' : a > h ? 'away' : 'draw',
+              date:        f.fixture.date?.split('T')[0],
+              status:      'finished',
+              competition: f.league?.name || '',
+              type:        f.league?.id === AF_WORLD_CUP_ID ? 'worldcup' : 'friendly'
+            };
+          });
+        try { localStorage.setItem('wcc_cache_finished', JSON.stringify({ data: allFinished, ts: Date.now() })); } catch(_) {}
+        await DB.setCacheStats('finished', allFinished);
+        return this._memSet('finished', allFinished);
+      }
     }
-    return this._memSet('finished', MOCK.finishedMatches);
+
+    // Leer caché de localStorage si existe
+    try {
+      const raw = localStorage.getItem('wcc_cache_finished');
+      if (raw) {
+        const parsed = JSON.parse(raw);
+        if (Date.now() - parsed.ts < 60 * 60 * 1000) return this._memSet('finished', parsed.data);
+      }
+    } catch(_) {}
+
+    // Fallback: IndexedDB
+    const cached = await DB.getCacheStats('finished');
+    if (cached?.length) return this._memSet('finished', cached);
+
+    // Último recurso: MOCK con resultados conocidos del MOCK.friendlyMatches
+    const mockFinished = MOCK.friendlyMatches
+      .filter(m => m.scoreHome !== null && m.scoreAway !== null)
+      .map(m => ({
+        ...m,
+        exactScore:  `${m.scoreHome}-${m.scoreAway}`,
+        finalResult: m.scoreHome > m.scoreAway ? 'home' : m.scoreAway > m.scoreHome ? 'away' : 'draw',
+        status:      'finished'
+      }));
+    return this._memSet('finished', mockFinished.length ? mockFinished : MOCK.finishedMatches);
   },
 
   /**
@@ -1095,17 +1258,51 @@ const API = {
 
   async getPredictableMatches() {
     const todayStr = localDateStr();
+    const yestStr  = yesterdayStr();
 
-    // Solo filtramos partidos de días ANTERIORES a hoy y los que tienen status:'finished' explícito.
-    // NO filtramos por getMatchState() aquí — ese estado solo es visual.
-    // Un partido de hoy cuya hora ya pasó sigue apareciendo (puede estar en curso o recién terminado).
-    return MOCK.predictableMatches
+    /* Obtener partidos reales de la API (ya incluye ayer, hoy y próximos) */
+    let realMatches = [];
+    try {
+      const all = await this.getUpcomingMatches();
+      if (all && all.length > 0) realMatches = all;
+    } catch(_) {}
+
+    /* Obtener partidos terminados (con scores reales) para enriquecer los datos */
+    let finishedData = [];
+    try {
+      const fin = await this.getFinishedMatches();
+      if (fin?.length) finishedData = fin;
+    } catch(_) {}
+
+    /* Si tenemos datos reales, usarlos — si no, MOCK fallback */
+    let source = realMatches.length > 0 ? realMatches : MOCK.predictableMatches;
+
+    // Enriquecer con scores de finishedData cuando el partido esté como 'finished'
+    // pero sin score (porque venía del MOCK o de una petición anterior sin FT)
+    if (finishedData.length > 0) {
+      source = source.map(m => {
+        if (m.status === 'finished' && m.scoreHome === null) {
+          // Buscar por id exacto o por nombre de equipos
+          const fin = finishedData.find(f =>
+            f.id === m.id ||
+            (f.home === m.home && f.away === m.away)
+          );
+          if (fin) return { ...m, scoreHome: fin.scoreHome, scoreAway: fin.scoreAway };
+        }
+        return m;
+      });
+    }
+
+    return source
       .filter(m => {
-        if ((m.date || '') < todayStr) return false;        // días anteriores: fuera
-        if (m.status === 'finished') return false;          // terminado explícito: fuera
+        const d = m.date || '';
+        // Incluir: partidos de ayer (con resultado para mostrar score) + hoy + futuros
+        if (d === yestStr) return true;          // ayer: visible con resultado final
+        if (d < yestStr)   return false;         // antes de ayer: fuera
         return true;
       })
       .sort((a, b) => {
+        // Primero los de hoy/ayer (con resultados), luego los futuros
         const ta = new Date(`${a.date}T${a.time||'23:59'}:00`).getTime();
         const tb = new Date(`${b.date}T${b.time||'23:59'}:00`).getTime();
         return ta - tb;
@@ -1419,21 +1616,68 @@ const API = {
   async forceRefresh() {
     await DB.clear('stats_cache');
     this._memCache = {};
-    // Limpiar cachés de upcoming para forzar re-consulta a api-football
+    // Limpiar todas las cachés para forzar re-consulta a api-football
     localStorage.removeItem('wcc_af_today_ts');
     localStorage.removeItem('wcc_af_next_ts');
+    localStorage.removeItem('wcc_af_yest_ts');
+    localStorage.removeItem('wcc_af_finished_ts');
     localStorage.removeItem('wcc_cache_upcoming_today');
     localStorage.removeItem('wcc_cache_upcoming_next');
+    localStorage.removeItem('wcc_cache_upcoming_yest');
     localStorage.removeItem('wcc_cache_upcoming');
-    const [live, upcoming, standings] = await Promise.all([
-      this.getLiveMatches(),
-      this.getUpcomingMatches(),
-      this.getStandings()
-    ]);
-    const fromApi = live?.some?.(m => m.id?.startsWith?.('af_'))
-                 || upcoming?.some?.(m => m.id?.startsWith?.('af_'))
-                 || standings?.some?.(t => t._fromApi);
-    return { live, upcoming, standings, source: fromApi ? 'API Football' : 'mock' };
+    localStorage.removeItem('wcc_cache_finished');
+
+    // Intentar hacer las requests; detectar si hubo conexión real
+    let apiConnected = false;
+    let apiError = null;
+
+    try {
+      const [live, upcoming, standings, finished] = await Promise.all([
+        this.getLiveMatches(),
+        this.getUpcomingMatches(),
+        this.getStandings(),
+        this.getFinishedMatches()
+      ]);
+
+      apiConnected = live?.some?.(m => m.id?.startsWith?.('af_'))
+                  || upcoming?.some?.(m => m.id?.startsWith?.('af_'))
+                  || finished?.some?.(m => m.id?.startsWith?.('af_'))
+                  || standings?.some?.(t => t._fromApi);
+
+      // Si no hay error registrado y la API devolvió algo → conectado
+      if (!API_STATUS.lastError && (
+        live?.some?.(m => m.id?.startsWith?.('af_')) ||
+        upcoming?.some?.(m => m.id?.startsWith?.('af_')) ||
+        finished?.some?.(m => m.id?.startsWith?.('af_'))
+      )) {
+        apiConnected = true;
+        API_STATUS.lastSuccess = Date.now();
+      }
+
+      const usingMock = !apiConnected;
+      API_STATUS.usingMock = usingMock;
+
+      let source;
+      if (API_STATUS.lastError === 'hourly_limit') {
+        source = 'hourly_limit';
+      } else if (API_STATUS.lastError === 'rate_limit') {
+        source = 'rate_limit';
+      } else if (API_STATUS.lastError === 'auth') {
+        source = 'auth_error';
+      } else if (API_STATUS.lastError === 'network') {
+        source = 'network_error';
+      } else if (apiConnected) {
+        source = 'API Football';
+      } else {
+        source = 'mock';
+      }
+
+      return { live, upcoming, standings, finished, source };
+    } catch(err) {
+      API_STATUS.lastError = 'network';
+      API_STATUS.usingMock = true;
+      return { live: [], upcoming: [], standings: [], finished: [], source: 'network_error' };
+    }
   },
 
   getCrest(name) { return `https://flagcdn.com/w80/${TEAM_FLAGS[name]?'':'xx'}.png`; },

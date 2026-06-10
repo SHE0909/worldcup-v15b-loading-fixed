@@ -74,7 +74,11 @@ const Predictions = {
             </div>
 
             <div class="pred-vs-block">
-              <span class="pred-vs">${state === 'live' ? `<span style="color:#ff4466">${m.scoreHome??0} — ${m.scoreAway??0}</span>` : 'VS'}</span>
+              <span class="pred-vs">${
+                state === 'live'     ? `<span style="color:#ff4466">${m.scoreHome??0} — ${m.scoreAway??0}</span>` :
+                state === 'finished' && m.scoreHome !== null && m.scoreAway !== null
+                  ? `<span style="color:#ccc;font-size:1rem">${m.scoreHome} — ${m.scoreAway}</span>` : 'VS'
+              }</span>
               <span class="pred-date-badge">${this._formatDate(m.date)}</span>
             </div>
 
@@ -97,7 +101,7 @@ const Predictions = {
           ${isLocked
             ? this._renderLocked(existing)
             : isClosed
-              ? this._renderClosed(state)
+              ? this._renderClosed(state, m)
               : this._renderOpen(m)
           }
         </div>
@@ -132,6 +136,26 @@ const Predictions = {
     list.querySelectorAll('.btn-lineup').forEach(btn => {
       btn.addEventListener('click', () => this._showLineup(btn.dataset.match, matches));
     });
+
+    // ── Botón Predecir Mundial ──
+    const existingBtn = document.getElementById('btn-predict-wc');
+    if (!existingBtn) {
+      const wcBtn = document.createElement('div');
+      wcBtn.style.cssText = 'text-align:center;margin-top:1.5rem;padding:0 1rem 2rem';
+      wcBtn.innerHTML = `
+        <button id="btn-predict-wc" style="
+          background:linear-gradient(135deg,#c0a022,#e8c840);
+          color:#000;font-weight:800;font-size:1rem;
+          border:none;border-radius:12px;padding:0.85rem 2rem;
+          cursor:pointer;width:100%;max-width:400px;
+          box-shadow:0 4px 20px rgba(200,160,0,0.35);letter-spacing:0.5px;
+        ">🏆 Predecir Mundial 2026</button>
+        <p style="font-size:0.7rem;color:var(--text-muted);margin-top:0.5rem">
+          Predice desde grupos hasta campeón · Gana hasta 50+ tiradas
+        </p>`;
+      list.parentElement.appendChild(wcBtn);
+      document.getElementById('btn-predict-wc').addEventListener('click', () => WorldCupPredictor.open());
+    }
   },
 
   _renderOpen(m) {
@@ -170,11 +194,13 @@ const Predictions = {
     `;
   },
 
-  _renderClosed(state) {
+  _renderClosed(state, m) {
+    const hasScore = m && m.status === 'finished' && m.scoreHome !== null && m.scoreAway !== null;
+    const scoreStr = hasScore ? ` · <strong style="color:#ddd">${m.scoreHome} — ${m.scoreAway}</strong>` : '';
     const msg = state === 'live'
-      ? '🔴 Partido en curso — predicciones cerradas'
+      ? `🔴 Partido en curso — predicciones cerradas`
       : state === 'finished'
-        ? '✅ Partido finalizado'
+        ? `✅ Partido finalizado${scoreStr}`
         : '🔒 Predicciones cerradas (faltan menos de 3h)';
     return `
       <div class="pred-locked" style="text-align:center;padding:0.75rem 0;">
