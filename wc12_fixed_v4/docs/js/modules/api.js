@@ -763,8 +763,8 @@ const API = {
       const fixtureUTC = new Date(f.fixture.date);
       const localDate  = localDateStr(fixtureUTC);
       // Hora local en formato HH:MM
-      const localHH    = String(fixtureUTC.getHours()).padStart(2,'0');
-      const localMM    = String(fixtureUTC.getMinutes()).padStart(2,'0');
+      const _fmtTime   = new Intl.DateTimeFormat('en-US', { timeZone: 'America/El_Salvador', hour: '2-digit', minute: '2-digit', hour12: false });
+      const [localHH, localMM] = _fmtTime.format(fixtureUTC).split(':');
       return {
         id:          `af_${f.fixture.id}`,
         home:        f.teams.home.name,
