@@ -54,7 +54,7 @@ const App = {
     }
 
     await this.loadUserData(user);
-    await this.navigateTo('dashboard');
+    this.navigateTo('dashboard'); // no await: la carga de datos (api-football) puede tardar; no bloquear la UI
 
     const daily = await Gacha.claimDaily();
     if (daily.ok) Toast.success('🎁 ¡Tirada diaria reclamada! +1 tirada');
@@ -139,7 +139,7 @@ const App = {
       case 'predictions': await Predictions.render(); break;
       case 'battle':      await Battle.render(); break;
       case 'exchange':    await Exchange.render(); break;
-      case 'profile':     await Profile.render(); ApiConfig.init(); break;
+      case 'profile':     await Profile.render(); break;
     }
   },
 
@@ -220,8 +220,6 @@ const App = {
         await Dashboard.render();
         await this.loadUserData();
 
-        // Actualizar banner del perfil si está visible
-        if (typeof ApiConfig !== 'undefined') ApiConfig.renderStatus();
 
         Toast.success('Estadísticas actualizadas ✅');
       } catch(err) {

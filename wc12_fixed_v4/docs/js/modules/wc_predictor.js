@@ -77,6 +77,7 @@ const WorldCupPredictor = {
         overlay.querySelectorAll('.wcp-phase-panel').forEach(p => p.style.display = 'none');
         tab.classList.add('active');
         overlay.querySelector(`#wcp-panel-${tab.dataset.phase}`).style.display = '';
+        if (tab.dataset.phase === 'champion') this._refreshChampionOptions(overlay);
       });
     });
 
@@ -272,13 +273,8 @@ const WorldCupPredictor = {
           </p>
         </div>
         <div id="wcp-champion-grid" style="display:grid;grid-template-columns:repeat(3,1fr);gap:0.4rem;">
-          ${this._getAllTeams().map(t => `
-            <button class="wcp-champion-btn" data-team="${t}"
-              style="background:rgba(255,255,255,0.05);border:1px solid var(--border);
-                border-radius:8px;padding:0.4rem 0.3rem;cursor:pointer;font-size:0.68rem;
-                color:var(--text-secondary);transition:all 0.15s;">
-              ${this._getFlag(t)} ${t}
-            </button>`).join('')}
+          <p style="grid-column:1/-1;font-size:0.7rem;color:var(--text-muted);text-align:center">
+            Primero selecciona los finalistas en la pestaña "Final"</p>
         </div>
       </div>`;
   },
@@ -331,6 +327,59 @@ const WorldCupPredictor = {
     }
   },
 
+  /* ── Equipos disponibles para una fase, según los picks de la fase anterior ── */
+  _getAvailableTeams(overlay, phaseId) {
+    if (phaseId === 'round32') {
+      // Todos los equipos elegidos como clasificados de grupo (hasta 24)
+      const teams = new Set();
+      Object.keys(WC2026_GROUPS).forEach(g => {
+        overlay.querySelectorAll(`.wcp-team-btn.selected[data-group="${g}"]`).forEach(b => teams.add(b.dataset.team));
+      });
+      return [...teams];
+    }
+    // r16, qf, sf, final → ganadores elegidos en la fase anterior
+    const prevMap = { r16:'round32', qf:'r16', sf:'qf', final:'sf', champion_from_final:'final' };
+    const prevPhase = prevMap[phaseId];
+    if (!prevPhase) return this._getAllTeams();
+    const prevContainer = overlay.querySelector(`#wcp-knockout-${prevPhase}`);
+    const teams = new Set();
+    if (prevContainer) {
+      prevContainer.querySelectorAll('.wcp-winner-slot').forEach(slot => {
+        if (slot.dataset.picked) teams.add(slot.dataset.picked);
+      });
+    }
+    return [...teams];
+  },
+
+  /* ── Refrescar opciones de campeón con los finalistas elegidos ──── */
+  _refreshChampionOptions(overlay) {
+    const finalists = this._getAvailableTeams(overlay, 'champion_from_final');
+    const grid = overlay.querySelector('#wcp-champion-grid');
+    if (!grid) return;
+    if (finalists.length === 0) {
+      grid.innerHTML = `<p style="grid-column:1/-1;font-size:0.7rem;color:var(--text-muted);text-align:center">
+        Primero selecciona los finalistas en la pestaña "Final"</p>`;
+      return;
+    }
+    grid.innerHTML = finalists.map(t => `
+      <button class="wcp-champion-btn" data-team="${t}"
+        style="background:rgba(255,255,255,0.05);border:1px solid var(--border);
+          border-radius:8px;padding:0.4rem 0.3rem;cursor:pointer;font-size:0.68rem;
+          color:var(--text-secondary);transition:all 0.15s;">
+        ${this._getFlag(t)} ${t}
+      </button>`).join('');
+    grid.querySelectorAll('.wcp-champion-btn').forEach(btn => {
+      btn.addEventListener('click', () => {
+        grid.querySelectorAll('.wcp-champion-btn').forEach(b => {
+          b.style.background='rgba(255,255,255,0.05)'; b.style.borderColor='var(--border)'; b.style.color='var(--text-secondary)'; b.style.fontWeight='';
+        });
+        btn.style.background='rgba(200,160,0,0.2)'; btn.style.borderColor='var(--gold)'; btn.style.color='var(--gold)'; btn.style.fontWeight='700';
+        const el = overlay.querySelector('#wcp-champion-pick');
+        if (el) el.textContent = `🏆 ${this._getFlag(btn.dataset.team)} ${btn.dataset.team}`;
+      });
+    });
+  },
+
   /* ── Inicializar picks de eliminatorias ─────────────────────────── */
   _initKnockoutPickers(overlay, pred) {
     // Para cada fase de eliminatoria, los equipos disponibles vienen
@@ -370,22 +419,13 @@ const WorldCupPredictor = {
 
     // Champion picker
     const champPred = pred.champion;
+    this._refreshChampionOptions(overlay);
     if (champPred) {
       const el = overlay.querySelector('#wcp-champion-pick');
       if (el) el.textContent = `🏆 ${this._getFlag(champPred)} ${champPred}`;
       const btn = overlay.querySelector(`.wcp-champion-btn[data-team="${champPred}"]`);
       if (btn) { btn.style.background='rgba(200,160,0,0.2)'; btn.style.borderColor='var(--gold)'; btn.style.color='var(--gold)'; btn.style.fontWeight='700'; }
     }
-    overlay.querySelectorAll('.wcp-champion-btn').forEach(btn => {
-      btn.addEventListener('click', () => {
-        overlay.querySelectorAll('.wcp-champion-btn').forEach(b => {
-          b.style.background='rgba(255,255,255,0.05)'; b.style.borderColor='var(--border)'; b.style.color='var(--text-secondary)'; b.style.fontWeight='';
-        });
-        btn.style.background='rgba(200,160,0,0.2)'; btn.style.borderColor='var(--gold)'; btn.style.color='var(--gold)'; btn.style.fontWeight='700';
-        const el = overlay.querySelector('#wcp-champion-pick');
-        if (el) el.textContent = `🏆 ${this._getFlag(btn.dataset.team)} ${btn.dataset.team}`;
-      });
-    });
   },
 
   _styleKoBtn(btn, selected) {
@@ -394,6 +434,12 @@ const WorldCupPredictor = {
 
   /* ── Selector de equipo para rondas de eliminatoria ─────────────── */
   _openTeamPicker(overlay, phaseId, pair, side, pred) {
+    const available = this._getAvailableTeams(overlay, phaseId);
+    if (available.length === 0) {
+      const prevLabel = phaseId === 'round32' ? 'Fase de Grupos' : 'la fase anterior';
+      Toast.warn(`Primero selecciona los clasificados en ${prevLabel}`);
+      return;
+    }
     const modal = document.createElement('div');
     modal.style.cssText = `
       position:fixed;top:0;left:0;right:0;bottom:0;z-index:10000;
@@ -403,7 +449,7 @@ const WorldCupPredictor = {
         padding:1rem;max-width:350px;width:90%;max-height:80vh;overflow-y:auto;">
         <h3 style="font-size:0.9rem;color:var(--gold);margin:0 0 0.75rem">Seleccionar equipo</h3>
         <div style="display:grid;grid-template-columns:1fr 1fr;gap:0.35rem;">
-          ${this._getAllTeams().map(t => `
+          ${available.map(t => `
             <button class="wcp-pick-team-btn" data-team="${t}"
               style="background:rgba(255,255,255,0.05);border:1px solid var(--border);
                 border-radius:8px;padding:0.4rem;cursor:pointer;font-size:0.7rem;

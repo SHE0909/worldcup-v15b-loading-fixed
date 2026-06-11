@@ -311,29 +311,6 @@
           <h3>Historial de Predicciones</h3>
           <div id="bet-history" class="bet-history"></div>
         </div>
-        <div class="profile-section" id="api-config-section">
-          <h3>⚙️ Configuración de API</h3>
-          <p style="font-size:0.75rem;color:var(--text-muted);margin-bottom:0.75rem">
-            Conecta tu propia key de <strong>API-Football</strong> para obtener partidos y resultados en tiempo real. Sin key, la app usa datos estáticos de respaldo.
-          </p>
-          <div id="api-status-banner" style="margin-bottom:0.75rem"></div>
-          <div style="display:flex;flex-direction:column;gap:0.5rem">
-            <label style="font-size:0.7rem;color:var(--text-secondary);letter-spacing:1px;text-transform:uppercase">API-Football Key (api-football.com)</label>
-            <div style="display:flex;gap:0.5rem">
-              <input type="password" id="input-af-key" placeholder="Tu key de api-football.com (32 chars hex)"
-                style="flex:1;background:var(--bg-surface);border:1px solid var(--border);border-radius:6px;padding:0.5rem 0.75rem;color:var(--text-primary);font-size:0.8rem;outline:none"/>
-              <button class="btn btn-sm" id="btn-save-af-key" style="white-space:nowrap">Guardar</button>
-            </div>
-            <div style="display:flex;gap:0.5rem;flex-wrap:wrap">
-              <button class="btn btn-secondary btn-sm" id="btn-test-af-key">🔍 Verificar key</button>
-              <button class="btn btn-secondary btn-sm" id="btn-clear-api-cache">🗑️ Limpiar caché</button>
-              <button class="btn btn-secondary btn-sm" id="btn-remove-af-key">❌ Quitar key</button>
-            </div>
-            <p style="font-size:0.68rem;color:var(--text-muted)">
-              Obtén tu key en <a href="https://www.api-football.com/dashboard" target="_blank" style="color:var(--accent)">api-football.com</a> → My Account → API Key. Plan Free: 100 req/día. <strong>No uses RapidAPI</strong>, usa el dashboard directo.
-            </p>
-          </div>
-        </div>
         <div class="profile-section">
           <h3>Datos</h3>
           <div class="data-actions" style="flex-direction:column">
