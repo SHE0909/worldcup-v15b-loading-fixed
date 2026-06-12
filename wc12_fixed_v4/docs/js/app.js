@@ -387,6 +387,53 @@ const App = {
     const goat = pull.results.find(f => f.rareza === 'goat');
     const leg  = pull.results.find(f => f.rareza === 'legendary');
     const epic = pull.results.find(f => f.rareza === 'epic');
+
+    // ── Animación especial Clash Royale al sacar legendaria/GOAT ──
+    if (goat || leg) {
+      const rarityClass = goat ? 'reveal-goat' : 'reveal-legendary';
+      const rarityLabel = goat ? '🐐 ¡¡G.O.A.T!!' : '✨ ¡LEGENDARIA!';
+      const rarityColor = goat ? '#ff2244' : '#ffd700';
+      const rarityName  = goat ? goat.name : leg.name;
+
+      // Overlay de partículas
+      const overlay = document.createElement('div');
+      overlay.id = 'rarity-reveal-overlay';
+      overlay.innerHTML = `
+        <div class="rarity-reveal-bg ${rarityClass}">
+          <div class="rarity-rays"></div>
+          <div class="rarity-particles" id="rarity-particles"></div>
+          <div class="rarity-label-wrap">
+            <div class="rarity-label-text" style="color:${rarityColor}">${rarityLabel}</div>
+            <div class="rarity-label-name">${rarityName}</div>
+          </div>
+        </div>`;
+      document.body.appendChild(overlay);
+
+      // Generar partículas dinámicas
+      const particlesEl = overlay.querySelector('#rarity-particles');
+      const colors = goat ? ['#ff2244','#ff6622','#ffcc00','#ffffff'] : ['#ffd700','#fff4a0','#fffbe6','#ffffff'];
+      for (let i = 0; i < 40; i++) {
+        const p = document.createElement('div');
+        p.className = 'rarity-particle';
+        p.style.cssText = `
+          left:${Math.random()*100}%;
+          animation-delay:${Math.random()*0.8}s;
+          animation-duration:${0.8 + Math.random()*0.8}s;
+          background:${colors[Math.floor(Math.random()*colors.length)]};
+          width:${4 + Math.random()*8}px;
+          height:${4 + Math.random()*8}px;
+        `;
+        particlesEl.appendChild(p);
+      }
+
+      // Quitar overlay después de la animación
+      setTimeout(() => {
+        overlay.style.opacity = '0';
+        overlay.style.transition = 'opacity 0.4s ease';
+        setTimeout(() => overlay.remove(), 500);
+      }, 2200);
+    }
+
     if (goat)      Toast.success(`🐐 ¡¡GOAT!! ¡¡Obtuviste a ${goat.name}!! 🔴`, 7000);
     else if (leg)  Toast.success(`✨ ¡LEGENDARIA! ¡Obtuviste a ${leg.name}!`, 5000);
     else if (epic) Toast.success(`⚡ ¡Épica! ${epic.name}`, 3000);

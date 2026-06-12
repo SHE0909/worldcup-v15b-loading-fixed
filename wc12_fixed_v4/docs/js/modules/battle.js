@@ -426,23 +426,24 @@ const Battle = {
     const DIRS_SHORT = ['Izq. arr.','Centro','Der. arr.','Izq. abajo','Raso','Der. abajo'];
 
     const showResult = (userScored, cpuScored, onNext) => {
+      const goalBg = userScored ? 'goal-flash' : '';
       Modal.open(`
-        <div style="text-align:center;padding:1rem 0">
-          <div style="display:flex;justify-content:center;gap:1.5rem;margin-bottom:0.5rem">
+        <div style="text-align:center;padding:1rem 0" class="${goalBg}">
+          <div style="font-size:2.5rem;margin-bottom:0.3rem">
+            <span class="${userScored ? 'ball-kick-anim' : ''}">⚽</span>
+          </div>
+          <div style="font-size:${userScored?'1.4rem':'1.1rem'};font-weight:900;color:${userScored?'#44ff88':'#ff4466'};font-family:'Bebas Neue',cursive;letter-spacing:1px;margin-bottom:0.3rem">
+            ${userScored ? '🥅 ¡¡GOOOL!!' : '🧤 ¡Atajado!'}
+          </div>
+          <div style="display:flex;justify-content:center;gap:1.5rem;margin:0.4rem 0">
             <div>
-              <div style="font-size:2rem">${userScored ? '⚽' : '🧤'}</div>
-              <div style="font-size:0.75rem;color:${userScored?'#44ff88':'#ff4466'};font-weight:700">
-                TÚ: ${userScored ? '¡Gol!' : 'Atajado'}
-              </div>
-            </div>
-            <div>
-              <div style="font-size:2rem">${cpuScored ? '⚽' : '✋'}</div>
-              <div style="font-size:0.75rem;color:${cpuScored?'#ff8844':'#44ff88'};font-weight:700">
-                CPU: ${cpuScored ? 'Gol' : '¡Atajaste!'}
+              <div style="font-size:0.7rem;color:var(--text-muted)">CPU</div>
+              <div style="font-size:0.9rem;color:${cpuScored?'#ff8844':'#44ff88'};font-weight:700">
+                ${cpuScored ? '⚽ Gol' : '✋ ¡Atajaste!'}
               </div>
             </div>
           </div>
-          <div style="font-size:1.6rem;font-family:'Bebas Neue',cursive;margin:0.5rem 0">
+          <div style="font-size:2rem;font-family:'Bebas Neue',cursive;margin:0.5rem 0;letter-spacing:2px">
             ${userGoals} — ${cpuGoals}
           </div>
           <button class="btn btn-primary" style="margin-top:1rem;width:100%" id="next-penalty-btn">
@@ -595,6 +596,41 @@ const Battle = {
     { q:'¿De qué país es Kylian Mbappé?',                          opts:['Bélgica','Senegal','Costa de Marfil','Francia'], ans:3 },
     { q:'¿En qué posición juega Rodri?',                           opts:['Extremo','Delantero','Defensa','Mediocampista defensivo'], ans:3 },
     { q:'¿Qué equipo ganó la Champions 2024?',                     opts:['Bayern','PSG','Arsenal','Real Madrid'],   ans:3 },
+    // Bloque 2 – Mundial 2026
+    { q:'¿Cuántas sedes tiene el Mundial 2026?',                   opts:['12','14','16','11'],                      ans:1 },
+    { q:'¿Cuál es la sede canadiense del Mundial 2026?',           opts:['Ottawa','Montreal','Toronto','Vancouver'], ans:2 },
+    { q:'¿Cuántos partidos tendrá el Mundial 2026?',               opts:['64','80','96','104'],                     ans:2 },
+    { q:'¿Qué formato de grupos usa el Mundial 2026?',             opts:['8 grupos de 6','12 grupos de 4','8 grupos de 4','16 grupos de 3'], ans:1 },
+    { q:'¿Cuál es el estadio de la final del Mundial 2026?',       opts:['SoFi Stadium','Rose Bowl','MetLife Stadium','AT&T Stadium'], ans:2 },
+    // Bloque 3 – Historia del fútbol
+    { q:'¿Qué país organizó el Mundial 2022?',                     opts:['Emiratos Árabes','Arabia Saudita','Kuwait','Catar'], ans:3 },
+    { q:'¿Quién marcó el "Gol del Siglo" en 1986?',                opts:['Platini','Zico','Maradona','Butcher'],    ans:2 },
+    { q:'¿Cuántas veces ha sido anfitrión Brasil del Mundial?',    opts:['1','2','3','4'],                          ans:1 },
+    { q:'¿Qué equipo europeo ha ganado más Mundiales (4)?',        opts:['Francia','España','Alemania','Italia'],   ans:3 },
+    { q:'¿En qué Mundial se usó el VAR por primera vez?',          opts:['Rusia 2018','Brasil 2014','Catar 2022','Francia 1998'], ans:0 },
+    { q:'¿Cuál fue el primer Mundial celebrado en Asia?',          opts:['Japón/Corea 2002','China 2030','Catar 2022','Australia 2023'], ans:0 },
+    { q:'¿Cuántos penaltis erró Baggio en la final del 94?',       opts:['0','1','2','3'],                          ans:1 },
+    { q:'¿Qué jugador ganó el Balón de Oro 2023?',                 opts:['Benzema','Messi','Mbappé','Haaland'],     ans:1 },
+    // Bloque 4 – Selecciones y estadísticas
+    { q:'¿Qué selección tiene el récord de goles en un solo Mundial (27)?', opts:['Brasil','Hungría','Francia','Alemania'], ans:1 },
+    { q:'¿Cuántos goles marcó Mbappé en el Mundial 2022?',         opts:['6','7','8','9'],                          ans:2 },
+    { q:'¿Qué selección llegó a la final del Mundial 2022?',       opts:['Brasil','Portugal','Francia','Marruecos'], ans:2 },
+    { q:'¿Cuál es la selección con más participaciones mundialistas?', opts:['Brasil','Alemania','Italia','Argentina'], ans:0 },
+    { q:'¿Qué portero ganó el Guante de Oro en Qatar 2022?',       opts:['Courtois','Alisson','Lloris','E. Martínez'], ans:3 },
+    { q:'¿Qué selección fue eliminada en grupos en Qatar 2022 como gran sorpresa?', opts:['Alemania','España','Bélgica','Uruguay'], ans:0 },
+    // Bloque 5 – Clubs y Champions
+    { q:'¿Cuántas Champions League tiene el Real Madrid?',         opts:['13','14','15','16'],                      ans:2 },
+    { q:'¿Qué club ganó la Premier 2023-24?',                      opts:['Arsenal','Liverpool','Man City','Chelsea'], ans:2 },
+    { q:'¿En qué estadio se jugó la final de la Champions 2024?',  opts:['Wembley','Bernabéu','Allianz Arena','Estadio Olímpico de Londres'], ans:0 },
+    { q:'¿Quién fue el máximo goleador de La Liga 2023-24?',       opts:['Vinícius','Bellingham','Lewandowski','Artem Dovbyk'], ans:3 },
+    { q:'¿Qué equipo ganó la Libertadores 2023?',                  opts:['Fluminense','Boca Juniors','River Plate','Atlético Mineiro'], ans:0 },
+    // Bloque 6 – Curiosidades
+    { q:'¿Cuántos árbitros participan en un partido oficial FIFA actualmente (con VAR)?', opts:['4','5','6','7'], ans:2 },
+    { q:'¿Qué medida tiene el campo de fútbol según FIFA (largo máx.)?', opts:['100m','110m','120m','130m'],        ans:2 },
+    { q:'¿Qué jugador tiene más seguidores en Instagram (fútbol)?', opts:['Mbappé','Ronaldo','Messi','Neymar'],     ans:1 },
+    { q:'¿Cuántos minutos dura la prórroga en un partido de fútbol?', opts:['20','25','30','40'],                   ans:2 },
+    { q:'¿Qué selección tiene el uniforme más antiguo del mundo (desde 1872)?', opts:['Inglaterra','Escocia','Gales','Irlanda'], ans:1 },
+    { q:'¿Qué selección ganó la Copa América 2024?',               opts:['Brasil','Colombia','Uruguay','Argentina'], ans:3 },
   ],
 
   async startQuizBattle() {
@@ -647,6 +683,17 @@ const Battle = {
               b.style.borderColor = isCorrect ? '#44ff88' : (b === btn && !correct ? '#ff4466' : '');
               b.disabled = true;
             });
+
+            // Animación flotante de puntos si respuesta correcta
+            if (correct) {
+              const rect = btn.getBoundingClientRect();
+              const el = document.createElement('div');
+              el.className = 'points-float';
+              el.textContent = '+1 pt ✓';
+              el.style.cssText = `top:${rect.top - 10}px;left:${rect.left + rect.width/2 - 30}px`;
+              document.body.appendChild(el);
+              setTimeout(() => el.remove(), 1100);
+            }
 
             setTimeout(() => {
               Modal.close();

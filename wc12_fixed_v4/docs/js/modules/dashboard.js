@@ -49,14 +49,22 @@ const Dashboard = {
     // pero que la API de live no reportó (ej: MOCK o TheSportsDB sin cobertura)
     // Sanitizar: solo agregar si realmente están dentro del tiempo estimado (<115 min)
     for (const m of (upcomingAll||[])) {
-      if (m.status === 'live' && !liveSet.has(m.id)) {
+      if (liveSet.has(m.id)) continue;
+      // BUG FIX: además de status==='live' explícito, detectar partidos cuyo
+      // horario ya pasó pero la API/mock todavía los marca como 'scheduled'
+      // (misma heurística que usa Predicciones vía API.getMatchState)
+      const isLiveByStatus = m.status === 'live';
+      const isLiveByTime   = m.status === 'scheduled' && typeof API.getMatchState === 'function'
+        && API.getMatchState(m) === 'live';
+
+      if (isLiveByStatus || isLiveByTime) {
         // Verificar que no haya pasado más de 115 min desde el inicio
         if (m.date && m.time) {
           const start   = new Date(`${m.date}T${m.time}:00Z`);
           const diffMin = (Date.now() - start.getTime()) / 60000;
           if (diffMin > 115) continue; // ya terminó, no mostrar como live
         }
-        liveOnly.push(m);
+        liveOnly.push(isLiveByTime ? { ...m, status: 'live' } : m);
       }
     }
 
@@ -152,6 +160,14 @@ const Dashboard = {
         const diffMin = (Date.now() - start.getTime()) / 60000;
         if (diffMin > 115) return { ...m, status: 'finished' };
       }
+      // BUG FIX: si el partido sigue 'scheduled' pero ya pasó su hora de inicio
+      // (mismo cálculo que usa Predicciones via API.getMatchState), tratarlo
+      // como 'live' para que Home y Predicciones queden sincronizados.
+      if (m.status === 'scheduled' && typeof API.getMatchState === 'function') {
+        const state = API.getMatchState(m);
+        if (state === 'live')     return { ...m, status: 'live' };
+        if (state === 'finished') return { ...m, status: 'finished' };
+      }
       return m;
     });
 
@@ -208,7 +224,8 @@ const Dashboard = {
       } else if (isFinished) {
         scoreHtml = `<span style="font-size:0.72rem;font-weight:500;color:#666;padding:0 4px;min-width:54px;text-align:center" title="Resultado no disponible en datos locales. Conecta tu API key para ver el marcador.">? — ?</span>`;
       } else if (isLive && m.scoreHome !== null && m.scoreAway !== null) {
-        scoreHtml = `<span style="font-size:0.88rem;font-weight:800;color:#ff4466;letter-spacing:1px;padding:0 4px;min-width:54px;text-align:center">${m.scoreHome} — ${m.scoreAway}</span>`;
+        const sh = m.scoreHome ?? 0, sa = m.scoreAway ?? 0;
+        scoreHtml = `<span style="font-size:0.88rem;font-weight:800;color:#ff4466;letter-spacing:1px;padding:0 4px;min-width:54px;text-align:center">${sh} — ${sa}</span>`;
       } else {
         const timeStr = m.time ? m.time+' hrs' : '—';
         scoreHtml = `<span style="color:var(--text-muted);font-size:0.72rem;font-weight:400;min-width:54px;text-align:center">${timeStr}</span>`;

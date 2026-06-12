@@ -1451,3 +1451,109 @@ input, button { font-family: inherit; }
   opacity: 0.7;
   cursor: not-allowed;
 }
+
+/* ═══════════════════════════════════════════════════════════
+   v16 DESIGN IMPROVEMENTS
+   ═══════════════════════════════════════════════════════════ */
+
+/* Mejorar cards generales */
+.card, .widget-card, .battle-mode-card {
+  transition: transform 0.2s ease, box-shadow 0.2s ease, border-color 0.2s ease !important;
+}
+.card:hover, .widget-card:hover {
+  transform: translateY(-2px) !important;
+  box-shadow: 0 8px 32px rgba(0,0,0,0.6), 0 0 0 1px var(--border-bright) !important;
+}
+
+/* Tabs más estilizadas */
+.tab-btn {
+  position: relative;
+  overflow: hidden;
+}
+.tab-btn::after {
+  content: '';
+  position: absolute;
+  bottom: 0; left: 50%; right: 50%;
+  height: 2px;
+  background: var(--accent);
+  transition: left 0.2s, right 0.2s;
+}
+.tab-btn.active::after { left: 0; right: 0; }
+
+/* Badges de rareza con brillo */
+.badge-legendary { box-shadow: 0 0 8px rgba(255,215,0,0.4); }
+.badge-goat      { box-shadow: 0 0 12px rgba(255,34,68,0.5); }
+.badge-epic      { box-shadow: 0 0 8px rgba(180,79,255,0.4); }
+
+/* Números grandes con gradiente */
+.stat-value, .profile-stat-number {
+  background: linear-gradient(135deg, var(--accent) 0%, #a78bfa 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+
+/* Barra de progreso animada */
+.progress-fill, .pity-fill {
+  position: relative;
+  overflow: hidden;
+}
+.progress-fill::after, .pity-fill::after {
+  content: '';
+  position: absolute;
+  top: 0; left: -100%;
+  width: 60%;
+  height: 100%;
+  background: linear-gradient(90deg, transparent, rgba(255,255,255,0.25), transparent);
+  animation: shimmer 2s ease-in-out infinite;
+}
+@keyframes shimmer {
+  0%   { left: -100%; }
+  100% { left: 200%; }
+}
+
+/* Secciones con borde superior de color */
+.section-card {
+  border-top: 3px solid var(--accent) !important;
+}
+
+/* Toast mejorado */
+.toast {
+  backdrop-filter: blur(16px) !important;
+  border: 1px solid rgba(255,255,255,0.1) !important;
+}
+
+/* Historial de predicciones — mejora visual */
+.bet-item {
+  border-left: 3px solid var(--border);
+  transition: border-color 0.2s;
+}
+.bet-item:has(.bet-result.win) { border-left-color: #44ff88; }
+.bet-item:has(.bet-result.loss) { border-left-color: #ff4466; }
+
+/* Botones principales — gradiente suave */
+.btn-primary {
+  background: linear-gradient(135deg, var(--accent) 0%, #0099bb 100%) !important;
+  box-shadow: 0 4px 15px rgba(0,212,255,0.25) !important;
+}
+.btn-primary:hover:not(:disabled) {
+  box-shadow: 0 6px 20px rgba(0,212,255,0.4) !important;
+  transform: translateY(-1px) !important;
+}
+
+/* Animación al ganar puntos en quiz */
+@keyframes pointsFloat {
+  0%   { opacity:1; transform:translateY(0) scale(1); }
+  50%  { opacity:1; transform:translateY(-24px) scale(1.2); }
+  100% { opacity:0; transform:translateY(-48px) scale(0.8); }
+}
+.points-float {
+  position:fixed;
+  font-family:'Bebas Neue',cursive;
+  font-size:1.8rem;
+  color: #44ff88;
+  text-shadow: 0 0 15px rgba(68,255,136,0.7);
+  pointer-events:none;
+  z-index:9998;
+  animation: pointsFloat 1s ease-out forwards;
+}

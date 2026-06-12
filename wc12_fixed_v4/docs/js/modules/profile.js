@@ -201,22 +201,45 @@ const Profile = {
       return;
     }
 
-    history.innerHTML = preds.slice(0, 10).map(p => {
-      const icon  = p.result === 'win' ? '✅' : p.result === 'loss' ? '❌' : '⏳';
-      const extra = p.exactCorrect ? ' +3 tiradas' : p.result === 'win' ? ' +1 tirada' : '';
+    // Calcular totales
+    const wins       = preds.filter(p => p.result === 'win').length;
+    const losses     = preds.filter(p => p.result === 'loss').length;
+    const totalGanado = preds.reduce((acc, p) => {
+      if (p.exactCorrect) return acc + 3;
+      if (p.result === 'win') return acc + 1;
+      return acc;
+    }, 0);
+
+    const summaryHtml = `
+      <div class="bet-summary" style="display:flex;gap:0.5rem;margin-bottom:0.6rem;padding:0.5rem 0.75rem;background:var(--surface-2,rgba(255,255,255,0.05));border-radius:8px;font-size:0.75rem;flex-wrap:wrap;">
+        <span>🏆 <strong>${wins}</strong> ganados</span>
+        <span style="color:var(--text-muted)">·</span>
+        <span>❌ <strong>${losses}</strong> perdidos</span>
+        <span style="color:var(--text-muted)">·</span>
+        <span style="color:var(--gold)">🎴 <strong>+${totalGanado}</strong> tiradas ganadas</span>
+      </div>`;
+
+    history.innerHTML = summaryHtml + preds.slice(0, 20).map(p => {
+      const icon    = p.result === 'win' ? '✅' : p.result === 'loss' ? '❌' : '⏳';
+      const tiradas = p.exactCorrect ? 3 : p.result === 'win' ? 1 : 0;
+      const rewardHtml = tiradas > 0
+        ? `<span class="bet-reward-badge" style="font-size:0.65rem;background:rgba(255,193,7,0.15);color:var(--gold);border-radius:4px;padding:1px 5px;margin-left:4px">+${tiradas} 🎴</span>`
+        : '';
+      const exactBadge = p.exactCorrect
+        ? `<span style="font-size:0.6rem;color:#4fc3f7;margin-left:4px">EXACTO</span>` : '';
       // Mostrar marcador final si está disponible
       const scoreHtml = p.finalScore
-        ? `<span class="bet-score">${p.finalHome || ''} ${p.finalScore} ${p.finalAway || ''}</span>`
+        ? `<span class="bet-score" style="font-size:0.65rem;color:var(--text-muted)">${p.finalHome || ''} ${p.finalScore} ${p.finalAway || ''}</span>`
         : '';
       return `
         <div class="bet-item">
           <div class="bet-left">
             <span class="bet-match">${p.matchId}</span>
-            <span class="bet-pick">${this._labelPick(p.pick)}${p.exact ? ' · ' + p.exact : ''}</span>
+            <span class="bet-pick">${this._labelPick(p.pick)}${p.exact ? ' · ' + p.exact : ''}${exactBadge}</span>
             ${scoreHtml}
           </div>
           <span class="bet-result ${p.result}">
-            ${icon}${extra}
+            ${icon}${rewardHtml}
           </span>
         </div>
       `;
@@ -296,8 +319,19 @@ const Profile = {
         exactCorrect: p.exactCorrect || false
       })),
       equipo_ideal: user.equipo_ideal || {},
+      wcPrediction: user.wcPrediction || null,
       battleAttempts: (() => {
         try { return JSON.parse(localStorage.getItem('wcc_battle_attempts') || 'null'); } catch(_) { return null; }
+      })(),
+      minigameStats: (() => {
+        try {
+          const stats = {};
+          ['wcc_quiz_stats','wcc_penalty_stats','wcc_classic_stats'].forEach(k => {
+            const v = localStorage.getItem(k);
+            if (v) stats[k] = JSON.parse(v);
+          });
+          return Object.keys(stats).length ? stats : null;
+        } catch(_) { return null; }
       })()
     };
 
@@ -369,6 +403,7 @@ const Profile = {
       user.favoritos        = data.favoritos    || user.favoritos;
       user.predicciones     = data.predicciones || user.predicciones;
       user.equipo_ideal     = data.equipo_ideal || user.equipo_ideal;
+      if (data.wcPrediction) user.wcPrediction = data.wcPrediction;
       // Restaurar nombre y foto de perfil si están en el export
       if (data.usuario)  user.name     = data.usuario;
       if (data.photoURL) user.photoURL = data.photoURL;
@@ -378,6 +413,14 @@ const Profile = {
       // Restaurar intentos diarios de batalla para preservar el límite entre dispositivos
       if (data.battleAttempts) {
         try { localStorage.setItem('wcc_battle_attempts', JSON.stringify(data.battleAttempts)); } catch(_) {}
+      }
+      // Restaurar estadísticas de minijuegos
+      if (data.minigameStats) {
+        try {
+          Object.entries(data.minigameStats).forEach(([k, v]) => {
+            localStorage.setItem(k, JSON.stringify(v));
+          });
+        } catch(_) {}
       }
 
       await Auth.updateUser(user);
