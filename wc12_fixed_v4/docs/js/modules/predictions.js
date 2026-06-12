@@ -317,8 +317,25 @@ const Predictions = {
       return;
     }
 
+    // Obtener datos del partido para guardar nombre de equipos en el historial
+    let matchHome = '', matchAway = '', matchHomeFlag = '', matchAwayFlag = '';
+    try {
+      const allMatches = await API.getPredictableMatches();
+      const m = (allMatches || []).find(x => String(x.id) === String(matchId));
+      if (m) {
+        matchHome     = m.home     || '';
+        matchAway     = m.away     || '';
+        matchHomeFlag = m.homeFlag || '';
+        matchAwayFlag = m.awayFlag || '';
+      }
+    } catch(_) {}
+
     preds.push({
       matchId,
+      matchHome,
+      matchAway,
+      matchHomeFlag,
+      matchAwayFlag,
       pick,
       exact:     exact || null,
       result:    'pending',
@@ -358,12 +375,18 @@ const Predictions = {
           && match.status === 'finished') {
         const sh = Number(match.scoreHome), sa = Number(match.scoreAway);
         finalResult = sh > sa ? 'home' : sa > sh ? 'away' : 'draw';
-        // Guardar marcador final en la predicción para mostrarlo en el historial
-        pred.finalScore = `${sh}–${sa}`;
+        // Guardar marcador final — siempre con guión normal para consistencia
+        pred.finalScore = `${sh}-${sa}`;
         pred.finalHome  = match.home  || '';
         pred.finalAway  = match.away  || '';
       }
       if (!finalResult) continue;
+
+      // Guardar nombre de equipos si aún no está (retrocompatible con predicciones antiguas)
+      if (!pred.matchHome && match.home) pred.matchHome = match.home;
+      if (!pred.matchAway && match.away) pred.matchAway = match.away;
+      if (!pred.matchHomeFlag && match.homeFlag) pred.matchHomeFlag = match.homeFlag;
+      if (!pred.matchAwayFlag && match.awayFlag) pred.matchAwayFlag = match.awayFlag;
 
       if (pred.pick === finalResult) {
         pred.result = 'win';
@@ -373,8 +396,11 @@ const Predictions = {
         pred.result = 'loss';
       }
 
-      const exactScore = match.exactScore || pred.finalScore;
-      if (pred.exact && exactScore && pred.exact === exactScore) {
+      // Normalizar guión largo/corto para comparar marcador exacto correctamente
+      const normalizeScore = s => (s || '').replace(/[–—]/g, '-').trim();
+      const exactScore = normalizeScore(match.exactScore || pred.finalScore);
+      const predExact  = normalizeScore(pred.exact || '');
+      if (predExact && exactScore && predExact === exactScore) {
         pred.exactCorrect = true;
         tirasGanadas += 3;
       }

@@ -227,10 +227,14 @@ const Profile = {
       const scoreHtml = p.finalScore
         ? `<span class="bet-score" style="font-size:0.65rem;color:var(--text-muted)">${p.finalHome || ''} ${p.finalScore} ${p.finalAway || ''}</span>`
         : '';
+      // Nombre del partido: usar home/away guardados, si no el matchId como fallback
+      const matchLabel = (p.matchHome && p.matchAway)
+        ? `${p.matchHomeFlag || ''} ${p.matchHome} vs ${p.matchAway} ${p.matchAwayFlag || ''}`
+        : p.matchId;
       return `
         <div class="bet-item">
           <div class="bet-left">
-            <span class="bet-match">${p.matchId}</span>
+            <span class="bet-match">${matchLabel}</span>
             <span class="bet-pick">${this._labelPick(p.pick)}${p.exact ? ' · ' + p.exact : ''}${exactBadge}</span>
             ${scoreHtml}
           </div>
