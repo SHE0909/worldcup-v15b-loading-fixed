@@ -1,7 +1,3 @@
-/**
- * profile.js — Perfil de usuario, favoritos, export/import  v3
- * v3: Edición de nombre, correo y foto de perfil
- */
 
 const Profile = {
 
@@ -319,9 +315,13 @@ const Profile = {
         exactCorrect: p.exactCorrect || false
       })),
       equipo_ideal: user.equipo_ideal || {},
-      wcPrediction: user.wcPrediction || null,
+      wcPrediction: user.wcPrediction || (() => {
+        try { return JSON.parse(localStorage.getItem('wcc_wc_prediction') || 'null'); } catch(_) { return null; }
+      })(),
       battleAttempts: (() => {
-        try { return JSON.parse(localStorage.getItem('wcc_battle_attempts') || 'null'); } catch(_) { return null; }
+        // Usar clave específica del usuario si está disponible
+        const key = user.email ? `wcc_battle_attempts_${user.email}` : 'wcc_battle_attempts';
+        try { return JSON.parse(localStorage.getItem(key) || 'null'); } catch(_) { return null; }
       })(),
       minigameStats: (() => {
         try {
@@ -403,16 +403,25 @@ const Profile = {
       user.favoritos        = data.favoritos    || user.favoritos;
       user.predicciones     = data.predicciones || user.predicciones;
       user.equipo_ideal     = data.equipo_ideal || user.equipo_ideal;
-      if (data.wcPrediction) user.wcPrediction = data.wcPrediction;
+      if (data.wcPrediction) {
+        user.wcPrediction = data.wcPrediction;
+        // Backup en localStorage para acceso síncrono
+        try { localStorage.setItem('wcc_wc_prediction', JSON.stringify(data.wcPrediction)); } catch(_) {}
+      }
       // Restaurar nombre y foto de perfil si están en el export
       if (data.usuario)  user.name     = data.usuario;
       if (data.photoURL) user.photoURL = data.photoURL;
       // Restaurar marcas de tiradas diarias para no resetear el límite al importar en otro navegador
       if (data.lastDailyPull) user.lastDailyPull = data.lastDailyPull;
       if (data.lastDailySpin) user.lastDailySpin = data.lastDailySpin;
-      // Restaurar intentos diarios de batalla para preservar el límite entre dispositivos
+      // Restaurar intentos diarios de batalla con clave específica del usuario
       if (data.battleAttempts) {
-        try { localStorage.setItem('wcc_battle_attempts', JSON.stringify(data.battleAttempts)); } catch(_) {}
+        try {
+          const key = user.email ? `wcc_battle_attempts_${user.email}` : 'wcc_battle_attempts';
+          localStorage.setItem(key, JSON.stringify(data.battleAttempts));
+          // Actualizar el email en BattleAttempts si está disponible
+          if (typeof BattleAttempts !== 'undefined') BattleAttempts.setUser(user.email);
+        } catch(_) {}
       }
       // Restaurar estadísticas de minijuegos
       if (data.minigameStats) {
@@ -433,4 +442,3 @@ const Profile = {
     }
   }
 };
-

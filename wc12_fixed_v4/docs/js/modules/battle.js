@@ -21,16 +21,27 @@
 ─────────────────────────────────────────────────────────────────────────── */
 const BattleAttempts = {
   MAX_DAILY: 3,
-  LS_KEY: 'wcc_battle_attempts',
+  LS_KEY_PREFIX: 'wcc_battle_attempts',
+  _email: '',   // se setea en Battle.render() con el email del usuario logueado
 
   _todayStr() {
     const d = new Date();
     return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
   },
 
+  /** Clave única por usuario para evitar que varias cuentas compartan intentos */
+  _lsKey() {
+    return this._email ? `${this.LS_KEY_PREFIX}_${this._email}` : this.LS_KEY_PREFIX;
+  },
+
+  /** Llamar con el email del usuario al inicio de cada sesión / render */
+  setUser(email) {
+    this._email = email || '';
+  },
+
   _load() {
     try {
-      const raw = localStorage.getItem(this.LS_KEY);
+      const raw = localStorage.getItem(this._lsKey());
       if (!raw) return null;
       const parsed = JSON.parse(raw);
       if (parsed.date !== this._todayStr()) return null; // nuevo día
@@ -39,7 +50,7 @@ const BattleAttempts = {
   },
 
   _save(data) {
-    try { localStorage.setItem(this.LS_KEY, JSON.stringify(data)); } catch(_) {}
+    try { localStorage.setItem(this._lsKey(), JSON.stringify(data)); } catch(_) {}
   },
 
   /** Devuelve cuántos intentos quedan para la categoría hoy. */
@@ -166,6 +177,8 @@ const Battle = {
 
   async render() {
     const user  = await Auth.currentUser();
+    // Vincular intentos al usuario logueado para que cada cuenta tenga su propio contador
+    BattleAttempts.setUser(user?.email || '');
     const owned = user?.figuritas || [];
     const el    = document.getElementById('tab-battle');
     if (!el) return;

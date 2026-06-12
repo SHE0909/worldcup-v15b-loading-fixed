@@ -219,11 +219,11 @@ const Dashboard = {
 
       // Marcador final o en vivo
       let scoreHtml = '';
-      if (isFinished && m.scoreHome !== null && m.scoreAway !== null) {
+      if (isFinished && m.scoreHome != null && m.scoreAway != null) {
         scoreHtml = `<span style="font-size:0.88rem;font-weight:800;color:#ddd;letter-spacing:1px;padding:0 4px;min-width:54px;text-align:center">${m.scoreHome} — ${m.scoreAway}</span>`;
       } else if (isFinished) {
         scoreHtml = `<span style="font-size:0.72rem;font-weight:500;color:#666;padding:0 4px;min-width:54px;text-align:center" title="Resultado no disponible en datos locales. Conecta tu API key para ver el marcador.">? — ?</span>`;
-      } else if (isLive && m.scoreHome !== null && m.scoreAway !== null) {
+      } else if (isLive && m.scoreHome != null && m.scoreAway != null) {
         const sh = m.scoreHome ?? 0, sa = m.scoreAway ?? 0;
         scoreHtml = `<span style="font-size:0.88rem;font-weight:800;color:#ff4466;letter-spacing:1px;padding:0 4px;min-width:54px;text-align:center">${sh} — ${sa}</span>`;
       } else {

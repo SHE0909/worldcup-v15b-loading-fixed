@@ -330,48 +330,96 @@ const MOCK = {
  *   home_team_id, away_team_id
  * }
  */
-function _mapWC26Match(m) {
-  const kickoff   = m.kickoff_utc ? new Date(m.kickoff_utc) : null;
-  const localDate = kickoff ? localDateStr(kickoff) : '';
+/* ── Traducción de nombres de equipo EN → ES (la API devuelve nombres en inglés) ── */
+const TEAM_NAME_ES = {
+  'Mexico':'México', 'South Africa':'Sudáfrica', 'South Korea':'Corea del Sur',
+  'Czech Republic':'Rep. Checa', 'Canada':'Canadá', 'Bosnia and Herzegovina':'Bosnia y Herz.',
+  'United States':'Estados Unidos', 'Paraguay':'Paraguay', 'Haiti':'Haití',
+  'Scotland':'Escocia', 'Australia':'Australia', 'Turkey':'Turquía',
+  'Brazil':'Brasil', 'Morocco':'Marruecos', 'Qatar':'Qatar', 'Switzerland':'Suiza',
+  'Ivory Coast':'Costa de Marfil', 'Ecuador':'Ecuador', 'Germany':'Alemania',
+  'Curaçao':'Curazao', 'Netherlands':'Países Bajos', 'Japan':'Japón',
+  'Sweden':'Suecia', 'Tunisia':'Túnez', 'Iran':'Irán', 'New Zealand':'Nueva Zelanda',
+  'Spain':'España', 'Cape Verde':'Cabo Verde', 'Belgium':'Bélgica', 'Egypt':'Egipto',
+  'Saudi Arabia':'Arabia Saudí', 'Uruguay':'Uruguay', 'France':'Francia',
+  'Senegal':'Senegal', 'Iraq':'Irak', 'Norway':'Noruega', 'Argentina':'Argentina',
+  'Algeria':'Argelia', 'Austria':'Austria', 'Jordan':'Jordania', 'Portugal':'Portugal',
+  'Democratic Republic of the Congo':'RD Congo', 'England':'Inglaterra',
+  'Croatia':'Croacia', 'Uzbekistan':'Uzbekistán', 'Colombia':'Colombia',
+  'Ghana':'Ghana', 'Panama':'Panamá',
+};
+function translateTeamName(name) { return TEAM_NAME_ES[name] || name || ''; }
 
-  // Hora local El Salvador (UTC-6)
-  let localTime = '';
-  if (kickoff) {
-    const fmt = new Intl.DateTimeFormat('en-US', {
-      timeZone: 'America/El_Salvador',
-      hour: '2-digit', minute: '2-digit', hour12: false
-    });
-    localTime = fmt.format(kickoff);
+/* ── Traducción de etiquetas de fases eliminatorias (cuando aún no hay equipo definido) ── */
+function translateBracketLabel(label) {
+  if (!label) return '';
+  return label
+    .replace(/^Winner Group ([A-L])$/, 'Ganador Grupo $1')
+    .replace(/^Runner-up Group ([A-L])$/, 'Subcampeón Grupo $1')
+    .replace(/^Winner Match (\d+)$/, 'Ganador Partido $1')
+    .replace(/^Loser Match (\d+)$/, 'Perdedor Partido $1')
+    .replace(/^3rd Group (.+)$/, '3° Grupo $1');
+}
+
+/* ── Nombres legibles para las fases de eliminación directa ── */
+const KNOCKOUT_NAMES = {
+  R32:'Dieciseisavos de Final', R16:'Octavos de Final', QF:'Cuartos de Final',
+  SF:'Semifinal', '3RD':'Tercer Lugar', FINAL:'Final',
+};
+
+/* ── Parsear local_date "MM/DD/YYYY HH:MM" → { date:'YYYY-MM-DD', time:'HH:MM' } ── */
+function _parseWC26LocalDate(str) {
+  if (!str) return { date: '', time: '' };
+  const [datePart, timePart] = str.split(' ');
+  const [mo, da, yr] = (datePart || '').split('/');
+  if (!mo || !da || !yr) return { date: '', time: timePart || '' };
+  return { date: `${yr}-${mo.padStart(2,'0')}-${da.padStart(2,'0')}`, time: timePart || '' };
+}
+
+function _mapWC26Match(m) {
+  const { date, time } = _parseWC26LocalDate(m.local_date);
+
+  const isFinished = String(m.finished).toUpperCase() === 'TRUE';
+  const te = (m.time_elapsed || '').toLowerCase();
+  const isLive = !isFinished && te !== '' && te !== 'notstarted';
+
+  let status = 'scheduled';
+  if (isFinished) status = 'finished';
+  else if (isLive) status = 'live';
+
+  // Nombre de equipos: usar nombre real si existe, o traducir la etiqueta de bracket
+  const homeName = m.home_team_name_en
+    ? translateTeamName(m.home_team_name_en)
+    : translateBracketLabel(m.home_team_label);
+  const awayName = m.away_team_name_en
+    ? translateTeamName(m.away_team_name_en)
+    : translateBracketLabel(m.away_team_label);
+
+  // Competencia: grupo (A-L) o fase eliminatoria (R32, R16, QF, SF, 3RD, FINAL)
+  let competition = 'Mundial 2026';
+  if (m.group) {
+    if (/^[A-L]$/.test(m.group)) competition = `Grupo ${m.group} — J${m.matchday || ''}`;
+    else competition = KNOCKOUT_NAMES[m.group] || m.group;
   }
 
-  const statusRaw = (m.status || '').toLowerCase();
-  let status = 'scheduled';
-  if (statusRaw === 'live' || statusRaw === 'in_progress' || statusRaw === 'inprogress') status = 'live';
-  else if (statusRaw === 'finished' || statusRaw === 'ft' || statusRaw === 'completed') status = 'finished';
-
-  const isLive     = status === 'live';
-  const isFinished = status === 'finished';
-
-  // Determinar competition desde round/group
-  let competition = 'Mundial 2026';
-  if (m.group_name) competition = `Grupo ${m.group_name}`;
-  else if (m.round) competition = m.round;
+  const scoreHome = (m.home_score !== undefined && m.home_score !== null) ? Number(m.home_score) : null;
+  const scoreAway = (m.away_score !== undefined && m.away_score !== null) ? Number(m.away_score) : null;
 
   return {
-    id:          `wc26_${m.id || m.match_number}`,
-    home:        m.home_team || '',
-    away:        m.away_team || '',
-    homeFlag:    getFlag(m.home_team || ''),
-    awayFlag:    getFlag(m.away_team || ''),
-    date:        localDate,
-    time:        localTime,
+    id:          `wc26_${m.id}`,
+    home:        homeName,
+    away:        awayName,
+    homeFlag:    getFlag(homeName),
+    awayFlag:    getFlag(awayName),
+    date,
+    time,
     competition,
-    venue:       m.stadium || '',
+    venue:       '',
     type:        'worldcup',
     status,
-    scoreHome:   (isLive || isFinished) ? (m.home_score ?? null) : null,
-    scoreAway:   (isLive || isFinished) ? (m.away_score ?? null) : null,
-    minute:      isLive ? (m.minute || null) : null,
+    scoreHome:   (isLive || isFinished) ? scoreHome : null,
+    scoreAway:   (isLive || isFinished) ? scoreAway : null,
+    minute:      isLive ? (m.time_elapsed || null) : null,
   };
 }
 
@@ -438,7 +486,7 @@ const API = {
   _memSet(key, data) { this._memCache[key] = { data, ts: Date.now() }; return data; },
 
   /* Versión de caché — se incrementa cuando cambia el fixture/MOCK */
-  _CACHE_VERSION: 'v19',
+  _CACHE_VERSION: 'v20',
 
   _lsCacheKey(key) { return `wcc_cache_${this._CACHE_VERSION}_${key}`; },
 
@@ -507,8 +555,8 @@ const API = {
       const games = Array.isArray(data) ? data : (data.games || data.matches || data.data || []);
       const live  = games
         .filter(m => {
-          const s = (m.status || '').toLowerCase();
-          return s === 'live' || s === 'in_progress' || s === 'inprogress';
+          const te = (m.time_elapsed || '').toLowerCase();
+          return String(m.finished).toUpperCase() !== 'TRUE' && te !== '' && te !== 'notstarted';
         })
         .map(_mapWC26Match);
       API_STATUS.usingMock = false;
@@ -565,13 +613,10 @@ const API = {
     if (data) {
       const games = Array.isArray(data) ? data : (data.games || data.matches || data.data || []);
       const finished = games
-        .filter(m => {
-          const s = (m.status || '').toLowerCase();
-          return s === 'finished' || s === 'ft' || s === 'completed';
-        })
+        .filter(m => String(m.finished).toUpperCase() === 'TRUE')
         .map(m => {
           const base = _mapWC26Match(m);
-          const h = m.home_score ?? 0, a = m.away_score ?? 0;
+          const h = Number(m.home_score ?? 0), a = Number(m.away_score ?? 0);
           return {
             ...base,
             scoreHome:   h,
