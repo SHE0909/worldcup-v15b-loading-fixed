@@ -373,11 +373,38 @@ function _parseWC26LocalDate(str) {
   const [datePart, timePart] = str.split(' ');
   const [mo, da, yr] = (datePart || '').split('/');
   if (!mo || !da || !yr) return { date: '', time: timePart || '' };
-  return { date: `${yr}-${mo.padStart(2,'0')}-${da.padStart(2,'0')}`, time: timePart || '' };
+  const [hh, mm] = (timePart || '0:0').split(':').map(Number);
+
+  // La API entrega local_date 1 hora detrás del horario real de El Salvador.
+  // Sumamos 1 hora aquí, manejando el rollover de día/mes/año.
+  const dt = new Date(Number(yr), Number(mo) - 1, Number(da), hh, mm);
+  dt.setHours(dt.getHours() + 1);
+
+  const date = `${dt.getFullYear()}-${String(dt.getMonth()+1).padStart(2,'0')}-${String(dt.getDate()).padStart(2,'0')}`;
+  const time = `${String(dt.getHours()).padStart(2,'0')}:${String(dt.getMinutes()).padStart(2,'0')}`;
+  return { date, time };
+}
+
+/* ── Convertir kickoff_utc (ISO UTC) a hora El Salvador (UTC-6) ── */
+function _utcToSV(utcStr) {
+  if (!utcStr) return { date: '', time: '' };
+  // kickoff_utc puede ser "2026-06-12T19:00:00Z" o "2026-06-12 19:00:00"
+  const iso = utcStr.includes('T') ? utcStr : utcStr.replace(' ', 'T') + 'Z';
+  const d = new Date(iso);
+  if (isNaN(d)) return { date: '', time: '' };
+  // El Salvador = UTC-6
+  const sv = new Date(d.getTime() - 6 * 3600000);
+  const yr  = sv.getUTCFullYear();
+  const mo  = String(sv.getUTCMonth() + 1).padStart(2, '0');
+  const da  = String(sv.getUTCDate()).padStart(2, '0');
+  const hh  = String(sv.getUTCHours()).padStart(2, '0');
+  const mm  = String(sv.getUTCMinutes()).padStart(2, '0');
+  return { date: `${yr}-${mo}-${da}`, time: `${hh}:${mm}` };
 }
 
 function _mapWC26Match(m) {
-  const { date, time } = _parseWC26LocalDate(m.local_date);
+  // Preferir kickoff_utc para conversión exacta a hora SV; fallback a local_date
+  const { date, time } = m.kickoff_utc ? _utcToSV(m.kickoff_utc) : _parseWC26LocalDate(m.local_date);
 
   const isFinished = String(m.finished).toUpperCase() === 'TRUE';
   const te = (m.time_elapsed || '').toLowerCase();
@@ -677,24 +704,47 @@ const API = {
   ══════════════════════════════════════════ */
   async getTeams(query = '') {
     if (!this._teamsCache) {
+      // Cargar standings primero para tener W/D/L/PTS actualizados
+      const standings = await this.getStandings().catch(() => []);
+      const standMap = {};
+      (standings || []).forEach(s => {
+        const key = (s.team || '').toLowerCase();
+        standMap[key] = s;
+      });
+
       const ls = this._lsGet('teams');
       if (ls) {
-        this._teamsCache = ls;
+        // Enriquecer caché LS con standings en vivo
+        this._teamsCache = ls.map(t => {
+          const s = standMap[(t.name||'').toLowerCase()];
+          return s ? { ...t, pj:s.pj||0, w:s.w||0, d:s.d||0, l:s.l||0, gf:s.gf||0, gc:s.gc||0, pts:s.pts||0 } : t;
+        });
       } else {
         const data = await this._wc26('/get/teams');
         if (data) {
           const teams = Array.isArray(data) ? data : (data.teams || data.data || []);
           if (teams.length > 0) {
-            this._teamsCache = teams.map(_mapWC26Team);
+            this._teamsCache = teams.map(t => {
+              const base = _mapWC26Team(t);
+              const key  = (base.name || '').toLowerCase();
+              const s    = standMap[key];
+              return s ? { ...base, pj:s.pj||0, w:s.w||0, d:s.d||0, l:s.l||0, gf:s.gf||0, gc:s.gc||0, pts:s.pts||0 } : base;
+            });
             this._lsSet('teams', this._teamsCache);
           }
         }
-        if (!this._teamsCache) this._teamsCache = MOCK.teams;
+        if (!this._teamsCache) {
+          // Enriquecer mock con standings reales si hay
+          this._teamsCache = MOCK.teams.map(t => {
+            const s = standMap[(t.name||'').toLowerCase()];
+            return s ? { ...t, pj:s.pj||0, w:s.w||0, d:s.d||0, l:s.l||0, gf:s.gf||0, gc:s.gc||0, pts:s.pts||0 } : t;
+          });
+        }
       }
     }
     if (!query) return this._teamsCache;
     const q = query.toLowerCase();
-    return this._teamsCache.filter(t => t.name.toLowerCase().includes(q));
+    return this._teamsCache.filter(t => (t.name||'').toLowerCase().includes(q));
   },
 
   /* ══════════════════════════════════════════
@@ -749,7 +799,7 @@ const API = {
     if (m.status === 'live')     return 'live';
     if (m.status === 'finished') return 'finished';
     if (!m.date || !m.time)      return 'upcoming';
-    const matchTs = new Date(`${m.date}T${m.time}:00`).getTime();
+    const matchTs = new Date(`${m.date}T${m.time}:00-06:00`).getTime();
     const diffMin = (Date.now() - matchTs) / 60000;
     if (diffMin > 115) return 'finished';
     if (diffMin > 0)   return 'live';
@@ -760,7 +810,7 @@ const API = {
 
   getTimeUntilMatch(m) {
     if (!m.date || !m.time) return '';
-    const diffMs = new Date(`${m.date}T${m.time}:00`).getTime() - Date.now();
+    const diffMs = new Date(`${m.date}T${m.time}:00-06:00`).getTime() - Date.now();
     if (diffMs <= 0) return '';
     const h   = Math.floor(diffMs / 3600000);
     const min = Math.floor((diffMs % 3600000) / 60000);
@@ -805,6 +855,8 @@ const API = {
         this.getStandings(),
         this.getFinishedMatches(),
       ]);
+      // Re-cargar teams enriquecidos con standings actualizados
+      await this.getTeams('').catch(() => {});
       const apiConnected = (upcoming?.some?.(m => m.id?.startsWith?.('wc26_')));
       API_STATUS.usingMock = !apiConnected;
       return {

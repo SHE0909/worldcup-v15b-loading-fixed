@@ -20,7 +20,7 @@
    Almacenado en localStorage: { date, counts: { classic:0, penalties:0, quiz:0 } }
 ─────────────────────────────────────────────────────────────────────────── */
 const BattleAttempts = {
-  MAX_DAILY: 3,
+  MAX_DAILY: 2,
   LS_KEY_PREFIX: 'wcc_battle_attempts',
   _email: '',   // se setea en Battle.render() con el email del usuario logueado
 
@@ -72,9 +72,9 @@ const BattleAttempts = {
 
   /** Resumen legible de intentos restantes para la UI. */
   summaryHTML() {
-    return ['classic','penalties','quiz'].map(cat => {
+    return ['classic','penalties','quiz','guess','connect'].map(cat => {
       const rem = this.remaining(cat);
-      const label = { classic:'Clásica', penalties:'Penales', quiz:'Quiz' }[cat];
+      const label = { classic:'Clásica', penalties:'Penales', quiz:'Quiz', guess:'Adivina', connect:'Conecta' }[cat];
       return `<span class="battle-attempts-badge ${rem === 0 ? 'exhausted' : ''}">${label}: ${rem}/${this.MAX_DAILY}</span>`;
     }).join('');
   }
@@ -229,6 +229,20 @@ const Battle = {
           <div class="bmode-reward">+2 tiradas + monedas</div>
           <div class="bmode-attempts">Intentos hoy: ${BattleAttempts.remaining('quiz')}/${BattleAttempts.MAX_DAILY}</div>
         </div>
+        <div class="battle-mode-card ${BattleAttempts.remaining('guess') === 0 ? 'bmode-exhausted' : ''}" id="bmode-guess">
+          <div class="bmode-icon">👤</div>
+          <div class="bmode-title">Adivina el Jugador</div>
+          <div class="bmode-desc">Mira la foto e identifica al jugador entre 4 opciones. ¡Sin fallar!</div>
+          <div class="bmode-reward">+1 tirada por acierto</div>
+          <div class="bmode-attempts">Intentos hoy: ${BattleAttempts.remaining('guess')}/${BattleAttempts.MAX_DAILY}</div>
+        </div>
+        <div class="battle-mode-card ${BattleAttempts.remaining('connect') === 0 ? 'bmode-exhausted' : ''}" id="bmode-connect">
+          <div class="bmode-icon">🔗</div>
+          <div class="bmode-title">Conecta Jugador</div>
+          <div class="bmode-desc">Une cada jugador con su selección. ¡Un fallo y se acaba!</div>
+          <div class="bmode-reward">+2 tiradas si completas</div>
+          <div class="bmode-attempts">Intentos hoy: ${BattleAttempts.remaining('connect')}/${BattleAttempts.MAX_DAILY}</div>
+        </div>
       </div>
 
       <div class="battle-team-preview">
@@ -268,24 +282,38 @@ const Battle = {
     // Eventos — verificar límite de intentos antes de iniciar
     document.getElementById('bmode-classic').addEventListener('click', () => {
       if (!BattleAttempts.consume('classic')) {
-        Toast.warn('Ya usaste los 3 intentos de Batalla Clásica hoy. Vuelve mañana.');
+        Toast.warn('Ya usaste los 2 intentos de Batalla Clásica hoy. Vuelve mañana.');
         return;
       }
       this.startClassicBattle();
     });
     document.getElementById('bmode-penalties').addEventListener('click', () => {
       if (!BattleAttempts.consume('penalties')) {
-        Toast.warn('Ya usaste los 3 intentos de Penales hoy. Vuelve mañana.');
+        Toast.warn('Ya usaste los 2 intentos de Penales hoy. Vuelve mañana.');
         return;
       }
       this.startPenaltyBattle();
     });
     document.getElementById('bmode-quiz').addEventListener('click', () => {
       if (!BattleAttempts.consume('quiz')) {
-        Toast.warn('Ya usaste los 3 intentos de Quiz hoy. Vuelve mañana.');
+        Toast.warn('Ya usaste los 2 intentos de Quiz hoy. Vuelve mañana.');
         return;
       }
       this.startQuizBattle();
+    });
+    document.getElementById('bmode-guess').addEventListener('click', () => {
+      if (!BattleAttempts.consume('guess')) {
+        Toast.warn('Ya usaste los 2 intentos de Adivina el Jugador hoy. Vuelve mañana.');
+        return;
+      }
+      this.startGuessPlayer();
+    });
+    document.getElementById('bmode-connect').addEventListener('click', () => {
+      if (!BattleAttempts.consume('connect')) {
+        Toast.warn('Ya usaste los 2 intentos de Conecta Jugador hoy. Vuelve mañana.');
+        return;
+      }
+      this.startConnectPlayer();
     });
     document.getElementById('btn-battle-random-team').addEventListener('click', () => {
       if (this._state.usingIdeal) {
@@ -749,6 +777,203 @@ const Battle = {
           <button class="btn btn-primary" onclick="Modal.close();Battle.render()" style="width:100%;margin-top:1rem">
             Continuar
           </button>
+        </div>
+      `);
+    }, 200);
+  },
+
+
+  /* ══ ADIVINA EL JUGADOR ══════════════════════════════════════════ */
+  async startGuessPlayer() {
+    const allFigs = Gacha.getPool();
+    if (!allFigs.length) { Toast.error('No hay jugadores disponibles'); return; }
+
+    const toGuess = [...allFigs].sort(() => Math.random() - 0.5).slice(0, 5);
+    let score = 0;
+    let questionIdx = 0;
+
+    const doQuestion = () => {
+      if (questionIdx >= toGuess.length) {
+        return this._endGuessPlayer(score, toGuess.length);
+      }
+      const correct = toGuess[questionIdx];
+      const wrong = allFigs.filter(f => f.id !== correct.id)
+                            .sort(() => Math.random() - 0.5).slice(0, 3);
+      const options = [...wrong, correct].sort(() => Math.random() - 0.5);
+
+      const photoUrl = (typeof API !== 'undefined' && API.getPhotoSync)
+        ? (API.getPhotoSync(correct) || '') : '';
+
+      const photoHtml = photoUrl
+        ? `<img src="${photoUrl}" alt="?" style="width:100%;height:100%;object-fit:cover;object-position:top center" referrerpolicy="no-referrer" onerror="this.style.display='none'">`
+        : `<span style="font-size:3rem">${correct.emoji}</span>`;
+
+      const optsHtml = options.map(opt =>
+        `<button class="btn guess-opt-btn" data-id="${opt.id}" style="font-size:0.78rem;padding:0.5rem">${opt.name}</button>`
+      ).join('');
+
+      Modal.open(`
+        <div style="text-align:center;padding:0.5rem">
+          <div style="font-size:0.75rem;color:var(--text-muted);margin-bottom:0.5rem">Jugador ${questionIdx+1} de ${toGuess.length} · Aciertos: ${score}</div>
+          <div style="width:120px;height:120px;border-radius:50%;background:rgba(255,255,255,0.05);border:2px solid rgba(255,255,255,0.1);overflow:hidden;margin:0 auto 1rem;display:flex;align-items:center;justify-content:center">
+            ${photoHtml}
+          </div>
+          <p style="margin-bottom:0.75rem;font-weight:600">¿Quién es este jugador?</p>
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:0.5rem">
+            ${optsHtml}
+          </div>
+        </div>
+      `);
+
+      setTimeout(() => {
+        document.querySelectorAll('.guess-opt-btn').forEach(btn => {
+          btn.addEventListener('click', () => {
+            const isCorrect = btn.dataset.id === correct.id;
+            if (isCorrect) score++;
+            document.querySelectorAll('.guess-opt-btn').forEach(b => {
+              b.style.background = b.dataset.id === correct.id
+                ? 'rgba(68,255,136,0.25)'
+                : (b === btn && !isCorrect ? 'rgba(255,68,102,0.2)' : '');
+              b.style.borderColor = b.dataset.id === correct.id
+                ? '#44ff88'
+                : (b === btn && !isCorrect ? '#ff4466' : '');
+              b.disabled = true;
+            });
+            setTimeout(() => {
+              Modal.close();
+              questionIdx++;
+              setTimeout(doQuestion, 200);
+            }, 900);
+          });
+        });
+      }, 50);
+    };
+
+    doQuestion();
+  },
+
+  async _endGuessPlayer(score, total) {
+    const tiradas = score;
+    const won = score >= Math.ceil(total * 0.6);
+    await this._applyBattleResult(won, false, tiradas, 0);
+    setTimeout(() => {
+      Modal.open(`
+        <div class="battle-result-modal">
+          <div class="brm-header ${won ? 'win' : score > 0 ? 'draw' : 'loss'}">
+            ${score === total ? '🎯 ¡PERFECTO!' : won ? '👤 ¡BIEN HECHO!' : score > 0 ? '👤 BUEN INTENTO' : '😅 ¡A PRACTICAR!'}
+          </div>
+          <div class="brm-score" style="font-size:2.5rem;font-family:'Bebas Neue',cursive">${score}/${total}</div>
+          <div style="font-size:0.8rem;color:var(--text-muted);margin:0.25rem 0">jugadores adivinados</div>
+          <div class="brm-reward">${tiradas > 0 ? `🎴 +${tiradas} tirada${tiradas>1?'s':''}` : 'Sin recompensa esta vez'}</div>
+          <button class="btn btn-primary" onclick="Modal.close();Battle.render()" style="width:100%;margin-top:1rem">Continuar</button>
+        </div>
+      `);
+    }, 200);
+  },
+
+  /* ══ CONECTA JUGADOR ══════════════════════════════════════════════ */
+  async startConnectPlayer() {
+    const allFigs = Gacha.getPool();
+    if (!allFigs.length) { Toast.error('No hay jugadores disponibles'); return; }
+
+    const byTeam = {};
+    allFigs.forEach(f => { (byTeam[f.team] = byTeam[f.team] || []).push(f); });
+    const teams = Object.keys(byTeam).sort(() => Math.random() - 0.5).slice(0, 6);
+    const players = teams.map(t => byTeam[t][Math.floor(Math.random()*byTeam[t].length)]);
+
+    const shuffledPlayers = [...players].sort(() => Math.random() - 0.5).map(p => Object.assign({}, p));
+    const shuffledTeams   = [...players].sort(() => Math.random() - 0.5).map(p => ({ name: p.team, flag: p.flag }));
+
+    let selectedPlayer = null;
+    let matched = 0;
+    const self = this;
+
+    const render = () => {
+      const activePlayers = shuffledPlayers.filter(p => !p._matched);
+      const activeTeams   = shuffledTeams.filter(t => !t._matched);
+
+      const playersHtml = activePlayers.map((p, i) =>
+        `<button class="btn connect-player-btn ${selectedPlayer && selectedPlayer.id === p.id ? 'connect-selected' : ''}"
+           data-idx="${shuffledPlayers.indexOf(p)}"
+           style="width:100%;margin-bottom:0.35rem;font-size:0.75rem;padding:0.4rem 0.5rem;text-align:left">
+           ${p.emoji} ${p.name}
+         </button>`
+      ).join('');
+
+      const teamsHtml = activeTeams.map((t, i) =>
+        `<button class="btn connect-team-btn"
+           data-idx="${shuffledTeams.indexOf(t)}"
+           style="width:100%;margin-bottom:0.35rem;font-size:0.75rem;padding:0.4rem 0.5rem;text-align:left">
+           ${t.flag} ${t.name}
+         </button>`
+      ).join('');
+
+      Modal.open(`
+        <div style="padding:0.5rem">
+          <div style="text-align:center;font-size:0.75rem;color:var(--text-muted);margin-bottom:0.75rem">
+            Empareja jugador con selección · ${matched}/${players.length} correctos
+          </div>
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:0.5rem">
+            <div>${playersHtml}</div>
+            <div>${teamsHtml}</div>
+          </div>
+          <div style="text-align:center;font-size:0.7rem;color:var(--text-muted);margin-top:0.5rem">
+            Toca un jugador y luego su selección
+          </div>
+        </div>
+      `);
+
+      setTimeout(() => {
+        document.querySelectorAll('.connect-player-btn').forEach(btn => {
+          btn.addEventListener('click', () => {
+            selectedPlayer = shuffledPlayers[parseInt(btn.dataset.idx)];
+            render();
+          });
+        });
+
+        document.querySelectorAll('.connect-team-btn').forEach(btn => {
+          btn.addEventListener('click', () => {
+            if (!selectedPlayer) { Toast.show('Selecciona un jugador primero'); return; }
+            const teamData = shuffledTeams[parseInt(btn.dataset.idx)];
+            const isCorrect = selectedPlayer.team === teamData.name;
+
+            if (isCorrect) {
+              selectedPlayer._matched = true;
+              teamData._matched = true;
+              matched++;
+              Toast.success(`✅ ¡Correcto! ${selectedPlayer.name} → ${teamData.flag} ${teamData.name}`);
+              selectedPlayer = null;
+              if (matched >= players.length) {
+                Modal.close();
+                return self._endConnectPlayer(true, matched);
+              }
+              render();
+            } else {
+              Toast.error(`❌ ¡Incorrecto! ${selectedPlayer.name} no juega en ${teamData.flag} ${teamData.name}`);
+              Modal.close();
+              setTimeout(() => self._endConnectPlayer(false, matched), 400);
+            }
+          });
+        });
+      }, 50);
+    };
+
+    render();
+  },
+
+  async _endConnectPlayer(won, matched) {
+    const tiradas = won ? 2 : matched >= 3 ? 1 : 0;
+    await this._applyBattleResult(won, false, tiradas, won ? 20 : 0);
+    setTimeout(() => {
+      Modal.open(`
+        <div class="battle-result-modal">
+          <div class="brm-header ${won ? 'win' : matched > 0 ? 'draw' : 'loss'}">
+            ${won ? '🔗 ¡PERFECTO!' : matched >= 3 ? '🔗 BUEN INTENTO' : '💀 FALLASTE'}
+          </div>
+          <div class="brm-score" style="font-size:2.5rem;font-family:'Bebas Neue',cursive">${matched}</div>
+          <div style="font-size:0.8rem;color:var(--text-muted);margin:0.25rem 0">conexiones correctas</div>
+          <div class="brm-reward">${tiradas > 0 ? `🎴 +${tiradas} tirada${tiradas>1?'s':''}` : 'Sin recompensa esta vez'}</div>
+          <button class="btn btn-primary" onclick="Modal.close();Battle.render()" style="width:100%;margin-top:1rem">Continuar</button>
         </div>
       `);
     }, 200);
