@@ -11,33 +11,27 @@
   <meta name="description" content="Colecciona figuritas del Mundial 2026, predice partidos y gana recompensas"/>
   <title>World Cup Collector — UES</title>
 
-  <!-- PWA Manifest -->
   <link rel="manifest" href="manifest.json"/>
   <link rel="icon" type="image/png" sizes="192x192" href="./icons/icon-192.png"/>
   <link rel="apple-touch-icon" href="./icons/icon-192.png"/>
   <link rel="apple-touch-icon" href="icons/icon-192.png"/>
 
-  <!-- Estilos -->
   <link rel="stylesheet" href="css/app.css"/>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Barlow:wght@300;400;600;700&family=Barlow+Condensed:wght@400;700&display=swap" rel="stylesheet">
 </head>
 <body>
 
-  <!-- PWA install banner (se muestra solo si aplica) -->
   <div id="pwa-install-banner" class="pwa-banner" style="display:none">
     <span>⚽ Instala WCC UES como app</span>
     <button class="btn btn-sm btn-primary" id="pwa-install-btn">Instalar</button>
     <button class="pwa-banner-close" id="pwa-banner-close">✕</button>
   </div>
 
-  <!-- MAIN APP -->
   <div id="screen-app" class="screen active">
 
-    <!-- DRAWER OVERLAY (mobile/tablet) -->
     <div id="drawer-overlay" class="drawer-overlay"></div>
 
-    <!-- SIDE DRAWER (mobile/tablet nav) -->
     <nav id="app-drawer" class="app-drawer" role="navigation" aria-label="Menú principal">
       <div class="drawer-header">
         <span class="drawer-logo">WCC</span>
@@ -65,7 +59,6 @@
       </div>
     </nav>
 
-    <!-- TOP HEADER -->
     <header class="app-header">
       <div class="header-left">
         <button class="btn-hamburger" id="btn-drawer-open" aria-label="Abrir menú">
@@ -83,7 +76,6 @@
       </div>
     </header>
 
-    <!-- TOP NAV (desktop only, hidden on mobile/tablet) -->
     <nav class="app-nav">
       <button class="nav-btn active" data-tab="dashboard"><svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 9l9-7 9 7v11a2 2 0 01-2 2H5a2 2 0 01-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg><span>Home</span></button>
       <button class="nav-btn" data-tab="stats"><svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/></svg><span>Seguimiento</span></button>
@@ -95,17 +87,13 @@
       <button class="nav-btn" data-tab="profile"><svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 21v-2a4 4 0 00-4-4H8a4 4 0 00-4 4v2"/><circle cx="12" cy="7" r="4"/></svg><span>Perfil</span></button>
     </nav>
 
-    <!-- TAB CONTENT -->
     <main class="app-main">
-
-      <!-- DASHBOARD -->
       <section id="tab-dashboard" class="tab-section active">
         <div class="section-header">
           <h2>Panel Principal</h2>
           <button class="btn btn-sm" id="btn-update-stats"><svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="23 4 23 10 17 10"/><polyline points="1 20 1 14 7 14"/><path d="M3.51 9a9 9 0 0114.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0020.49 15"/></svg> Actualizar</button>
         </div>
         <div id="api-status-bar" class="api-status-bar" style="display:none;"></div>
-        <!-- Accesos rápidos -->
         <div class="quick-actions">
           <button class="qa-btn" onclick="App.navigateTo('gacha')"><svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="3" width="14" height="18" rx="2"/><path d="M8 21h12a2 2 0 002-2V7a2 2 0 00-2-2h-2"/></svg><span>Tirar</span></button>
           <button class="qa-btn" onclick="App.navigateTo('battle')"><svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg><span>Minijuegos</span></button>
@@ -134,7 +122,6 @@
         </div>
       </section>
 
-      <!-- STATS -->
       <section id="tab-stats" class="tab-section">
         <div class="section-header"><h2>Estadísticas</h2></div>
         <div class="search-bar">
@@ -149,15 +136,11 @@
         <div id="stats-content" class="stats-content"></div>
       </section>
 
-      <!-- GACHA -->
       <section id="tab-gacha" class="tab-section">
         <div class="section-header"><h2>🎴 Sobres</h2></div>
         <div class="gacha-center">
-
-          <!-- SOBRE PANINI STYLE -->
           <div class="sobre-stage">
             <div class="sobre-wrapper" id="sobre-wrapper">
-              <!-- Sobre cerrado -->
               <div class="sobre sobre-closed" id="sobre-closed">
                 <div class="sobre-top-flap"></div>
                 <div class="sobre-body">
@@ -171,10 +154,8 @@
                   </div>
                   <div class="sobre-bottom-strip"></div>
                 </div>
-                <!-- Brillo/reflejo -->
                 <div class="sobre-shine"></div>
               </div>
-              <!-- Sobre abierto (animación) -->
               <div class="sobre-open" id="sobre-open" style="display:none;"></div>
             </div>
 
@@ -215,7 +196,6 @@
         </div>
       </section>
 
-      <!-- ALBUM -->
       <section id="tab-album" class="tab-section">
         <div class="section-header">
           <h2>📖 Mi Álbum</h2>
@@ -246,17 +226,12 @@
         </div>
       </section>
 
-      <!-- BATTLE -->
       <section id="tab-battle" class="tab-section">
-        <!-- Renderizado dinámico por Battle.render() -->
       </section>
 
-      <!-- EXCHANGE -->
       <section id="tab-exchange" class="tab-section">
-        <!-- Renderizado dinámico por Exchange.render() -->
       </section>
 
-      <!-- PREDICTIONS -->
       <section id="tab-predictions" class="tab-section">
         <div class="section-header">
           <h2>🎯 Predicciones</h2>
@@ -265,7 +240,6 @@
         <div id="predictions-list" class="predictions-list"></div>
       </section>
 
-      <!-- PROFILE -->
       <section id="tab-profile" class="tab-section">
         <div class="section-header"><h2>Mi Perfil</h2></div>
         <div class="profile-card" id="profile-card">
@@ -330,10 +304,8 @@
     </main>
   </div>
 
-  <!-- TOAST -->
   <div id="toast" class="toast"></div>
 
-  <!-- MODAL -->
   <div id="modal-overlay" class="modal-overlay" style="display:none;">
     <div class="modal-box" id="modal-box">
       <button class="modal-close" id="modal-close">✕</button>
@@ -341,7 +313,6 @@
     </div>
   </div>
 
-  <!-- SCRIPTS -->
   <script src="js/utils/db.js"></script>
   <script src="js/utils/auth.js"></script>
   <script src="js/utils/toast.js"></script>
@@ -358,7 +329,7 @@
   <script src="js/modules/exchange.js"></script>
   <script src="js/app.js"></script>
   <script>
-  /* ── DRAWER LATERAL ── */
+
   (function() {
     const drawer  = document.getElementById('app-drawer');
     const overlay = document.getElementById('drawer-overlay');
@@ -383,7 +354,6 @@
     btnClose?.addEventListener('click', closeDrawer);
     overlay?.addEventListener('click', closeDrawer);
 
-    // Cerrar al navegar
     drawer?.querySelectorAll('.drawer-nav-btn').forEach(btn => {
       btn.addEventListener('click', () => {
         // Sync active state
@@ -394,20 +364,17 @@
       });
     });
 
-    // Logout desde drawer
     btnLogoutDrawer?.addEventListener('click', async () => {
       closeDrawer();
       document.getElementById('btn-logout')?.click();
     });
 
-    // Swipe para cerrar (deslizar izq)
     let touchStartX = 0;
     drawer?.addEventListener('touchstart', e => { touchStartX = e.touches[0].clientX; }, { passive: true });
     drawer?.addEventListener('touchend', e => {
       if (touchStartX - e.changedTouches[0].clientX > 60) closeDrawer();
     }, { passive: true });
 
-    // Swipe para abrir (desde borde izq)
     document.addEventListener('touchstart', e => {
       if (e.touches[0].clientX < 20) touchStartX = e.touches[0].clientX;
     }, { passive: true });
@@ -415,7 +382,6 @@
       if (touchStartX < 20 && e.changedTouches[0].clientX - touchStartX > 60) openDrawer();
     }, { passive: true });
 
-    // Sincronizar estado activo del drawer con la nav de escritorio
     const origNavigateTo = App?.navigateTo?.bind(App);
     if (origNavigateTo) {
       App.navigateTo = function(tab) {
@@ -426,7 +392,6 @@
       };
     }
 
-    // Rellenar info del usuario en el drawer
     async function fillDrawerUser() {
       try {
         const u = await Auth.currentUser();
@@ -445,13 +410,11 @@
         }
       } catch(e) {}
     }
-    // Rellenar cuando la app esté lista
     window.addEventListener('app:ready', fillDrawerUser);
     setTimeout(fillDrawerUser, 800);
   })();
   </script>
 
-  <!-- Service Worker PWA -->
   <script>
     if ('serviceWorker' in navigator && location.protocol !== 'file:') {
       window.addEventListener('load', () => {
@@ -463,7 +426,6 @@
       console.info('[PWA] SW desactivado en file:// — abre desde un servidor HTTP para PWA completo.');
     }
 
-    // PWA Install prompt
     let deferredPrompt;
     window.addEventListener('beforeinstallprompt', e => {
       e.preventDefault();

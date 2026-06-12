@@ -7,10 +7,8 @@ const App = {
   _currentTab: 'dashboard',
 
   async init() {
-    // Mostrar loading splash si existe
     const splash = document.getElementById('loading-splash');
 
-    // Limpiar caché de upcoming si el día cambió (fix timezone UTC vs local)
     try {
       const now = new Date();
       const todayLocal = `${now.getFullYear()}-${String(now.getMonth()+1).padStart(2,'0')}-${String(now.getDate()).padStart(2,'0')}`;
@@ -25,7 +23,6 @@ const App = {
       await DB.open();
     } catch(dbErr) {
       console.error('DB.open() falló:', dbErr);
-      // Intentar borrar la BD corrupta y recargar
       try {
         indexedDB.deleteDatabase('WCCollectorUES');
         console.warn('BD eliminada, recargando...');
@@ -54,15 +51,13 @@ const App = {
     }
 
     await this.loadUserData(user);
-    this.navigateTo('dashboard'); // no await: la carga de datos (api-football) puede tardar; no bloquear la UI
+    this.navigateTo('dashboard');
 
     const daily = await Gacha.claimDaily();
     if (daily.ok) Toast.success('🎁 ¡Tirada diaria reclamada! +1 tirada');
 
     this._bindNavEvents();
     this._bindGlobalEvents();
-
-    // Mostrar estado de la API key al inicio (límite horario / key personal)
     this._showInitialApiKeyInfo();
   },
 
@@ -86,7 +81,6 @@ const App = {
     this.refreshHeader(u);
   },
 
-  /* ── Actualizar header sin recargar la página ── */
   async refreshHeader(u = null) {
     const user = u || await Auth.currentUser();
     if (!user) return;
@@ -152,7 +146,6 @@ const App = {
       btn.addEventListener('click', () => {
         document.querySelectorAll('.stab').forEach(b => b.classList.remove('active'));
         btn.classList.add('active');
-        // Limpiar búsqueda al cambiar de tab
         const input = document.getElementById('search-input');
         if (input) input.value = '';
         Stats._lastQuery = '';
@@ -179,21 +172,18 @@ const App = {
   },
 
   _bindGlobalEvents() {
-    /* ── LOGOUT con modal de confirmación ── */
     document.getElementById('btn-logout')?.addEventListener('click', async () => {
       const confirmed = await this._confirmLogout();
       if (!confirmed) return;
       await Auth.logout();
-      API.clearPhotoCache();            // BUG FIX: limpiar caché de fotos y equipos
-      await DB.clear('stats_cache');    // BUG FIX: limpiar caché de stats al cerrar sesión
+      API.clearPhotoCache();            
+      await DB.clear('stats_cache');   
       window.location.replace('login.html');
     });
 
-    /* ── Gacha ── */
     document.getElementById('btn-gacha-1')?.addEventListener('click',  () => this.doPull(1));
     document.getElementById('btn-gacha-10')?.addEventListener('click', () => this.doPull(10));
 
-    /* ── Actualizar stats ── */
     document.getElementById('btn-update-stats')?.addEventListener('click', async () => {
       const btn = document.getElementById('btn-update-stats');
       const svgIcon = `<svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="23 4 23 10 17 10"/><polyline points="1 20 1 14 7 14"/><path d="M3.51 9a9 9 0 0114.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0020.49 15"/></svg>`;
@@ -209,7 +199,6 @@ const App = {
           ? refreshResult.finished
           : await API.getFinishedMatches();
 
-        // También sincronizar partidos finalizados que vengan en upcoming
         const allForEval = [
           ...(finished || []),
           ...(refreshResult.upcoming || []).filter(m => m.status === 'finished' && m.scoreHome !== null)
@@ -231,7 +220,6 @@ const App = {
       }
     });
 
-    /* ── Exportar / Importar ── */
     document.getElementById('btn-export')?.addEventListener('click', () => Profile.exportData());
     document.getElementById('btn-import')?.addEventListener('change', (e) => {
       const file = e.target.files[0];
@@ -240,7 +228,6 @@ const App = {
     });
   },
 
-  /* Modal de confirmación para logout */
   _confirmLogout() {
     return new Promise(resolve => {
       const overlay = document.createElement('div');
@@ -313,14 +300,12 @@ const App = {
     if (btnX1)  btnX1.disabled  = true;
     if (btnX10) btnX10.disabled = true;
 
-    /* 1. Animación de abrir sobre */
     result.style.display = 'none';
     if (sobreClosed) {
       sobreClosed.classList.add('sobre-opening');
       await new Promise(r => setTimeout(r, 900));
     }
 
-    /* 2. Mostrar loading */
     result.style.display = 'block';
     result.innerHTML = `
       <div class="sobre-loading">
@@ -333,7 +318,6 @@ const App = {
         <p class="sobre-loading-text">Revelando figuritas…</p>
       </div>`;
 
-    /* 3. Tirada real */
     const pull = await Gacha.pull(n);
 
     if (sobreClosed) sobreClosed.classList.remove('sobre-opening');
@@ -347,19 +331,15 @@ const App = {
       return;
     }
 
-    /* 4. Actualizar contadores del header */
     await App.refreshHeader(pull.user);
 
-    /* 5. Pre-poblar cache de fotos (async) y luego renderizar cartas */
     await Promise.all(pull.results.map(f => Gacha.getPlayerPhoto(f)));
 
-    /* 5b. Renderizar cartas (ya con fotos en cache) */
     result.innerHTML = `
       <div class="gacha-cards-grid ${pull.results.length === 1 ? 'single-card' : ''}" id="gacha-grid">
         ${pull.results.map((f, idx) => this._renderFiguritaCard(f, null, idx)).join('')}
       </div>`;
 
-    /* 6. Flip animation stagger */
     document.querySelectorAll('#gacha-grid .figurita-card').forEach((card, i) => {
       setTimeout(() => card.classList.add('card-flip-in'), i * 100);
     });
@@ -373,7 +353,6 @@ const App = {
         if (!url) return;
         const wraps = document.querySelectorAll(`#gacha-grid .fig-photo-wrap[data-id="${f.id}"]`);
         wraps.forEach(wrap => {
-          // Si ya hay una img con src (incluso si aún cargando), no duplicar
           const existingImg = wrap.querySelector('img.fig-photo');
           if (existingImg && existingImg.src) return;
           const isCutout = url.includes('cutout') || url.includes('Cutout');
@@ -399,14 +378,12 @@ const App = {
       }).catch(()=>{});
     });
 
-    /* 8. Pity bar */
     const pc = pull.user.pityCount || 0;
     const pd = document.getElementById('pity-display');
     const pb = document.getElementById('pity-bar');
     if (pd) pd.textContent = `${pc}/50`;
     if (pb) pb.style.width = `${Math.min(100, (pc / 50) * 100)}%`;
 
-    /* 9. Notificación */
     const goat = pull.results.find(f => f.rareza === 'goat');
     const leg  = pull.results.find(f => f.rareza === 'legendary');
     const epic = pull.results.find(f => f.rareza === 'epic');
@@ -421,12 +398,9 @@ const App = {
     const stats = Album.getPlayerStats ? (Album.getPlayerStats(f.id) || {}) : {};
     const isPOR = f.pos === 'POR';
 
-    /* Usar foto disponible de forma síncrona (memoria → localStorage) */
     const cachedUrl = API.getPhotoSync(f) || photoUrl || null;
     const isCutout  = cachedUrl && (cachedUrl.includes('cutout') || cachedUrl.includes('Cutout'));
 
-    /* BUG FIX duplicados: siempre mostramos el emoji de fondo; la foto se pone encima con onload.
-       Evita que duplicados queden sin foto si no estaban en memCache al renderizar. */
     const photoSection = `<div class="fig-photo-wrap" data-id="${f.id}" style="position:relative">
       <span class="fig-emoji-fallback" style="position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);z-index:0">${f.emoji}</span>
       ${cachedUrl

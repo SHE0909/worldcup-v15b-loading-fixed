@@ -22,13 +22,11 @@
 </head>
 <body>
 
-  <!-- Splash mientras se verifica sesión -->
   <div class="splash-loader" id="splash">
     <span class="splash-ball">⚽</span>
     <p class="splash-text">Verificando sesión…</p>
   </div>
 
-  <!-- AUTH SCREEN -->
   <div class="auth-bg">
     <div class="auth-orb orb-1"></div>
     <div class="auth-orb orb-2"></div>
@@ -42,7 +40,6 @@
       <p class="logo-sub">Universidad de El Salvador</p>
     </div>
 
-    <!-- LOGIN FORM -->
     <div id="form-login" class="auth-form active">
       <h2>Iniciar Sesión</h2>
       <div class="form-group">
@@ -63,7 +60,6 @@
       <p class="auth-switch" style="margin-top:0.4rem"><a href="#" id="go-transfer" style="color:#8899aa;font-size:0.78rem">¿Ya tienes cuenta en otro navegador?</a></p>
     </div>
 
-    <!-- REGISTER FORM -->
     <div id="form-register" class="auth-form">
       <h2>Crear Cuenta</h2>
       <div class="form-group">
@@ -120,12 +116,10 @@
     </div>
   </div>
 
-  <!-- Solo las utilidades que necesita auth -->
   <script src="js/utils/db.js"></script>
   <script src="js/utils/auth.js"></script>
   <script src="js/utils/toast.js"></script>
 
-  <!-- Toast element (necesario para toast.js) -->
   <div id="toast" class="toast"></div>
 
   <script>
@@ -137,7 +131,6 @@
     const splash = document.getElementById('splash');
 
     async function init() {
-      // Timeout de seguridad: si tarda más de 6s, forzar mostrar formulario
       const safetyTimer = setTimeout(() => {
         console.warn('Init timeout — mostrando formulario de login');
         splash.classList.add('hidden');
@@ -151,18 +144,16 @@
         clearTimeout(safetyTimer);
 
         if (user) {
-          // ✅ Sesión válida → ir directo al dashboard
           window.location.replace('app.html');
           return;
         }
       } catch(err) {
         console.error('Error al inicializar DB:', err);
         clearTimeout(safetyTimer);
-        // Si la BD está corrupta, borrarla y continuar
+
         try { indexedDB.deleteDatabase('WCCollectorUES'); } catch(_) {}
       }
 
-      // Sin sesión (o error) → mostrar el formulario
       splash.classList.add('hidden');
       setTimeout(() => { if (splash.parentNode) splash.parentNode.removeChild(splash); }, 450);
     }
@@ -217,7 +208,6 @@
         return;
       }
 
-      // ✅ Login exitoso → redirigir a app.html
       Toast.success(`¡Bienvenido, ${result.user.name.split(' ')[0]}! 👋`);
       setTimeout(() => window.location.replace('app.html'), 600);
     }
@@ -227,7 +217,6 @@
       document.getElementById(id).addEventListener('keydown', e => { if (e.key === 'Enter') doLogin(); })
     );
 
-    /* ── REGISTRO ── */
     async function doRegister() {
       clearErrors();
       const name  = document.getElementById('reg-name').value.trim();
@@ -247,7 +236,6 @@
 
       Toast.success('¡Cuenta creada! Iniciando sesión…');
 
-      // Auto-login y redirigir
       const loginResult = await Auth.login({ email, password: pass });
       if (loginResult.ok) {
         setTimeout(() => window.location.replace('app.html'), 700);
@@ -259,7 +247,6 @@
       document.getElementById(id).addEventListener('keydown', e => { if (e.key === 'Enter') doRegister(); })
     );
 
-    /* ── Cambiar a formulario transfer ── */
     document.getElementById('go-transfer').addEventListener('click', e => {
       e.preventDefault(); clearErrors();
       document.getElementById('form-login').classList.remove('active');
@@ -271,7 +258,6 @@
       document.getElementById('form-login').classList.add('active');
     });
 
-    /* ── Mostrar nombre del archivo seleccionado ── */
     document.getElementById('transfer-file').addEventListener('change', function() {
       const lbl = document.getElementById('transfer-file-label');
       const nameEl = document.getElementById('transfer-file-name');
@@ -284,7 +270,6 @@
       }
     });
 
-    /* ── RESTAURAR CUENTA ── */
     async function doTransfer() {
       clearErrors();
       const email   = document.getElementById('transfer-email').value.trim();
@@ -309,7 +294,6 @@
         const text = await file.text();
         const data = JSON.parse(text);
 
-        // Validar que el JSON es de esta app y del mismo correo
         if (!data.email || !data.figuritas || !data.usuario) {
           document.getElementById('transfer-file-err').textContent = 'Archivo inválido o corrupto'; return;
         }
@@ -318,10 +302,9 @@
             'El archivo pertenece a ' + data.email + ', no a este correo'; return;
         }
 
-        // Verificar si ya existe la cuenta
         const existing = await DB.getUser(email);
         if (existing) {
-          // Ya existe: solo actualizar contraseña e importar datos
+
           const hash = await Auth.hashPassword(pass);
           existing.passwordHash = hash;
           existing.figuritas    = data.figuritas || existing.figuritas;
@@ -338,7 +321,6 @@
           existing.freeSpinsClaimed = true;
           await DB.saveUser(existing);
         } else {
-          // No existe: crear cuenta nueva con los datos del JSON
           const hash = await Auth.hashPassword(pass);
           const user = {
             email,
@@ -373,7 +355,6 @@
 
     document.getElementById('btn-transfer').addEventListener('click', doTransfer);
 
-    /* Arranque */
     init();
   </script>
 </body>

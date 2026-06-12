@@ -28,7 +28,7 @@ const STATIC_ASSETS = [
 self.addEventListener('install', e => {
   e.waitUntil(
     caches.open(CACHE_NAME).then(cache => cache.addAll(STATIC_ASSETS))
-      .catch(() => {}) // No fallar si algún asset no existe aún
+      .catch(() => {})
   );
   self.skipWaiting();
 });
@@ -43,9 +43,7 @@ self.addEventListener('activate', e => {
 });
 
 self.addEventListener('fetch', e => {
-  // Solo cachear requests GET
   if (e.request.method !== 'GET') return;
-  // No cachear APIs externas
   if (e.request.url.includes('api.football-data') || e.request.url.includes('thesportsdb')) return;
 
   e.respondWith(
@@ -62,7 +60,6 @@ self.addEventListener('fetch', e => {
   );
 });
 
-// Notificaciones push (futuro)
 self.addEventListener('push', e => {
   const data = e.data?.json() || { title: 'WCC UES', body: '¡Tienes nuevas tiradas disponibles!' };
   e.waitUntil(
