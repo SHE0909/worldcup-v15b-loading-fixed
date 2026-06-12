@@ -418,9 +418,42 @@
   <script>
     if ('serviceWorker' in navigator && location.protocol !== 'file:') {
       window.addEventListener('load', () => {
-        navigator.serviceWorker.register('./sw.js')
-          .then(r => console.log('[PWA] SW registrado:', r.scope))
-          .catch(e => console.warn('[PWA] SW fallo:', e));
+        navigator.serviceWorker.register('./sw.js').then(reg => {
+          console.log('[PWA] SW registrado:', reg.scope);
+
+          // Detectar cuando hay un nuevo SW esperando (nueva versión desplegada)
+          const onNewSW = (worker) => {
+            worker.addEventListener('statechange', () => {
+              if (worker.state === 'installed') {
+                // Hay una versión nueva lista — mostrar aviso y recargar automáticamente
+                console.log('[PWA] Nueva versión disponible, actualizando...');
+                // Decirle al nuevo SW que tome el control ahora
+                worker.postMessage('SKIP_WAITING');
+              }
+            });
+          };
+
+          // Si ya hay un SW esperando al registrar (ej: página recargada sin cerrar)
+          if (reg.waiting) onNewSW(reg.waiting);
+
+          // Cuando se detecta una actualización durante la sesión
+          reg.addEventListener('updatefound', () => {
+            if (reg.installing) onNewSW(reg.installing);
+          });
+
+          // Cuando el nuevo SW toma el control, recargar la página para servir archivos frescos
+          let refreshing = false;
+          navigator.serviceWorker.addEventListener('controllerchange', () => {
+            if (!refreshing) {
+              refreshing = true;
+              window.location.reload();
+            }
+          });
+
+          // Verificar actualizaciones cada 5 minutos en segundo plano
+          setInterval(() => reg.update(), 5 * 60 * 1000);
+
+        }).catch(e => console.warn('[PWA] SW fallo:', e));
       });
     } else if (location.protocol === 'file:') {
       console.info('[PWA] SW desactivado en file:// — abre desde un servidor HTTP para PWA completo.');
