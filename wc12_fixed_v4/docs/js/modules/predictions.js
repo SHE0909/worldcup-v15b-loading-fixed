@@ -471,7 +471,27 @@ const Predictions = {
    */
   _showResultModals(results) {
     if (!results.length) return;
-    const [first, ...rest] = results;
+
+    // Filtrar modales ya mostrados (guardados en localStorage por matchId+pick)
+    const SHOWN_KEY = 'wcc_pred_modals_shown';
+    let shownSet;
+    try { shownSet = new Set(JSON.parse(localStorage.getItem(SHOWN_KEY) || '[]')); }
+    catch(_) { shownSet = new Set(); }
+
+    const pending = results.filter(r => {
+      const key = `${r.matchHome}-${r.matchAway}-${r.pick}`;
+      return !shownSet.has(key);
+    });
+
+    if (!pending.length) return;
+
+    // Marcar todos como vistos antes de mostrar
+    pending.forEach(r => {
+      shownSet.add(`${r.matchHome}-${r.matchAway}-${r.pick}`);
+    });
+    try { localStorage.setItem(SHOWN_KEY, JSON.stringify([...shownSet])); } catch(_) {}
+
+    const [first, ...rest] = pending;
 
     const home = first.matchHome || 'Local';
     const away = first.matchAway || 'Visitante';
@@ -514,7 +534,7 @@ const Predictions = {
 
     document.getElementById('pred-result-next')?.addEventListener('click', () => {
       Modal.close();
-      if (rest.length) this._showResultModals(rest);
+      if (rest.length) this._showResultModals(rest); // rest already filtered above
     });
   },
 

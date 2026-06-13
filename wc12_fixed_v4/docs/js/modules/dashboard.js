@@ -91,9 +91,9 @@ const Dashboard = {
           </span>
         </div>
         <div class="match-teams-row">
-          <span>${m.homeFlag||''} ${m.home}</span>
-          <span class="match-score" style="color:#ff4466;font-weight:800">${scoreH} — ${scoreA}</span>
-          <span>${m.away} ${m.awayFlag||''}</span>
+          <span style="flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${m.homeFlag||''} ${m.home}</span>
+          <span class="match-score" style="color:#ff4466;font-weight:800;flex-shrink:0">${scoreH} — ${scoreA}</span>
+          <span style="flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;text-align:right">${m.away} ${m.awayFlag||''}</span>
         </div>
         ${m.competition ? `<div style="font-size:0.62rem;color:var(--text-muted);margin-top:2px;text-align:center">${m.competition}</div>` : ''}
         ${m.venue ? `<div style="font-size:0.58rem;color:var(--text-muted);text-align:center">📍 ${m.venue}</div>` : ''}
@@ -240,9 +240,9 @@ const Dashboard = {
             ${statusBadge}
           </div>
           <div class="match-teams-row" style="font-size:0.82rem;font-weight:600">
-            <span style="${isFinished ? 'color:var(--text-secondary)' : ''}">${m.homeFlag||''} ${m.home}</span>
-            ${scoreHtml}
-            <span style="${isFinished ? 'color:var(--text-secondary)' : ''}">${m.away} ${m.awayFlag||''}</span>
+            <span style="flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;${isFinished ? 'color:var(--text-secondary)' : ''}">${m.homeFlag||''} ${m.home}</span>
+            <span style="flex-shrink:0">${scoreHtml}</span>
+            <span style="flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;text-align:right;${isFinished ? 'color:var(--text-secondary)' : ''}">${m.away} ${m.awayFlag||''}</span>
           </div>
           ${m.venue ? `<div style="font-size:0.62rem;color:var(--text-muted);margin-top:1px">📍 ${m.venue}</div>` : ''}
         </div>
@@ -315,6 +315,7 @@ const Dashboard = {
     const table = await API.getStandings();
 
     el.innerHTML = `
+      <div style="overflow-x:hidden;width:100%">
       <table class="stats-table standings-mini">
         <thead>
           <tr>
@@ -344,6 +345,7 @@ const Dashboard = {
       <p style="font-size:0.6rem;color:var(--text-muted);margin-top:4px;text-align:right">
         🟢 Clasifican | 🟡 Posible clasificación
       </p>
+      </div>
     `;
   },
 

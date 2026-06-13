@@ -3,6 +3,21 @@
  * Mejoras: logout con diseño, gacha con fotos, status de API real
  */
 
+// --- Twemoji: convierte emojis (banderas, etc.) en imágenes para que se vean igual en todos los dispositivos ---
+function parseEmojis(node) {
+  if (window.twemoji) {
+    try { twemoji.parse(node || document.body, { folder: 'svg', ext: '.svg' }); } catch(_) {}
+  }
+}
+if (typeof window !== 'undefined') {
+  window.parseEmojis = parseEmojis;
+  document.addEventListener('DOMContentLoaded', () => {
+    parseEmojis(document.body);
+    const observer = new MutationObserver(() => parseEmojis(document.body));
+    observer.observe(document.body, { childList: true, subtree: true });
+  });
+}
+
 const App = {
   _currentTab: 'dashboard',
 

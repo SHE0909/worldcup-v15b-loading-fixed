@@ -250,6 +250,8 @@ input, button { font-family: inherit; }
   flex: 1;
   padding: 1rem 1.25rem 2rem;
   width: 100%;
+  min-width: 0;
+  overflow-x: hidden;
 }
 .tab-section { display: none; animation: fadeUp 0.3s ease; width: 100%; }
 .tab-section.active { display: block; width: 100%; }
@@ -293,21 +295,50 @@ input, button { font-family: inherit; }
 }
 
 /* ============================================
-   DASHBOARD
+   DASHBOARD LAYOUT — fuente única de verdad
+   Móvil (<768px):  1 columna, todo apilado
+   Tablet (768–1199px): sidebar 220px + main
+   Desktop (>=1200px): sidebar 1fr + main 1.6fr
    ============================================ */
 .dashboard-grid {
   display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 1rem;
+  gap: 0.75rem;
+  align-items: start;
+  grid-template-columns: 1fr;
 }
-@media (max-width: 600px) {
-  .dashboard-grid { grid-template-columns: 1fr; }
+.dash-sidebar {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+.dash-main {
+  display: flex;
+  flex-direction: column;
+}
+.dash-main .dash-card {
+  height: 100%;
+}
+/* Tablet */
+@media (min-width: 768px) {
+  .dashboard-grid {
+    grid-template-columns: 220px 1fr;
+    gap: 1rem;
+  }
+}
+/* Desktop */
+@media (min-width: 1200px) {
+  .dashboard-grid {
+    grid-template-columns: 1fr 1.6fr;
+    gap: 1.25rem;
+  }
 }
 .dash-card {
   background: var(--bg-card);
   border: 1px solid var(--border);
   border-radius: var(--radius-md);
   padding: 1rem;
+  min-width: 0;
+  overflow: hidden;
 }
 .dash-card h3 {
   font-family: 'Barlow Condensed', sans-serif;
@@ -1139,11 +1170,16 @@ input, button { font-family: inherit; }
 /* ============================================
    STANDINGS TABLE (dashboard)
    ============================================ */
-.standings-mini { font-size: 0.8rem; }
+.standings-mini { font-size: 0.8rem; min-width: 0 !important; width: 100%; }
 .standings-mini tr { border-bottom: 1px solid var(--border); }
-.standings-mini td { padding: 0.3rem 0.5rem; }
+.standings-mini td { padding: 0.3rem 0.4rem; }
+.standings-mini th { padding: 0.3rem 0.4rem; }
 .standings-mini .pos { color: var(--text-muted); font-family: 'Barlow Condensed', sans-serif; }
 .standings-mini .pts { color: var(--accent); font-weight: 700; font-family: 'Barlow Condensed', sans-serif; }
+/* La tabla de posiciones en el sidebar no necesita scroll horizontal */
+.card-standings .stats-table-wrap { overflow-x: visible; }
+.card-standings .standings-mini { min-width: 0 !important; }
+.card-standings td, .card-standings th { font-size: 0.72rem; padding: 0.25rem 0.3rem; }
 
 /* ============================================
    SCROLLBAR
@@ -1236,7 +1272,24 @@ input, button { font-family: inherit; }
   display: flex;
   justify-content: space-between;
   align-items: center;
-  gap: 0.5rem;
+  gap: 0.4rem;
+  min-width: 0;
+  overflow: hidden;
+  width: 100%;
+}
+.match-teams-row > span:first-child,
+.match-teams-row > span:last-child {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.match-teams-row > span:last-child {
+  text-align: right;
+}
+.match-teams-row .match-score {
+  flex-shrink: 0;
 }
 .match-live-item {
   border-left-width: 3px !important;
@@ -1409,9 +1462,7 @@ input, button { font-family: inherit; }
 
 /* ── Tablet/Desktop improvements ── */
 @media (min-width: 768px) {
-  .dashboard-grid {
-    grid-template-columns: repeat(2, 1fr);
-  }
+  /* dashboard-grid: handled by base rules at 768px */
   .gacha-center {
     max-width: 600px;
     margin: 0 auto;
@@ -1427,17 +1478,11 @@ input, button { font-family: inherit; }
 }
 
 @media (min-width: 1024px) {
-  .dashboard-grid {
-    grid-template-columns: repeat(2, 1fr);
-    max-width: 900px;
-    margin: 0 auto;
-  }
+  /* dashboard-grid: handled by base rules at 1200px */
   .album-grid {
     grid-template-columns: repeat(auto-fill, minmax(80px, 1fr));
   }
   .app-main {
-    max-width: 900px;
-    margin: 0 auto;
     padding: 1rem 2rem;
   }
 }
@@ -1867,7 +1912,10 @@ input, button { font-family: inherit; }
 .match-teams-row {
   display: flex;
   align-items: center;
-  gap: 0.5rem;
+  gap: 0.4rem;
+  min-width: 0;
+  overflow: hidden;
+  width: 100%;
 }
 
 /* ============================================
@@ -3217,8 +3265,7 @@ html, body { overflow-x: hidden; width: 100%; }
   /* Main: menos padding */
   .app-main { padding: 0.75rem 0.75rem 2rem; }
 
-  /* Dashboard en 1 columna */
-  .dashboard-grid { grid-template-columns: 1fr; gap: 0.75rem; }
+  /* dashboard-grid: 1col en movil — handled by base rules */
 
   /* Quick actions del dashboard */
   .quick-actions-grid {
@@ -3292,7 +3339,7 @@ html, body { overflow-x: hidden; width: 100%; }
 /* ── Tablet (768px - 1023px): dos columnas más amplias ── */
 @media (min-width: 641px) and (max-width: 1023px) {
   .app-main { padding: 1rem 1.5rem 2rem; }
-  .dashboard-grid { grid-template-columns: repeat(2, 1fr); }
+  /* dashboard-grid handled by base rules */
   .album-grid { grid-template-columns: repeat(auto-fill, minmax(85px, 1fr)); }
   .predictions-list { grid-template-columns: repeat(2, 1fr); }
 }
@@ -3346,8 +3393,7 @@ html, body { overflow-x: hidden; width: 100%; }
   .header-stats { gap: 0.35rem; }
   .header-stat { font-size: 0.68rem; padding: 0.18rem 0.45rem; gap: 3px; }
 
-  /* Dashboard: cards apiladas */
-  .dashboard-grid { grid-template-columns: 1fr; gap: 0.65rem; }
+  /* dashboard-grid: 1col movil — handled by base rules */
   .dash-card { padding: 0.85rem; }
 
   /* Partidos: score más visible */
@@ -3686,7 +3732,7 @@ html, body { overflow-x: hidden; width: 100%; }
 @media (min-width: 641px) and (max-width: 1023px) {
   .app-drawer { width: 260px; }
   .app-main { padding: 1rem 1.25rem 2rem; }
-  .dashboard-grid { grid-template-columns: repeat(2, 1fr); gap: 1rem; }
+  /* dashboard-grid handled by base rules */
   .album-grid { grid-template-columns: repeat(auto-fill, minmax(88px, 1fr)); }
   .predictions-list { grid-template-columns: repeat(2, 1fr); }
   .header-stat { font-size: 0.8rem; }
@@ -3707,8 +3753,7 @@ html, body { overflow-x: hidden; width: 100%; }
 
   .app-main { padding: 0.75rem 0.75rem 1.5rem; }
 
-  /* Dashboard: 1 columna */
-  .dashboard-grid { grid-template-columns: 1fr; gap: 0.65rem; }
+  /* dashboard-grid: 1col movil — handled by base rules */
   .dash-card { padding: 0.85rem; }
 
   /* Quick actions: 2×2 */
@@ -3863,12 +3908,7 @@ html, body { overflow-x: hidden; width: 100%; }
     margin-bottom: 3px !important;
   }
 
-  /* Cards del dashboard: apiladas, sin overflow */
-  .dashboard-grid {
-    display: flex !important;
-    flex-direction: column !important;
-    gap: 0.65rem !important;
-  }
+  /* dashboard-grid movil handled by base rules */
   .dash-card {
     width: 100% !important;
     min-width: 0 !important;
@@ -3924,9 +3964,7 @@ html, body { overflow-x: hidden; width: 100%; }
   .quick-actions {
     grid-template-columns: repeat(4, 1fr) !important;
   }
-  .dashboard-grid {
-    grid-template-columns: repeat(2, 1fr) !important;
-  }
+  /* dashboard-grid tablet handled by base rules */
 }
 
 /* ═══════════════════════════════════════════════════════════
@@ -4117,4 +4155,13 @@ html, body { overflow-x: hidden; width: 100%; }
   font-size: 3.6rem;
   display:inline-block;
   animation: guessEmojiPop 0.45s cubic-bezier(.34,1.56,.64,1);
+}
+
+/* Twemoji: iconos de emoji (banderas, etc.) renderizados como imágenes */
+img.emoji {
+  height: 1em;
+  width: 1em;
+  margin: 0 .05em 0 .1em;
+  vertical-align: -0.1em;
+  display: inline-block;
 }
