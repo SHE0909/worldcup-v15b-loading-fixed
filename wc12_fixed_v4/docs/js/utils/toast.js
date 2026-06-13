@@ -29,9 +29,13 @@ const Modal = {
     content.innerHTML = html;
     overlay.style.display = 'flex';
     document.getElementById('modal-close').addEventListener('click', () => Modal.close(), { once: true });
-    overlay.addEventListener('click', (e) => {
-      if (e.target === overlay) Modal.close();
-    }, { once: true });
+    // Evitar acumular listeners de click en el overlay cada vez que se abre el modal
+    if (!overlay._wccClickBound) {
+      overlay.addEventListener('click', (e) => {
+        if (e.target === overlay) Modal.close();
+      });
+      overlay._wccClickBound = true;
+    }
   },
   close() {
     const overlay = document.getElementById('modal-overlay');

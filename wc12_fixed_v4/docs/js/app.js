@@ -159,6 +159,12 @@ const App = {
     document.getElementById('search-input')?.addEventListener('keydown', (e) => {
       if (e.key === 'Enter') document.getElementById('btn-search').click();
     });
+    // Búsqueda inteligente: filtra en vivo con cada tecla (debounce corto)
+    document.getElementById('search-input')?.addEventListener('input', (e) => {
+      clearTimeout(this._searchDebounce);
+      const value = e.target.value.trim();
+      this._searchDebounce = setTimeout(() => Stats.search(value), 180);
+    });
 
     document.querySelectorAll('.filt').forEach(btn => {
       btn.addEventListener('click', () => {

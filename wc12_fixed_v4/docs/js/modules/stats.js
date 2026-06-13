@@ -459,7 +459,7 @@ const Stats = {
     // Filter by query
     const q       = query.toLowerCase();
     const players = q
-      ? merged.filter(p => p.name.toLowerCase().includes(q) || p.team.toLowerCase().includes(q))
+      ? merged.filter(p => p.name.toLowerCase().includes(q) || matchesSearch(p.team, query))
       : merged;
 
     const user    = await Auth.currentUser();

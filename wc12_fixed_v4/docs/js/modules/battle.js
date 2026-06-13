@@ -230,9 +230,9 @@ const Battle = {
           <div class="bmode-attempts">Intentos hoy: ${BattleAttempts.remaining('quiz')}/${BattleAttempts.MAX_DAILY}</div>
         </div>
         <div class="battle-mode-card ${BattleAttempts.remaining('guess') === 0 ? 'bmode-exhausted' : ''}" id="bmode-guess">
-          <div class="bmode-icon">👤</div>
-          <div class="bmode-title">Adivina el Jugador</div>
-          <div class="bmode-desc">Mira la foto e identifica al jugador entre 4 opciones. ¡Sin fallar!</div>
+          <div class="bmode-icon">🔮</div>
+          <div class="bmode-title">Adivina por Emoji</div>
+          <div class="bmode-desc">Mira el emoji característico e identifica al jugador entre 4 opciones. ¡Sin fallar!</div>
           <div class="bmode-reward">+1 tirada por acierto</div>
           <div class="bmode-attempts">Intentos hoy: ${BattleAttempts.remaining('guess')}/${BattleAttempts.MAX_DAILY}</div>
         </div>
@@ -801,13 +801,6 @@ const Battle = {
                             .sort(() => Math.random() - 0.5).slice(0, 3);
       const options = [...wrong, correct].sort(() => Math.random() - 0.5);
 
-      const photoUrl = (typeof API !== 'undefined' && API.getPhotoSync)
-        ? (API.getPhotoSync(correct) || '') : '';
-
-      const photoHtml = photoUrl
-        ? `<img src="${photoUrl}" alt="?" style="width:100%;height:100%;object-fit:cover;object-position:top center" referrerpolicy="no-referrer" onerror="this.style.display='none'">`
-        : `<span style="font-size:3rem">${correct.emoji}</span>`;
-
       const optsHtml = options.map(opt =>
         `<button class="btn guess-opt-btn" data-id="${opt.id}" style="font-size:0.78rem;padding:0.5rem">${opt.name}</button>`
       ).join('');
@@ -815,8 +808,8 @@ const Battle = {
       Modal.open(`
         <div style="text-align:center;padding:0.5rem">
           <div style="font-size:0.75rem;color:var(--text-muted);margin-bottom:0.5rem">Jugador ${questionIdx+1} de ${toGuess.length} · Aciertos: ${score}</div>
-          <div style="width:120px;height:120px;border-radius:50%;background:rgba(255,255,255,0.05);border:2px solid rgba(255,255,255,0.1);overflow:hidden;margin:0 auto 1rem;display:flex;align-items:center;justify-content:center">
-            ${photoHtml}
+          <div class="guess-emoji-circle">
+            <span class="guess-emoji-pop">${correct.emoji || '❓'}</span>
           </div>
           <p style="margin-bottom:0.75rem;font-weight:600">¿Quién es este jugador?</p>
           <div style="display:grid;grid-template-columns:1fr 1fr;gap:0.5rem">
@@ -893,27 +886,27 @@ const Battle = {
       const activeTeams   = shuffledTeams.filter(t => !t._matched);
 
       const playersHtml = activePlayers.map((p, i) =>
-        `<button class="btn connect-player-btn ${selectedPlayer && selectedPlayer.id === p.id ? 'connect-selected' : ''}"
+        `<button class="btn connect-player-btn connect-card-in" style="animation-delay:${i*0.05}s"
            data-idx="${shuffledPlayers.indexOf(p)}"
-           style="width:100%;margin-bottom:0.35rem;font-size:0.75rem;padding:0.4rem 0.5rem;text-align:left">
-           ${p.emoji} ${p.name}
+           ${selectedPlayer && selectedPlayer.id === p.id ? 'data-selected="1"' : ''}>
+           ${p.name}
          </button>`
       ).join('');
 
       const teamsHtml = activeTeams.map((t, i) =>
-        `<button class="btn connect-team-btn"
-           data-idx="${shuffledTeams.indexOf(t)}"
-           style="width:100%;margin-bottom:0.35rem;font-size:0.75rem;padding:0.4rem 0.5rem;text-align:left">
+        `<button class="btn connect-team-btn connect-card-in" style="animation-delay:${i*0.05}s"
+           data-idx="${shuffledTeams.indexOf(t)}">
            ${t.flag} ${t.name}
          </button>`
       ).join('');
 
       Modal.open(`
         <div style="padding:0.5rem">
-          <div style="text-align:center;font-size:0.75rem;color:var(--text-muted);margin-bottom:0.75rem">
-            Empareja jugador con selección · ${matched}/${players.length} correctos
+          <div class="connect-progress">
+            <div class="connect-progress-label">Empareja jugador con selección · ${matched}/${players.length} correctos</div>
+            <div class="connect-progress-bar"><div class="connect-progress-fill" style="width:${(matched/players.length)*100}%"></div></div>
           </div>
-          <div style="display:grid;grid-template-columns:1fr 1fr;gap:0.5rem">
+          <div class="connect-grid">
             <div>${playersHtml}</div>
             <div>${teamsHtml}</div>
           </div>
@@ -922,6 +915,9 @@ const Battle = {
           </div>
         </div>
       `);
+
+      // Reaplicar estado "seleccionado" (vía clase, ya que data-selected no añade estilos por sí solo)
+      document.querySelectorAll('.connect-player-btn[data-selected="1"]').forEach(b => b.classList.add('connect-selected'));
 
       setTimeout(() => {
         document.querySelectorAll('.connect-player-btn').forEach(btn => {
@@ -936,22 +932,29 @@ const Battle = {
             if (!selectedPlayer) { Toast.show('Selecciona un jugador primero'); return; }
             const teamData = shuffledTeams[parseInt(btn.dataset.idx)];
             const isCorrect = selectedPlayer.team === teamData.name;
+            const playerBtn = document.querySelector(`.connect-player-btn[data-idx="${shuffledPlayers.indexOf(selectedPlayer)}"]`);
 
             if (isCorrect) {
               selectedPlayer._matched = true;
               teamData._matched = true;
               matched++;
               Toast.success(`✅ ¡Correcto! ${selectedPlayer.name} → ${teamData.flag} ${teamData.name}`);
+              btn.classList.add('connect-correct');
+              playerBtn?.classList.add('connect-correct');
+              const wasLast = matched >= players.length;
               selectedPlayer = null;
-              if (matched >= players.length) {
-                Modal.close();
-                return self._endConnectPlayer(true, matched);
-              }
-              render();
+              setTimeout(() => {
+                if (wasLast) { Modal.close(); self._endConnectPlayer(true, matched); }
+                else render();
+              }, 350);
             } else {
               Toast.error(`❌ ¡Incorrecto! ${selectedPlayer.name} no juega en ${teamData.flag} ${teamData.name}`);
-              Modal.close();
-              setTimeout(() => self._endConnectPlayer(false, matched), 400);
+              btn.classList.add('connect-wrong');
+              playerBtn?.classList.add('connect-wrong');
+              setTimeout(() => {
+                Modal.close();
+                setTimeout(() => self._endConnectPlayer(false, matched), 200);
+              }, 450);
             }
           });
         });

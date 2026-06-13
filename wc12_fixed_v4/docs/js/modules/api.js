@@ -15,8 +15,14 @@
  * Documentación: https://worldcup26.ir/api-docs
  */
 
-/* ── URL base de worldcup26.ir ── */
+/* ── URL base del worker (proxy a worldcup26.ir) ── */
 const WC26_BASE = 'https://winter-thunder-a7a0.cq22003.workers.dev';
+
+/**
+ * USE_MOCK_ONLY = true → nunca llama al worker, siempre usa MOCK
+ * Cambiar a false cuando el worker esté actualizado con worldcup26.ir
+ */
+const USE_MOCK_ONLY = false;
 
 /* Estado global de la API */
 const API_STATUS = {
@@ -350,6 +356,30 @@ const TEAM_NAME_ES = {
 };
 function translateTeamName(name) { return TEAM_NAME_ES[name] || name || ''; }
 
+/* ── Mapa inverso ES → EN, para que la búsqueda reconozca nombres en inglés ── */
+const TEAM_NAME_EN = {};
+Object.entries(TEAM_NAME_ES).forEach(([en, es]) => { TEAM_NAME_EN[es] = en; });
+
+/* ── Quita acentos/diacríticos para comparaciones de búsqueda ── */
+function _normalizeSearch(str) {
+  return (str || '')
+    .toString()
+    .normalize('NFD').replace(/[\u0300-\u036f]/g, '')
+    .toLowerCase();
+}
+
+/* ── true si `text` (nombre en español, ej. de un equipo/jugador) coincide
+   con la búsqueda `q`, comparando también contra su alias en inglés.
+   Insensible a mayúsculas y acentos. ── */
+function matchesSearch(text, q) {
+  if (!q) return true;
+  const nq = _normalizeSearch(q);
+  if (_normalizeSearch(text).includes(nq)) return true;
+  const en = TEAM_NAME_EN[text];
+  if (en && _normalizeSearch(en).includes(nq)) return true;
+  return false;
+}
+
 /* ── Traducción de etiquetas de fases eliminatorias (cuando aún no hay equipo definido) ── */
 function translateBracketLabel(label) {
   if (!label) return '';
@@ -513,7 +543,7 @@ const API = {
   _memSet(key, data) { this._memCache[key] = { data, ts: Date.now() }; return data; },
 
   /* Versión de caché — se incrementa cuando cambia el fixture/MOCK */
-  _CACHE_VERSION: 'v20',
+  _CACHE_VERSION: 'v22',
 
   _lsCacheKey(key) { return `wcc_cache_${this._CACHE_VERSION}_${key}`; },
 
@@ -559,8 +589,9 @@ const API = {
     }
   },
 
-  /* ── worldcup26.ir fetch ── */
+  /* ── worldcup26.ir fetch (via worker proxy) ── */
   async _wc26(endpoint) {
+    if (USE_MOCK_ONLY) return null; // usar MOCK directamente
     return await this._fetch(`${WC26_BASE}${endpoint}`);
   },
 
@@ -670,33 +701,56 @@ const API = {
   async getStandings() {
     const mem = this._memGet('standings');
     if (mem) return mem;
-    const ls = this._lsGet('standings');
-    if (ls) return this._memSet('standings', ls);
 
-    const data = await this._wc26('/get/groups');
-    if (data) {
-      const groups = Array.isArray(data) ? data : (data.groups || data.data || []);
-      const rows = [];
-      for (const g of groups) {
-        const groupName = g.group || g.group_name || g.name || '';
-        const teams     = g.teams || g.standings || [];
-        teams.forEach((t, i) => {
-          rows.push({
-            ..._mapWC26Standing(t),
-            pos:   t.position || (i + 1),
-            group: groupName,
-          });
-        });
-      }
-      if (rows.length > 0) {
-        API_STATUS.usingMock = false;
-        this._lsSet('standings', rows);
-        return this._memSet('standings', rows);
-      }
+    // Calculamos la tabla a partir de partidos finalizados reales.
+    // Si no hay datos reales, usamos el MOCK directamente (con resultados ya cargados).
+    let finished = [];
+    try { finished = await this.getFinishedMatches(); } catch(_) {}
+
+    // Si no hay partidos reales, devolver MOCK tal cual (ya tiene México 2-0)
+    if (!finished || finished.length === 0) {
+      const mockRows = MOCK.standings.slice();
+      const groups = {};
+      mockRows.forEach(s => (groups[s.group] = groups[s.group] || []).push(s));
+      const sorted = [];
+      Object.values(groups).forEach(arr => {
+        arr.sort((x,y) => y.pts - x.pts || (y.gf-y.gc)-(x.gf-x.gc) || y.gf-x.gf);
+        arr.forEach((s,i) => { s.pos = i+1; sorted.push(s); });
+      });
+      API_STATUS.usingMock = true;
+      return this._memSet('standings', sorted);
     }
 
-    API_STATUS.usingMock = true;
-    return this._memSet('standings', MOCK.standings);
+    // Hay datos reales: recalcular desde cero sobre base de equipos del MOCK
+    const base = MOCK.standings.map(s => ({ ...s, pj:0, w:0, d:0, l:0, gf:0, gc:0, pts:0 }));
+    const byTeam = {};
+    base.forEach(s => { byTeam[s.team] = s; });
+
+    try {
+      finished.forEach(m => {
+        const h = byTeam[m.home], a = byTeam[m.away];
+        if (!h || !a) return; // partidos de eliminatoria / equipos sin grupo definido
+        const hs = m.scoreHome ?? 0, as = m.scoreAway ?? 0;
+        h.pj++; a.pj++;
+        h.gf += hs; h.gc += as;
+        a.gf += as; a.gc += hs;
+        if (hs > as)      { h.w++; h.pts += 3; a.l++; }
+        else if (hs < as) { a.w++; a.pts += 3; h.l++; }
+        else              { h.d++; a.d++; h.pts++; a.pts++; }
+      });
+    } catch(_) { /* si falla, queda en 0 */ }
+
+    // Reordenar cada grupo por pts, diferencia de goles y goles a favor
+    const groups = {};
+    base.forEach(s => (groups[s.group] = groups[s.group] || []).push(s));
+    const rows = [];
+    Object.values(groups).forEach(arr => {
+      arr.sort((x, y) => y.pts - x.pts || (y.gf - y.gc) - (x.gf - x.gc) || y.gf - x.gf);
+      arr.forEach((s, i) => { s.pos = i + 1; rows.push(s); });
+    });
+
+    API_STATUS.usingMock = rows.every(r => r.pj === 0);
+    return this._memSet('standings', rows);
   },
 
   /* ══════════════════════════════════════════
@@ -734,17 +788,21 @@ const API = {
           }
         }
         if (!this._teamsCache) {
-          // Enriquecer mock con standings reales si hay
-          this._teamsCache = MOCK.teams.map(t => {
-            const s = standMap[(t.name||'').toLowerCase()];
-            return s ? { ...t, pj:s.pj||0, w:s.w||0, d:s.d||0, l:s.l||0, gf:s.gf||0, gc:s.gc||0, pts:s.pts||0 } : t;
-          });
+          // Usar getStandings() que ya devuelve datos reales o MOCK con resultados
+          const standRows = await this.getStandings().catch(() => MOCK.standings);
+          this._teamsCache = (standRows || MOCK.standings).map(s => ({
+            id:    `mock_${(s.team||'').replace(/\s+/g,'_')}`,
+            name:  s.team,
+            flag:  s.flag,
+            group: s.group,
+            pj: s.pj||0, w: s.w||0, d: s.d||0, l: s.l||0,
+            gf: s.gf||0, gc: s.gc||0, pts: s.pts||0,
+          }));
         }
       }
     }
     if (!query) return this._teamsCache;
-    const q = query.toLowerCase();
-    return this._teamsCache.filter(t => (t.name||'').toLowerCase().includes(q));
+    return this._teamsCache.filter(t => matchesSearch(t.name||'', query));
   },
 
   /* ══════════════════════════════════════════
