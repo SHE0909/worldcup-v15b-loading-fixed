@@ -433,8 +433,11 @@ function _utcToSV(utcStr) {
 }
 
 function _mapWC26Match(m) {
-  // Preferir kickoff_utc para conversión exacta a hora SV; fallback a local_date
-  const { date, time } = m.kickoff_utc ? _utcToSV(m.kickoff_utc) : _parseWC26LocalDate(m.local_date);
+  // Preferir local_date (con corrección horaria conocida); fallback a kickoff_utc.
+  // NOTA: kickoff_utc de worldcup26.ir resultó poco confiable (desfasaba varios
+  // partidos hasta 3h respecto al horario real), por eso siempre que exista
+  // local_date se usa esa conversión y solo se recurre a kickoff_utc si falta.
+  const { date, time } = m.local_date ? _parseWC26LocalDate(m.local_date) : _utcToSV(m.kickoff_utc);
 
   const isFinished = String(m.finished).toUpperCase() === 'TRUE';
   const te = (m.time_elapsed || '').toLowerCase();
@@ -478,6 +481,28 @@ function _mapWC26Match(m) {
     scoreAway:   (isLive || isFinished) ? scoreAway : null,
     minute:      isLive ? (m.time_elapsed || null) : null,
   };
+}
+
+/* ── Búsqueda de coincidencia en el fixture conocido (MOCK) por nombre de equipos ──
+   La API externa devuelve fechas/horas poco confiables para varios partidos
+   (desfases de hasta 3h). El fixture MOCK fue verificado manualmente contra
+   el calendario oficial (hora El Salvador), así que cuando un partido de la
+   API coincide con uno del fixture conocido, se usa SIEMPRE esa fecha/hora. */
+function _findKnownSchedule(home, away) {
+  const nh = _normalizeSearch(home), na = _normalizeSearch(away);
+  return _ALL_MATCHES.find(m => {
+    const mh = _normalizeSearch(m.home), ma = _normalizeSearch(m.away);
+    return (mh === nh && ma === na) || (mh === na && ma === nh);
+  }) || null;
+}
+
+function _applyKnownSchedule(match) {
+  const known = _findKnownSchedule(match.home, match.away);
+  if (known && known.date && known.time) {
+    match.date = known.date;
+    match.time = known.time;
+  }
+  return match;
 }
 
 function _mapWC26Standing(t) {
@@ -543,7 +568,7 @@ const API = {
   _memSet(key, data) { this._memCache[key] = { data, ts: Date.now() }; return data; },
 
   /* Versión de caché — se incrementa cuando cambia el fixture/MOCK */
-  _CACHE_VERSION: 'v23',
+  _CACHE_VERSION: 'v25',
 
   _lsCacheKey(key) { return `wcc_cache_${this._CACHE_VERSION}_${key}`; },
 
@@ -616,7 +641,7 @@ const API = {
           const te = (m.time_elapsed || '').toLowerCase();
           return String(m.finished).toUpperCase() !== 'TRUE' && te !== '' && te !== 'notstarted';
         })
-        .map(_mapWC26Match);
+        .map(m => _applyKnownSchedule(_mapWC26Match(m)));
       API_STATUS.usingMock = false;
       return this._memSet('live', live);
     }
@@ -641,7 +666,7 @@ const API = {
     if (data) {
       const games = Array.isArray(data) ? data : (data.games || data.matches || data.data || []);
       const mapped = games
-        .map(_mapWC26Match)
+        .map(m => _applyKnownSchedule(_mapWC26Match(m)))
         .filter(m => m.date >= yestStr)
         .sort((a, b) => {
           if (a.status === 'live' && b.status !== 'live') return -1;
@@ -673,7 +698,7 @@ const API = {
       const finished = games
         .filter(m => String(m.finished).toUpperCase() === 'TRUE')
         .map(m => {
-          const base = _mapWC26Match(m);
+          const base = _applyKnownSchedule(_mapWC26Match(m));
           const h = Number(m.home_score ?? 0), a = Number(m.away_score ?? 0);
           return {
             ...base,
@@ -803,7 +828,7 @@ const API = {
     const data = await this._wc26('/get/games');
     if (data) {
       const games  = Array.isArray(data) ? data : (data.games || data.matches || data.data || []);
-      const mapped = games.map(_mapWC26Match);
+      const mapped = games.map(m => _applyKnownSchedule(_mapWC26Match(m)));
       const played   = mapped.filter(m => m.status === 'finished' && (norm(m.home).includes(tn) || norm(m.away).includes(tn)));
       const upcoming = mapped.filter(m => m.status !== 'finished' && (norm(m.home).includes(tn) || norm(m.away).includes(tn)));
       const result = { played, upcoming };
@@ -842,8 +867,8 @@ const API = {
     const diffMin = (Date.now() - matchTs) / 60000;
     if (diffMin > 115) return 'finished';
     if (diffMin > 0)   return 'live';
-    if (diffMin > -60) return 'starting_soon';
-    if (diffMin > -180) return 'closed';
+    if (diffMin > -60) return 'closed';        // <1h para el inicio: predicciones cerradas
+    if (diffMin > -180) return 'starting_soon'; // 1h-3h antes: aviso de cierre próximo
     return 'upcoming';
   },
 

@@ -290,7 +290,7 @@ const Profile = {
     if (!user) return;
 
     const exportObj = {
-      version:      '2.1',
+      version:      '2.2',
       exportedAt:   new Date().toISOString(),
       app:          'World Cup Collector UES',
       usuario:      user.name,
@@ -300,6 +300,9 @@ const Profile = {
       aciertos:     user.aciertos,
       monedas:      user.monedas || 0,
       pityCount:    user.pityCount || 0,
+      battleWins:   user.battleWins   || 0,
+      battleLosses: user.battleLosses || 0,
+      exchangeLog:  user.exchangeLog  || [],
       lastDailyPull: user.lastDailyPull || null,
       lastDailySpin: user.lastDailySpin || null,
       figuritas: (user.figuritas || []).map(f => ({
@@ -404,6 +407,9 @@ const Profile = {
       user.aciertos         = Number(data.aciertos)  || user.aciertos;
       user.monedas          = typeof data.monedas === 'number' ? data.monedas : (user.monedas ?? 0);
       user.pityCount        = Number(data.pityCount) || 0;
+      user.battleWins       = typeof data.battleWins   === 'number' ? data.battleWins   : (user.battleWins   ?? 0);
+      user.battleLosses     = typeof data.battleLosses === 'number' ? data.battleLosses : (user.battleLosses ?? 0);
+      user.exchangeLog      = Array.isArray(data.exchangeLog) ? data.exchangeLog : (user.exchangeLog || []);
       user.favoritos        = data.favoritos    || user.favoritos;
       user.predicciones     = data.predicciones || user.predicciones;
       user.equipo_ideal     = data.equipo_ideal || user.equipo_ideal;

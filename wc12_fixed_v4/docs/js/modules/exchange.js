@@ -50,6 +50,31 @@ const Exchange = {
         }).join('')}
       </div>
 
+      <!-- Canjear monedas por tiradas -->
+      <div class="exchange-rules-title">Canjear monedas</div>
+      <div class="exchange-rules-grid" id="exchange-coins-grid" style="margin-bottom:1rem">
+        <div class="exchange-rule-card ${(user.monedas||0) >= 100 ? 'available' : 'unavailable'}">
+          <div class="erc-emoji">🪙</div>
+          <div class="erc-label">100 Monedas → 1 Tirada</div>
+          <div class="erc-desc">Cambia tus monedas por tiradas de gacha</div>
+          <div class="erc-progress">
+            <span class="${(user.monedas||0) >= 100 ? 'erc-have' : 'erc-need'}">
+              ${user.monedas||0}/100
+            </span>
+            ${(user.monedas||0) >= 100
+              ? `<span class="erc-ready">¡Listo!</span>`
+              : `<span class="erc-missing">Faltan ${100 - (user.monedas||0)}</span>`
+            }
+          </div>
+          ${(user.monedas||0) >= 100
+            ? `<button class="btn btn-primary" id="erc-coins-btn" style="width:100%;margin-top:0.5rem;font-size:0.8rem">
+                 Canjear 🎴
+               </button>`
+            : `<div class="erc-locked">🔒 No disponible</div>`
+          }
+        </div>
+      </div>
+
       <!-- Reglas de intercambio -->
       <div class="exchange-rules-title">Opciones de canje</div>
       <div class="exchange-rules-grid" id="exchange-rules-grid">
@@ -96,6 +121,14 @@ const Exchange = {
       </div>
     `;
 
+    // Canjear monedas por tirada
+    const coinsBtn = el.querySelector('#erc-coins-btn');
+    if (coinsBtn) {
+      coinsBtn.addEventListener('click', async () => {
+        await this.doExchangeCoins();
+      });
+    }
+
     // Eventos de canje
     el.querySelectorAll('.erc-btn').forEach(btn => {
       btn.addEventListener('click', async () => {
@@ -111,6 +144,25 @@ const Exchange = {
       if (f.duplicados > 0) counts[f.rareza] = (counts[f.rareza] || 0) + f.duplicados;
     });
     return counts;
+  },
+
+  async doExchangeCoins() {
+    const user = await Auth.currentUser();
+    if (!user) return;
+    const monedas = user.monedas || 0;
+    if (monedas < 100) {
+      Toast.warn('Necesitas al menos 100 monedas para canjear');
+      return;
+    }
+
+    user.monedas  = monedas - 100;
+    user.tiradas  = (user.tiradas || 0) + 1;
+    await Auth.updateUser(user);
+    await DB.logActivity(user.email, 'exchange', '100 monedas → 1 tirada');
+    if (typeof App !== 'undefined') await App.refreshHeader();
+
+    Toast.success('¡Canjeado! +1 🎴 tirada de gacha');
+    await this.render();
   },
 
   async doExchange(ruleId) {

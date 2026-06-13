@@ -201,7 +201,7 @@ const Predictions = {
       ? `🔴 Partido en curso — predicciones cerradas`
       : state === 'finished'
         ? `✅ Partido finalizado${scoreStr}`
-        : '🔒 Predicciones cerradas (faltan menos de 3h)';
+        : '🔒 Predicciones cerradas (falta menos de 1h)';
     return `
       <div class="pred-locked" style="text-align:center;padding:0.75rem 0;">
         <span style="font-size:0.78rem;color:var(--text-muted)">${msg}</span>
@@ -308,6 +308,24 @@ const Predictions = {
       }
     }
 
+    // Validar que el marcador exacto sea consistente con la victoria elegida
+    // (ej: si predices "victoria local", el marcador no puede ser un empate
+    // ni dar la victoria al visitante — se evalúa solo por diferencia de goles)
+    if (pick === 'home' && exact) {
+      const [g1, g2] = exact.split('-').map(Number);
+      if (g1 <= g2) {
+        Toast.warn('El marcador no coincide con la victoria local. El local debe tener más goles. Ej: 2-1');
+        return;
+      }
+    }
+    if (pick === 'away' && exact) {
+      const [g1, g2] = exact.split('-').map(Number);
+      if (g2 <= g1) {
+        Toast.warn('El marcador no coincide con la victoria visitante. El visitante debe tener más goles. Ej: 1-2');
+        return;
+      }
+    }
+
     const user = await Auth.currentUser();
     if (!user) return;
 
@@ -363,6 +381,7 @@ const Predictions = {
     let tirasGanadas = 0;
     let newWins      = 0;
     const preds      = user.predicciones || [];
+    const newlyResolved = [];
 
     for (const pred of preds) {
       if (pred.result !== 'pending') continue;
@@ -388,9 +407,11 @@ const Predictions = {
       if (!pred.matchHomeFlag && match.homeFlag) pred.matchHomeFlag = match.homeFlag;
       if (!pred.matchAwayFlag && match.awayFlag) pred.matchAwayFlag = match.awayFlag;
 
+      let predTiradas = 0;
       if (pred.pick === finalResult) {
         pred.result = 'win';
         tirasGanadas += 1;
+        predTiradas  += 1;
         newWins++;
       } else {
         pred.result = 'loss';
@@ -403,7 +424,21 @@ const Predictions = {
       if (predExact && exactScore && predExact === exactScore) {
         pred.exactCorrect = true;
         tirasGanadas += 3;
+        predTiradas  += 3;
       }
+
+      newlyResolved.push({
+        matchHome:     pred.matchHome || match.home,
+        matchAway:     pred.matchAway || match.away,
+        matchHomeFlag: pred.matchHomeFlag || match.homeFlag,
+        matchAwayFlag: pred.matchAwayFlag || match.awayFlag,
+        finalScore:    exactScore,
+        pick:          pred.pick,
+        exact:         pred.exact || null,
+        won:           pred.result === 'win',
+        exactCorrect:  !!pred.exactCorrect,
+        tiradas:       predTiradas,
+      });
     }
 
     if (tirasGanadas > 0) {
@@ -423,7 +458,64 @@ const Predictions = {
       }
     }
 
+    if (typeof App !== 'undefined') await App.refreshHeader();
+    if (newlyResolved.length) this._showResultModals(newlyResolved);
+
     return tirasGanadas;
+  },
+
+  /**
+   * _showResultModals — muestra un modal por cada predicción recién resuelta,
+   * indicando si se ganó/perdió, si hubo marcador exacto, y cuántas tiradas
+   * se ganaron. Si hay varias, se encolan y se muestran una tras otra.
+   */
+  _showResultModals(results) {
+    if (!results.length) return;
+    const [first, ...rest] = results;
+
+    const home = first.matchHome || 'Local';
+    const away = first.matchAway || 'Visitante';
+    const homeFlag = first.matchHomeFlag || '🏠';
+    const awayFlag = first.matchAwayFlag || '✈️';
+
+    const headerIcon  = first.won ? '🏆' : '❌';
+    const headerText  = first.won ? '¡Acertaste!' : 'Fallaste esta vez';
+    const headerColor = first.won ? '#44ff88' : '#ff6666';
+
+    const pickLabels = { home: home, away: away, draw: 'Empate' };
+    const pickLabel  = pickLabels[first.pick] || first.pick;
+
+    const rewardLines = [];
+    if (first.won) rewardLines.push(`🎴 +1 tirada por acertar el ganador`);
+    if (first.exactCorrect) rewardLines.push(`🎯 +3 tiradas por marcador exacto`);
+    if (!first.won && !first.exactCorrect) rewardLines.push('Sin recompensa esta vez. ¡Suerte para la próxima!');
+
+    Modal.open(`
+      <div style="text-align:center;padding:0.5rem 0">
+        <div style="font-size:2rem;margin-bottom:0.25rem">${headerIcon}</div>
+        <h3 style="font-family:'Bebas Neue',cursive;font-size:1.4rem;color:${headerColor};letter-spacing:1px;margin:0 0 0.5rem">
+          ${headerText}
+        </h3>
+        <p style="font-size:0.85rem;color:var(--text-secondary);margin:0 0 0.25rem">
+          ${homeFlag} ${home} <strong style="color:var(--text-primary)">${first.finalScore || ''}</strong> ${away} ${awayFlag}
+        </p>
+        <p style="font-size:0.75rem;color:var(--text-muted);margin:0 0 0.75rem">
+          Tu predicción: <strong>${pickLabel}</strong>${first.exact ? ` · Marcador: <strong>${first.exact}</strong>` : ''}
+        </p>
+        <div style="background:var(--bg-surface);border-radius:10px;padding:0.6rem;margin-bottom:0.75rem">
+          ${rewardLines.map(l => `<div style="font-size:0.8rem;color:var(--text-primary);padding:2px 0">${l}</div>`).join('')}
+          ${first.tiradas > 0 ? `<div style="font-size:1rem;font-weight:800;color:var(--accent);margin-top:4px">Total: +${first.tiradas} 🎴</div>` : ''}
+        </div>
+        <button class="btn btn-primary" id="pred-result-next" style="width:100%">
+          ${rest.length ? 'Siguiente' : '¡Genial!'}
+        </button>
+      </div>
+    `);
+
+    document.getElementById('pred-result-next')?.addEventListener('click', () => {
+      Modal.close();
+      if (rest.length) this._showResultModals(rest);
+    });
   },
 
   /**
