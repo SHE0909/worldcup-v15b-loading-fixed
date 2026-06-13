@@ -543,7 +543,7 @@ const API = {
   _memSet(key, data) { this._memCache[key] = { data, ts: Date.now() }; return data; },
 
   /* Versión de caché — se incrementa cuando cambia el fixture/MOCK */
-  _CACHE_VERSION: 'v22',
+  _CACHE_VERSION: 'v23',
 
   _lsCacheKey(key) { return `wcc_cache_${this._CACHE_VERSION}_${key}`; },
 
@@ -757,50 +757,31 @@ const API = {
      EQUIPOS
   ══════════════════════════════════════════ */
   async getTeams(query = '') {
-    if (!this._teamsCache) {
-      // Cargar standings primero para tener W/D/L/PTS actualizados
-      const standings = await this.getStandings().catch(() => []);
-      const standMap = {};
-      (standings || []).forEach(s => {
-        const key = (s.team || '').toLowerCase();
-        standMap[key] = s;
-      });
+    // Siempre reconstruir desde standings frescos (nunca usar LS ni teamsCache)
+    // Usa _normalizeSearch para que "México"=="mexico"=="Mexico" hagan match
+    const standings = await this.getStandings().catch(() => MOCK.standings);
+    const standMap  = {};
+    (standings || MOCK.standings).forEach(s => {
+      standMap[_normalizeSearch(s.team)] = s;
+    });
 
-      const ls = this._lsGet('teams');
-      if (ls) {
-        // Enriquecer caché LS con standings en vivo
-        this._teamsCache = ls.map(t => {
-          const s = standMap[(t.name||'').toLowerCase()];
-          return s ? { ...t, pj:s.pj||0, w:s.w||0, d:s.d||0, l:s.l||0, gf:s.gf||0, gc:s.gc||0, pts:s.pts||0 } : t;
-        });
-      } else {
-        const data = await this._wc26('/get/teams');
-        if (data) {
-          const teams = Array.isArray(data) ? data : (data.teams || data.data || []);
-          if (teams.length > 0) {
-            this._teamsCache = teams.map(t => {
-              const base = _mapWC26Team(t);
-              const key  = (base.name || '').toLowerCase();
-              const s    = standMap[key];
-              return s ? { ...base, pj:s.pj||0, w:s.w||0, d:s.d||0, l:s.l||0, gf:s.gf||0, gc:s.gc||0, pts:s.pts||0 } : base;
-            });
-            this._lsSet('teams', this._teamsCache);
-          }
-        }
-        if (!this._teamsCache) {
-          // Usar getStandings() que ya devuelve datos reales o MOCK con resultados
-          const standRows = await this.getStandings().catch(() => MOCK.standings);
-          this._teamsCache = (standRows || MOCK.standings).map(s => ({
-            id:    `mock_${(s.team||'').replace(/\s+/g,'_')}`,
-            name:  s.team,
-            flag:  s.flag,
-            group: s.group,
-            pj: s.pj||0, w: s.w||0, d: s.d||0, l: s.l||0,
-            gf: s.gf||0, gc: s.gc||0, pts: s.pts||0,
-          }));
-        }
-      }
-    }
+    this._teamsCache = MOCK.standings.map(s => {
+      const live = standMap[_normalizeSearch(s.team)] || s;
+      return {
+        id:    'mock_' + _normalizeSearch(s.team).replace(/\s+/g, '_'),
+        name:  s.team,
+        flag:  s.flag,
+        group: s.group,
+        pj:  live.pj  != null ? live.pj  : (s.pj  || 0),
+        w:   live.w   != null ? live.w   : (s.w   || 0),
+        d:   live.d   != null ? live.d   : (s.d   || 0),
+        l:   live.l   != null ? live.l   : (s.l   || 0),
+        gf:  live.gf  != null ? live.gf  : (s.gf  || 0),
+        gc:  live.gc  != null ? live.gc  : (s.gc  || 0),
+        pts: live.pts != null ? live.pts : (s.pts || 0),
+      };
+    });
+
     if (!query) return this._teamsCache;
     return this._teamsCache.filter(t => matchesSearch(t.name||'', query));
   },

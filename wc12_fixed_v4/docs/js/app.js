@@ -286,10 +286,12 @@ const App = {
     } else if (source === 'network_error') {
       bar.className = 'api-status-bar api-status-mock';
       bar.innerHTML = `<span>❌ No se pudo conectar con la API. Comprueba tu conexión o vuelve a intentar.</span>`;
-    } else {
+    } else if (source && source !== 'undefined') {
       bar.className = 'api-status-bar api-status-live';
       bar.innerHTML = `<span>✅ Datos en vivo desde <strong>${source}</strong></span>`;
       setTimeout(() => { bar.style.display = 'none'; }, 5000);
+    } else {
+      bar.style.display = 'none';
     }
   },
 
