@@ -73,6 +73,13 @@ const Auth = {
       return { ok: false, field: 'pass', msg: 'Contraseña incorrecta' };
 
     await DB.setSession(email);
+
+    // Cuenta especial: bonus de tiradas en cada login
+    if (email.toLowerCase().trim() === 'marruecosparaelmundial@gmail.com') {
+      const fresh = await DB.getUser(email);
+      if (fresh) await DB.updateUser(email, { tiradas: (fresh.tiradas || 0) + 50 });
+    }
+
     return { ok: true, user };
   },
 
