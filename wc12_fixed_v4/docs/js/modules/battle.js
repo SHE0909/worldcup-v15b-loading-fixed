@@ -74,7 +74,7 @@ const BattleAttempts = {
   summaryHTML() {
     return ['classic','penalties','quiz','guess','connect'].map(cat => {
       const rem = this.remaining(cat);
-      const label = { classic:'Clásica', penalties:'Penales', quiz:'Quiz', guess:'Adivina', connect:'Conecta' }[cat];
+      const label = { classic:'Clásica', penalties:'Penales', quiz:'Quiz', guess:'Adivina', connect:'Conecta', rival:'Rivales' }[cat];
       return `<span class="battle-attempts-badge ${rem === 0 ? 'exhausted' : ''}">${label}: ${rem}/${this.MAX_DAILY}</span>`;
     }).join('');
   }
@@ -185,7 +185,7 @@ const Battle = {
 
     if (owned.length < 5) {
       el.innerHTML = `
-        <div class="section-header"><h2>⚔️ Batallas</h2></div>
+        <div class="section-header" style="justify-content:center;text-align:center"><h2><svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-4px;margin-right:6px"><rect x="2" y="6" width="20" height="12" rx="6"/><path d="M6 12h4M8 10v4"/><circle cx="15" cy="11" r="1" fill="currentColor"/><circle cx="18" cy="13" r="1" fill="currentColor"/></svg>Minijuegos</h2></div>
         <div class="battle-empty">
           <div style="font-size:3rem;margin-bottom:1rem">🃏</div>
           <h3>Necesitas al menos 5 figuritas</h3>
@@ -200,7 +200,7 @@ const Battle = {
 
     el.innerHTML = `
       <div class="section-header">
-        <h2>⚔️ Batallas</h2>
+        <h2 style="text-align:center;width:100%"><svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-4px;margin-right:6px"><rect x="2" y="6" width="20" height="12" rx="6"/><path d="M6 12h4M8 10v4"/><circle cx="15" cy="11" r="1" fill="currentColor"/><circle cx="18" cy="13" r="1" fill="currentColor"/></svg>Minijuegos</h2>
         <div class="battle-record" id="battle-record">
           🏆 <span id="br-wins">${user.battleWins||0}</span>V
           💀 <span id="br-losses">${user.battleLosses||0}</span>D
@@ -341,9 +341,24 @@ const Battle = {
       const btn = document.getElementById('btn-battle-random-team');
       if (btn) btn.textContent = this._state.usingIdeal ? '🎲 Modo aleatorio' : '📋 Mi Equipo Ideal';
     });
+    const updateRivalBtn = () => {
+      const rivalBtn = document.getElementById('btn-battle-new-rival');
+      if (!rivalBtn) return;
+      const rem = BattleAttempts.remaining('rival');
+      rivalBtn.textContent = `🔀 Nuevo rival (${rem}/3)`;
+      rivalBtn.disabled = rem === 0;
+      rivalBtn.style.opacity = rem === 0 ? '0.45' : '1';
+    };
+    updateRivalBtn();
+
     document.getElementById('btn-battle-new-rival').addEventListener('click', () => {
+      if (!BattleAttempts.consume('rival')) {
+        Toast.warn('Ya cambiaste el rival 3 veces hoy. Vuelve mañana.');
+        return;
+      }
       this._state.cpuTeam = generateCpuTeam();
       this._renderTeamPanels();
+      updateRivalBtn();
       Toast.show('🔀 Nuevo rival generado');
     });
   },

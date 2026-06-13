@@ -474,7 +474,7 @@ function _mapWC26Match(m) {
     date,
     time,
     competition,
-    venue:       '',
+    venue:       m.stadium_name ? `${m.stadium_name}${m.city ? ', '+m.city : ''}` : (m.venue || ''),
     type:        'worldcup',
     status,
     scoreHome:   (isLive || isFinished) ? scoreHome : null,
@@ -898,6 +898,93 @@ const API = {
       }
     } catch(_) {}
     return MOCK.predictableMatches;
+  },
+
+  /* ══════════════════════════════════════════
+     ESTADIOS — GET /get/stadiums
+  ══════════════════════════════════════════ */
+  async getStadiums() {
+    const mem = this._memGet('stadiums');
+    if (mem) return mem;
+    try {
+      const data = await this._wc26('/get/stadiums');
+      if (data) {
+        const list = Array.isArray(data) ? data : (data.stadiums || data.data || []);
+        const mapped = list.map(s => ({
+          id:       s.id || s.stadium_id,
+          name:     s.name || s.stadium_name || '',
+          city:     s.city || '',
+          country:  s.country || '',
+          capacity: s.capacity || 0,
+          surface:  s.surface || 'Grass',
+        }));
+        if (mapped.length > 0) return this._memSet('stadiums', mapped);
+      }
+    } catch(_) {}
+    // MOCK estadios del Mundial 2026
+    return this._memSet('stadiums', [
+      { id:1,  name:'MetLife Stadium',       city:'Nueva York/NJ',  country:'USA', capacity:82500 },
+      { id:2,  name:'SoFi Stadium',          city:'Los Ángeles',    country:'USA', capacity:70240 },
+      { id:3,  name:'AT&T Stadium',          city:'Dallas',         country:'USA', capacity:80000 },
+      { id:4,  name:'Hard Rock Stadium',     city:'Miami',          country:'USA', capacity:65326 },
+      { id:5,  name:"Levi's Stadium",       city:'San Francisco',  country:'USA', capacity:68500 },
+      { id:6,  name:'Arrowhead Stadium',     city:'Kansas City',    country:'USA', capacity:76416 },
+      { id:7,  name:'Lumen Field',           city:'Seattle',        country:'USA', capacity:68740 },
+      { id:8,  name:'Lincoln Financial',     city:'Filadelfia',     country:'USA', capacity:69176 },
+      { id:9,  name:'NRG Stadium',           city:'Houston',        country:'USA', capacity:72220 },
+      { id:10, name:'Gillette Stadium',      city:'Boston',         country:'USA', capacity:65878 },
+      { id:11, name:'BC Place',              city:'Vancouver',      country:'CAN', capacity:54500 },
+      { id:12, name:'BMO Field',             city:'Toronto',        country:'CAN', capacity:30000 },
+      { id:13, name:'Estadio Azteca',        city:'Ciudad de México',country:'MEX',capacity:87523 },
+      { id:14, name:'Estadio BBVA',          city:'Monterrey',      country:'MEX', capacity:51000 },
+      { id:15, name:'Estadio Akron',         city:'Guadalajara',    country:'MEX', capacity:49850 },
+      { id:16, name:'Mercedes-Benz Stadium', city:'Atlanta',        country:'USA', capacity:71000 },
+    ]);
+  },
+
+  /* ══════════════════════════════════════════
+     DETALLE DE PARTIDO — GET /get/games/:id
+  ══════════════════════════════════════════ */
+  async getMatchDetail(matchId) {
+    const cacheKey = `match_${matchId}`;
+    const mem = this._memGet(cacheKey);
+    if (mem) return mem;
+    try {
+      // Extraer el id numérico del formato wc26_123
+      const numId = String(matchId).replace('wc26_', '');
+      const data = await this._wc26(`/get/games/${numId}`);
+      if (data) {
+        const m = Array.isArray(data) ? data[0] : (data.game || data.match || data);
+        if (m && m.id) {
+          const mapped = _applyKnownSchedule(_mapWC26Match(m));
+          return this._memSet(cacheKey, mapped, 60); // cache 60s
+        }
+      }
+    } catch(_) {}
+    // Fallback: buscar en datos locales
+    const all = await this.getUpcomingMatches();
+    return all.find(m => m.id === matchId) || null;
+  },
+
+  /* ══════════════════════════════════════════
+     TODOS LOS GRUPOS A–L (para tabla completa)
+  ══════════════════════════════════════════ */
+  async getAllGroups() {
+    const mem = this._memGet('allGroups');
+    if (mem) return mem;
+    const standings = await this.getStandings();
+    // Agrupar por grupo
+    const groups = {};
+    standings.forEach(t => {
+      const g = t.group || 'Desconocido';
+      if (!groups[g]) groups[g] = [];
+      groups[g].push(t);
+    });
+    // Ordenar equipos dentro de cada grupo por pts DESC, luego GF-GC DESC
+    Object.values(groups).forEach(arr => arr.sort((a,b) =>
+      (b.pts - a.pts) || ((b.gf-b.gc) - (a.gf-a.gc)) || (b.gf - a.gf)
+    ));
+    return this._memSet('allGroups', groups, 120);
   },
 
   /* ══════════════════════════════════════════

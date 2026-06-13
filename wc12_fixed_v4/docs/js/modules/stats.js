@@ -373,7 +373,7 @@ const Stats = {
       const q = this._lastQuery;
       if (tab === 'teams')   await this.renderTeams(content, q);
       if (tab === 'players') await this.renderPlayers(content, q);
-      if (tab === 'scorers') await this.renderScorers(content);
+      if (tab === 'groups')  await this.renderGroups(content);
     } catch(err) {
       console.error('[Stats.render]', err);
       content.innerHTML = '<p class="empty-state" style="color:var(--text-muted)">Error al cargar datos. Intenta de nuevo.</p>';
@@ -533,17 +533,62 @@ const Stats = {
       </div>`;
   },
 
+  /* ── Grupos A–L completos desde la API ── */
+  async renderGroups(container) {
+    container.innerHTML = '<div class="spinner"></div>';
+    try {
+      const groups = await API.getAllGroups();
+      const groupKeys = Object.keys(groups).sort();
+      if (!groupKeys.length) {
+        container.innerHTML = '<p class="empty-state">No hay datos de grupos disponibles.</p>';
+        return;
+      }
+      container.innerHTML = '<div class="groups-grid">' + groupKeys.map(g => {
+        const teams = groups[g];
+        return `
+          <div class="group-table-wrap">
+            <div class="group-table-title">Grupo ${g}</div>
+            <table class="stats-table" style="font-size:0.72rem">
+              <thead><tr>
+                <th>#</th><th>Equipo</th><th>PJ</th>
+                <th style="color:#44ff88">V</th><th>E</th><th style="color:#ff4466">D</th>
+                <th>GF</th><th>GC</th><th style="color:var(--gold)">Pts</th>
+              </tr></thead>
+              <tbody>
+                ${teams.map((t, i) => `
+                  <tr style="${i < 2 ? 'border-left:2px solid var(--accent)' : ''}">
+                    <td class="text-muted" style="font-size:0.8rem">${i+1}</td>
+                    <td><span class="team-flag">${t.flag||'🏳️'}</span>${t.team}</td>
+                    <td>${t.pj||0}</td>
+                    <td style="color:#44ff88">${t.w||0}</td>
+                    <td class="text-muted">${t.d||0}</td>
+                    <td style="color:#ff4466">${t.l||0}</td>
+                    <td>${t.gf||0}</td>
+                    <td>${t.gc||0}</td>
+                    <td style="color:var(--gold);font-weight:700">${t.pts||0}</td>
+                  </tr>`).join('')}
+              </tbody>
+            </table>
+            <div style="font-size:0.6rem;color:var(--text-muted);padding:2px 4px;margin-top:2px">
+              ─ Clasifican al R32
+            </div>
+          </div>`;
+      }).join('') + '</div>';
+    } catch(err) {
+      container.innerHTML = '<p class="empty-state" style="color:var(--text-muted)">Error al cargar grupos.</p>';
+    }
+  },
+
   async search(query) {
-    this._lastQuery = query; // Persistir query para cuando se cambie de tab
+    this._lastQuery = query;
     const content = document.getElementById('stats-content');
     if (!content) return;
     content.innerHTML = '<div class="spinner"></div>';
     if (this._currentTab === 'teams')   await this.renderTeams(content, query);
     if (this._currentTab === 'players') await this.renderPlayers(content, query);
-    if (this._currentTab === 'scorers') await this.renderScorers(content);
+    if (this._currentTab === 'groups')  await this.renderGroups(content);
   },
 
-  /* Buscar por nombre para el modal de favorito en Dashboard */
   findPlayer(name) {
     const q = name.toLowerCase();
     return ALL_PLAYERS.find(p => p.name.toLowerCase().includes(q)) || null;

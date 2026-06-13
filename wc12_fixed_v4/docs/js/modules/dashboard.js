@@ -483,7 +483,10 @@ const Dashboard = {
           <div style="display:flex;align-items:center;gap:6px;padding:5px 0;border-bottom:1px solid var(--border)">
             <span style="font-size:0.45rem;padding:1px 4px;border-radius:6px;${m.type==='friendly'?'background:rgba(74,168,255,0.15);color:#4aa8ff;border:1px solid rgba(74,168,255,0.3)':'background:rgba(255,215,0,0.12);color:var(--gold);border:1px solid rgba(255,215,0,0.25)'}">${m.type==='friendly'?'AMI':'WC'}</span>
             <span style="flex:1;font-size:0.68rem">${m.homeFlag||''} ${m.home} vs ${m.away} ${m.awayFlag||''}</span>
-            <span style="font-size:0.65rem;color:var(--text-muted)">${Dashboard._formatDate(m.date)}</span>
+            <div style="text-align:right">
+              <span style="font-size:0.65rem;color:var(--text-muted);display:block">${Dashboard._formatDate(m.date)} · ${m.time||''}</span>
+              ${m.venue ? `<span style="font-size:0.58rem;color:var(--text-muted);opacity:0.7">📍 ${m.venue}</span>` : ''}
+            </div>
           </div>`).join('')
         : '<p style="font-size:0.7rem;color:var(--text-muted);padding:6px 0">Sin próximos partidos</p>';
 

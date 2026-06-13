@@ -137,23 +137,26 @@ const Predictions = {
       btn.addEventListener('click', () => this._showLineup(btn.dataset.match, matches));
     });
 
-    // ── Botón Predecir Mundial ──
-    const existingBtn = document.getElementById('btn-predict-wc');
+    // ── Botón Predecir Mundial — al INICIO de la sección ──
+    const existingBtn = document.getElementById('btn-predict-wc-wrap');
     if (!existingBtn) {
       const wcBtn = document.createElement('div');
-      wcBtn.style.cssText = 'text-align:center;margin-top:1.5rem;padding:0 1rem 2rem';
+      wcBtn.id = 'btn-predict-wc-wrap';
+      wcBtn.style.cssText = 'padding:0 0 1.2rem;margin-top:0.2rem';
       wcBtn.innerHTML = `
         <button id="btn-predict-wc" style="
           background:linear-gradient(135deg,#c0a022,#e8c840);
-          color:#000;font-weight:800;font-size:1rem;
-          border:none;border-radius:12px;padding:0.85rem 2rem;
-          cursor:pointer;width:100%;max-width:400px;
-          box-shadow:0 4px 20px rgba(200,160,0,0.35);letter-spacing:0.5px;
-        ">🏆 Predecir Mundial 2026</button>
-        <p style="font-size:0.7rem;color:var(--text-muted);margin-top:0.5rem">
-          Predice desde grupos hasta campeón · Gana hasta 50+ tiradas
-        </p>`;
-      list.parentElement.appendChild(wcBtn);
+          color:#000;font-weight:800;font-size:1.05rem;
+          border:none;border-radius:14px;padding:1rem 2rem;
+          cursor:pointer;width:100%;
+          box-shadow:0 4px 24px rgba(200,160,0,0.4);letter-spacing:0.5px;
+          display:flex;align-items:center;justify-content:center;gap:0.6rem;
+        "><svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M6 9H4.5a2.5 2.5 0 010-5H6"/><path d="M18 9h1.5a2.5 2.5 0 000-5H18"/><path d="M4 22h16"/><path d="M10 14.66V17c0 .55-.47.98-.97 1.21C7.85 18.75 7 20.24 7 22"/><path d="M14 14.66V17c0 .55.47.98.97 1.21C16.15 18.75 17 20.24 17 22"/><path d="M18 2H6v7a6 6 0 0012 0V2z"/></svg>
+          Predecir Mundial 2026
+          <span style="font-size:0.72rem;font-weight:500;opacity:0.75">· Hasta 50+ tiradas</span>
+        </button>`;
+      // Insertar antes de la lista, no al final
+      list.parentElement.insertBefore(wcBtn, list);
       document.getElementById('btn-predict-wc').addEventListener('click', () => WorldCupPredictor.open());
     }
   },

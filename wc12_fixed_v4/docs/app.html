@@ -72,7 +72,7 @@
       </div>
       <div class="header-right">
         <span class="header-stat" id="hdr-tiradas"><svg viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="3" width="14" height="18" rx="2"/><path d="M8 21h12a2 2 0 002-2V7a2 2 0 00-2-2h-2"/></svg> <strong>0</strong></span>
-        <span class="header-stat" id="hdr-monedas"><svg viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="16"/><line x1="8" y1="12" x2="16" y2="12"/></svg> <strong>0</strong></span>
+        <span class="header-stat" id="hdr-monedas">🪙 <strong>0</strong></span>
         <button class="btn-icon" id="btn-logout" title="Cerrar sesión"><svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 21H5a2 2 0 01-2-2V5a2 2 0 012-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg></button>
       </div>
     </header>
@@ -91,7 +91,7 @@
     <main class="app-main">
       <section id="tab-dashboard" class="tab-section active">
         <div class="section-header">
-          <h2>Panel Principal</h2>
+          <h2><svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-3px;margin-right:6px"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/></svg>Panel Principal</h2>
           <button class="btn btn-sm" id="btn-update-stats"><svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="23 4 23 10 17 10"/><polyline points="1 20 1 14 7 14"/><path d="M3.51 9a9 9 0 0114.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0020.49 15"/></svg> Actualizar</button>
         </div>
         <div id="api-status-bar" class="api-status-bar" style="display:none;"></div>
@@ -128,21 +128,21 @@
       </section>
 
       <section id="tab-stats" class="tab-section">
-        <div class="section-header"><h2>Estadísticas</h2></div>
+        <div class="section-header"><h2><svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-3px;margin-right:6px"><line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/></svg>Estadísticas</h2></div>
         <div class="search-bar">
           <input type="text" id="search-input" placeholder="Buscar equipo o jugador..."/>
           <button class="btn btn-sm" id="btn-search">Buscar</button>
         </div>
         <div class="stats-tabs">
           <button class="stab active" data-stab="teams">Equipos</button>
+          <button class="stab" data-stab="groups">Grupos A–L</button>
           <button class="stab" data-stab="players">Jugadores</button>
-          <button class="stab" data-stab="scorers">Goleadores</button>
         </div>
         <div id="stats-content" class="stats-content"></div>
       </section>
 
       <section id="tab-gacha" class="tab-section">
-        <div class="section-header"><h2>🎴 Sobres</h2></div>
+        <div class="section-header"><h2><svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-4px;margin-right:6px"><rect x="2" y="4" width="14" height="18" rx="2"/><path d="M8 22h12a2 2 0 002-2V8a2 2 0 00-2-2h-2"/></svg>Sobres</h2></div>
         <div class="gacha-center">
           <div class="sobre-stage">
             <div class="sobre-wrapper" id="sobre-wrapper">
@@ -203,7 +203,7 @@
 
       <section id="tab-album" class="tab-section">
         <div class="section-header">
-          <h2>📖 Mi Álbum</h2>
+          <h2><svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-4px;margin-right:6px"><path d="M2 3h6a4 4 0 014 4v14a3 3 0 00-3-3H2z"/><path d="M22 3h-6a4 4 0 00-4 4v14a3 3 0 013-3h7z"/></svg>Mi Álbum</h2>
           <span class="album-progress-label" id="album-pct">0% completado</span>
         </div>
         <div class="album-filters">
@@ -219,7 +219,7 @@
         </div>
         <div id="album-grid" class="album-grid"></div>
         <div class="section-header" style="margin-top:2rem;">
-          <h2>⚽ Equipo Ideal</h2>
+          <h2><svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-4px;margin-right:6px"><circle cx="12" cy="12" r="10"/><path d="M12 8l1.5 3h3l-2.5 1.8.9 3-2.9-2.1L9.1 16l.9-3L7.5 11h3z"/></svg>Equipo Ideal</h2>
           <button class="btn btn-sm" id="btn-save-team">💾 Guardar</button>
         </div>
         <div id="ideal-team" class="ideal-team">
@@ -238,15 +238,15 @@
       </section>
 
       <section id="tab-predictions" class="tab-section">
-        <div class="section-header">
-          <h2>🎯 Predicciones</h2>
-          <span class="badge-info">Acierta y gana tiradas 🎴</span>
+        <div class="section-header" style="justify-content:center;flex-direction:column;align-items:center;gap:0.3rem;text-align:center;">
+          <h2><svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-3px;margin-right:6px"><circle cx="12" cy="12" r="10"/><path d="M12 8v4l3 3"/></svg>Predicciones</h2>
+          <span class="badge-info">Acierta y gana tiradas</span>
         </div>
         <div id="predictions-list" class="predictions-list"></div>
       </section>
 
       <section id="tab-profile" class="tab-section">
-        <div class="section-header"><h2>Mi Perfil</h2></div>
+        <div class="section-header"><h2><svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-3px;margin-right:6px"><path d="M20 21v-2a4 4 0 00-4-4H8a4 4 0 00-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>Mi Perfil</h2></div>
         <div class="profile-card" id="profile-card">
           <div class="profile-avatar-wrap">
             <div class="profile-avatar" id="profile-avatar"></div>
@@ -405,7 +405,7 @@
         const statsEl = document.getElementById('drawer-stats');
         const avatarEl= document.getElementById('drawer-avatar');
         if (nameEl)  nameEl.textContent  = u.name || u.email || 'Jugador';
-        if (statsEl) statsEl.textContent = `🎴 ${u.tiradas ?? 0} · 💰 ${u.monedas ?? 0}`;
+        if (statsEl) statsEl.textContent = `🎴 ${u.tiradas ?? 0} · 🪙 ${u.monedas ?? 0}`;
         if (avatarEl) {
           if (u.avatar) {
             avatarEl.innerHTML = `<img src="${u.avatar}" style="width:100%;height:100%;border-radius:50%;object-fit:cover">`;

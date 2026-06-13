@@ -104,7 +104,7 @@ const App = {
     const gc = document.getElementById('gacha-count');
     if (gc) gc.textContent = user.tiradas ?? 0;
     const hdrMonedas = document.getElementById('hdr-monedas');
-    if (hdrMonedas) hdrMonedas.innerHTML = `💰 <strong>${user.monedas ?? 0}</strong>`;
+    if (hdrMonedas) hdrMonedas.innerHTML = `🪙 <strong>${user.monedas ?? 0}</strong>`;
   },
 
   navigateTo(tab) {
@@ -128,6 +128,9 @@ const App = {
       case 'dashboard':   await Dashboard.render(); break;
       case 'stats':       await Stats.render(Stats._currentTab || 'teams'); break;
       case 'gacha': {
+        // Limpiar resultado anterior al entrar a la tab
+        const prevResult = document.getElementById('gacha-result');
+        if (prevResult) { prevResult.innerHTML = ''; prevResult.style.display = 'none'; }
         const u = await Auth.currentUser();
         if (u) {
           const gc = document.getElementById('gacha-count');
@@ -371,13 +374,19 @@ const App = {
           Nota: querySelectorAll captura TODAS las cartas con el mismo data-id (duplicados) */
     /* 7b. Inyectar fotos para cartas que no tenían foto en caché al renderizar
            (incluye duplicados de sesiones anteriores). Usa onload para fade-in. */
+    // Inyectar fotos - deduplicado por id para no pedir la misma foto varias veces
+    const seenPhotoIds = new Set();
     pull.results.forEach(f => {
+      if (seenPhotoIds.has(f.id)) return; // ya procesado
+      seenPhotoIds.add(f.id);
       Gacha.getPlayerPhoto(f).then(url => {
         if (!url) return;
+        // Inyectar en TODOS los wraps con este id (incluyendo duplicados)
         const wraps = document.querySelectorAll(`#gacha-grid .fig-photo-wrap[data-id="${f.id}"]`);
         wraps.forEach(wrap => {
+          // Quitar img previa si existe (puede estar sin src por race condition)
           const existingImg = wrap.querySelector('img.fig-photo');
-          if (existingImg && existingImg.src) return;
+          if (existingImg) existingImg.remove();
           const isCutout = url.includes('cutout') || url.includes('Cutout');
           const img = document.createElement('img');
           img.className = "fig-photo";
@@ -391,7 +400,7 @@ const App = {
           };
           img.onerror = () => { img.remove(); };
           img.src = url;
-          wrap.insertBefore(img, wrap.querySelector('.fig-emoji-fallback')?.nextSibling || wrap.firstChild);
+          wrap.insertBefore(img, wrap.firstChild);
           if (!wrap.querySelector('.fig-photo-gradient')) {
             const g = document.createElement('div');
             g.className = 'fig-photo-gradient';

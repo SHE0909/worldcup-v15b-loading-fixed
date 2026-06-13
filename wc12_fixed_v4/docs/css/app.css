@@ -2004,10 +2004,13 @@ input, button { font-family: inherit; }
 }
 .battle-modes {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+  grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
   gap: 0.75rem;
   padding: 0 var(--gap);
   margin-bottom: 1.5rem;
+  max-width: 1100px;
+  margin-left: auto;
+  margin-right: auto;
 }
 .battle-mode-card {
   background: var(--bg-card);
@@ -2066,6 +2069,9 @@ input, button { font-family: inherit; }
   gap: 0.75rem;
   padding: 0 var(--gap);
   align-items: start;
+  max-width: 1100px;
+  margin-left: auto;
+  margin-right: auto;
 }
 .battle-vs-center {
   font-family: 'Bebas Neue', cursive;
@@ -4164,4 +4170,41 @@ img.emoji {
   margin: 0 .05em 0 .1em;
   vertical-align: -0.1em;
   display: inline-block;
+}
+
+
+/* ── Grupos A–L grid ────────────────────── */
+.groups-grid {
+  display: flex;
+  flex-direction: column;
+  gap: 1.2rem;
+  padding: 0.5rem 0 3rem;
+}
+.group-table-wrap {
+  background: var(--bg-card);
+  border: 1px solid var(--border-bright);
+  border-radius: var(--radius);
+  padding: 1rem 1.2rem 1.2rem;
+  width: 100%;
+  box-sizing: border-box;
+}
+.group-table-wrap .stats-table {
+  width: 100%;
+  table-layout: auto;
+}
+.group-table-wrap .stats-table th,
+.group-table-wrap .stats-table td {
+  padding: 6px 8px;
+  white-space: nowrap;
+}
+/* Team name column flexible */
+.group-table-wrap .stats-table td:nth-child(2) {
+  width: 100%;
+}
+.group-table-title {
+  font-family: 'Bebas Neue', cursive;
+  font-size: 1.25rem;
+  letter-spacing: 3px;
+  color: var(--accent);
+  margin-bottom: 0.75rem;
 }
