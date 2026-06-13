@@ -8,7 +8,7 @@
  * Al cambiar CACHE_VERSION el SW se instala automáticamente y limpia la caché vieja.
  * ¡Incrementar este número en cada deploy!
  */
-const CACHE_VERSION = 'wcc-ues-v16';
+const CACHE_VERSION = 'wcc-ues-v17';
 const BASE = '/worldcup-v15b-loading-fixed';
 
 const STATIC_ASSETS = [
