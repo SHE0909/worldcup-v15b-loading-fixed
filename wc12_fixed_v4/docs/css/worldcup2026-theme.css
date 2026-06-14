@@ -342,3 +342,44 @@ body {
   opacity: 0;
   animation: wc-flash 0.65s ease-out forwards;
 }
+
+@media (max-width: 640px) {
+  .group-table-wrap {
+    padding: 0.75rem 0.6rem 1rem;
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+  }
+  .group-table-wrap .stats-table {
+    min-width: 0;
+    width: 100%;
+    table-layout: auto;
+    font-size: 0.7rem;
+  }
+  .group-table-wrap .stats-table th,
+  .group-table-wrap .stats-table td {
+    padding: 5px 4px;
+    white-space: nowrap;
+  }
+  .group-table-wrap .stats-table td:nth-child(2),
+  .group-table-wrap .stats-table th:nth-child(2) {
+    width: auto;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    max-width: 110px;
+  }
+}
+
+@media (max-width: 400px) {
+  .group-table-wrap .stats-table {
+    font-size: 0.65rem;
+  }
+  .group-table-wrap .stats-table th,
+  .group-table-wrap .stats-table td {
+    padding: 4px 3px;
+  }
+  .group-table-wrap .stats-table td:nth-child(2),
+  .group-table-wrap .stats-table th:nth-child(2) {
+    max-width: 80px;
+  }
+}
