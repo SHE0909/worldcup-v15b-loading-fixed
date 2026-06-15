@@ -227,7 +227,7 @@ const Exchange = {
   async _showExchangeResult(fig, isNew, rule) {
     // Intentar cargar foto
     let photoUrl = null;
-    try { photoUrl = await API.getPlayerPhotosCached(fig.sdbName || fig.name); } catch(_) {}
+    try { photoUrl = await API.getPhotoById(fig.id); } catch(_) {}
 
     const rarityColors = {
       common: '#aaa', rare: 'var(--rare)', epic: 'var(--epic)', legendary: 'var(--legendary)'
@@ -252,8 +252,8 @@ const Exchange = {
             ${photoUrl
               ? `<img src="${photoUrl}" alt="${fig.name}"
                       style="width:100%;height:100%;object-fit:cover;object-position:top"
-                      onerror="this.parentNode.innerHTML='<span style=\\'font-size:3rem\\'>${fig.emoji}</span>'">`
-              : `<span style="font-size:3rem">${fig.emoji}</span>`
+                      onerror="this.parentNode.innerHTML='<span style=\\'font-size:2rem\\'>${Array.isArray(fig.emoji) ? fig.emoji.join('') : (fig.emoji || '⚽')}</span>'">`
+              : `<span style="font-size:3rem">${Array.isArray(fig.emoji) ? fig.emoji.join('') : (fig.emoji || '⚽')}</span>`
             }
           </div>
           <div style="padding:0.4rem;width:100%;text-align:center">
