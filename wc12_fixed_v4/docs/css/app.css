@@ -4208,3 +4208,125 @@ img.emoji {
   color: var(--accent);
   margin-bottom: 0.75rem;
 }
+
+/* ══════════════════════════════════════════
+   PREDICCIONES — header + botón historial
+   ══════════════════════════════════════════ */
+.pred-section-header {
+  display: flex !important;
+  align-items: center !important;
+  justify-content: space-between !important;
+  gap: 0.75rem !important;
+  margin-bottom: 1rem !important;
+}
+.pred-header-center {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 0.3rem;
+}
+.pred-header-title {
+  font-family: 'Bebas Neue', cursive;
+  font-size: 1.6rem;
+  letter-spacing: 2px;
+  color: var(--text-primary);
+  margin: 0;
+}
+/* Reset nativo del botón + estilos propios — alta especificidad */
+button#btn-pred-history,
+button.btn-pred-history-toggle {
+  /* reset */
+  -webkit-appearance: none;
+  appearance: none;
+  box-sizing: border-box;
+  /* layout */
+  flex-shrink: 0;
+  display: inline-flex !important;
+  align-items: center;
+  gap: 0.3rem;
+  /* tipografía */
+  font-family: 'Barlow Condensed', sans-serif !important;
+  font-size: 0.72rem !important;
+  font-weight: 700 !important;
+  letter-spacing: 0.8px;
+  text-transform: uppercase;
+  line-height: 1;
+  /* colores */
+  background: rgba(255, 215, 0, 0.08) !important;
+  color: var(--gold) !important;
+  border: 1px solid rgba(255, 215, 0, 0.45) !important;
+  border-radius: 20px !important;
+  /* espaciado */
+  padding: 0.32rem 0.9rem !important;
+  /* resto */
+  cursor: pointer;
+  white-space: nowrap;
+  transition: background 0.2s, color 0.2s, border-color 0.2s, box-shadow 0.2s;
+  outline: none;
+  text-decoration: none;
+}
+button#btn-pred-history:hover,
+button.btn-pred-history-toggle:hover {
+  background: rgba(255, 215, 0, 0.18) !important;
+  border-color: var(--gold) !important;
+  box-shadow: 0 0 14px rgba(255, 215, 0, 0.22);
+}
+button#btn-pred-history.active,
+button.btn-pred-history-toggle.active {
+  background: var(--gold) !important;
+  color: #111 !important;
+  border-color: var(--gold) !important;
+  box-shadow: 0 2px 16px rgba(255, 215, 0, 0.4);
+}
+
+/* Minuto en vivo */
+.pred-live-minute {
+  font-size: 0.7rem;
+  font-family: 'Barlow Condensed', sans-serif;
+  font-weight: 700;
+  color: #ff4466;
+  letter-spacing: 0.5px;
+  animation: blink 1.5s infinite;
+}
+
+/* PWA install button en perfil */
+.btn-install-pwa-profile {
+  -webkit-appearance: none;
+  appearance: none;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  width: 100%;
+  padding: 0.75rem 1.25rem;
+  background: linear-gradient(135deg, var(--accent), #0090b3);
+  color: #000;
+  font-weight: 700;
+  font-size: 0.9rem;
+  border: none;
+  border-radius: 10px;
+  cursor: pointer;
+  letter-spacing: 0.3px;
+  box-shadow: 0 3px 16px rgba(0, 212, 255, 0.35);
+  transition: transform 0.15s, box-shadow 0.15s;
+}
+.btn-install-pwa-profile:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 5px 20px rgba(0, 212, 255, 0.5);
+}
+
+/* Standings tabs */
+.standings-tab-btn {
+  transition: background 0.15s, color 0.15s;
+}
+.standings-tab-btn:hover { opacity: 0.85; }
+
+/* Mobile */
+@media (max-width: 480px) {
+  .pred-header-title { font-size: 1.3rem; }
+  button#btn-pred-history,
+  button.btn-pred-history-toggle {
+    padding: 0.28rem 0.65rem !important;
+    font-size: 0.66rem !important;
+  }
+}

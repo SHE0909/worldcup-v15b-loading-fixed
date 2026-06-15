@@ -20,6 +20,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Barlow:wght@300;400;600;700&family=Barlow+Condensed:wght@400;700&display=swap" rel="stylesheet">
   <script src="https://cdn.jsdelivr.net/npm/@twemoji/api@latest/dist/twemoji.min.js" crossorigin="anonymous"></script>
+  <link rel="stylesheet" href="css/worldcup2026-theme.css"/>
 </head>
 <body>
 
@@ -238,9 +239,17 @@
       </section>
 
       <section id="tab-predictions" class="tab-section">
-        <div class="section-header" style="justify-content:center;flex-direction:column;align-items:center;gap:0.3rem;text-align:center;">
-          <h2><svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-3px;margin-right:6px"><circle cx="12" cy="12" r="10"/><path d="M12 8v4l3 3"/></svg>Predicciones</h2>
-          <span class="badge-info">Acierta y gana tiradas</span>
+        <div class="pred-section-header">
+          <div class="pred-header-center">
+            <h2 class="pred-header-title">
+              <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-3px;margin-right:6px"><circle cx="12" cy="12" r="10"/><path d="M12 8v4l3 3"/></svg>Predicciones
+            </h2>
+            <span class="badge-info">Acierta y gana tiradas</span>
+          </div>
+          <button id="btn-pred-history" class="btn-pred-history-toggle">
+            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+            <span class="btn-pred-history-text">Ver historial</span>
+          </button>
         </div>
         <div id="predictions-list" class="predictions-list"></div>
       </section>
@@ -303,6 +312,14 @@
               <input type="file" id="btn-import" accept=".json" style="display:none"/>
             </label>
           </div>
+        </div>
+        <div class="profile-section" id="profile-pwa-section" style="display:none">
+          <h3>Aplicación</h3>
+          <button id="btn-install-pwa-profile" class="btn-install-pwa-profile">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+            Instalar aplicación (PWA)
+          </button>
+          <p style="font-size:0.72rem;color:var(--text-muted);margin-top:0.4rem;text-align:center">Instala la app en tu dispositivo para acceder sin navegador</p>
         </div>
       </section>
 
@@ -465,13 +482,32 @@
     }
 
     let deferredPrompt;
+    window._pwaPrompt = null;
+
+    function _showPwaProfileBtn() {
+      const sec = document.getElementById('profile-pwa-section');
+      if (sec) sec.style.display = 'block';
+    }
+    function _hidePwaProfileBtn() {
+      const sec = document.getElementById('profile-pwa-section');
+      if (sec) sec.style.display = 'none';
+    }
+
     window.addEventListener('beforeinstallprompt', e => {
       e.preventDefault();
       deferredPrompt = e;
+      window._pwaPrompt = e;
       const banner = document.getElementById('pwa-install-banner');
       if (banner && !localStorage.getItem('pwa-banner-dismissed')) {
         banner.style.display = 'flex';
       }
+      _showPwaProfileBtn();
+    });
+
+    window.addEventListener('appinstalled', () => {
+      deferredPrompt = null;
+      window._pwaPrompt = null;
+      _hidePwaProfileBtn();
     });
 
     document.getElementById('pwa-install-btn')?.addEventListener('click', async () => {
@@ -479,12 +515,28 @@
       deferredPrompt.prompt();
       const { outcome } = await deferredPrompt.userChoice;
       deferredPrompt = null;
+      window._pwaPrompt = null;
       document.getElementById('pwa-install-banner').style.display = 'none';
+      _hidePwaProfileBtn();
     });
 
     document.getElementById('pwa-banner-close')?.addEventListener('click', () => {
       document.getElementById('pwa-install-banner').style.display = 'none';
       localStorage.setItem('pwa-banner-dismissed', '1');
+    });
+
+    document.getElementById('btn-install-pwa-profile')?.addEventListener('click', async () => {
+      const prompt = window._pwaPrompt;
+      if (!prompt) {
+        Toast.warn('La instalación no está disponible. Es posible que la app ya esté instalada.');
+        return;
+      }
+      prompt.prompt();
+      const { outcome } = await prompt.userChoice;
+      window._pwaPrompt = null;
+      deferredPrompt = null;
+      _hidePwaProfileBtn();
+      if (outcome === 'accepted') Toast.success('¡App instalada exitosamente!');
     });
   </script>
 </body>

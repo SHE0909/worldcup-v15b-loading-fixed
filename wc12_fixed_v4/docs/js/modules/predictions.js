@@ -10,15 +10,48 @@
 
 const Predictions = {
 
-  async render() {
-    const matches = await API.getPredictableMatches();
-    const user    = await Auth.currentUser();
-    const preds   = user?.predicciones || [];
-    const list    = document.getElementById('predictions-list');
+  async render(showHistory = false) {
+    const allMatches = await API.getPredictableMatches();
+    const user       = await Auth.currentUser();
+    const preds      = user?.predicciones || [];
+    const list       = document.getElementById('predictions-list');
+    const histBtn    = document.getElementById('btn-pred-history');
     if (!list) return;
 
-    if (!matches || matches.length === 0) {
+    if (!allMatches || allMatches.length === 0) {
       list.innerHTML = '<p class="empty-state">No hay partidos disponibles para predecir en este momento.</p>';
+      return;
+    }
+
+    // Separar finalizados de activos
+    const finishedMatches = allMatches.filter(m => {
+      const state = API.getMatchState(m);
+      return state === 'finished';
+    });
+    const activeMatches = allMatches.filter(m => {
+      const state = API.getMatchState(m);
+      return state !== 'finished';
+    });
+
+    // Actualizar contador del botón historial
+    if (histBtn) {
+      const textSpan = histBtn.querySelector('.btn-pred-history-text');
+      if (textSpan) {
+        const isHistory = histBtn.dataset.mode === 'history';
+        textSpan.textContent = isHistory
+          ? `Ver activos`
+          : `Ver historial (${finishedMatches.length})`;
+      }
+    }
+
+    const matches = showHistory
+      ? finishedMatches.slice().reverse()   // más reciente primero
+      : activeMatches;
+
+    if (!matches.length) {
+      list.innerHTML = showHistory
+        ? '<p class="empty-state">No hay partidos finalizados aún.</p>'
+        : '<p class="empty-state">No hay partidos disponibles para predecir en este momento.</p>';
       return;
     }
 
@@ -32,7 +65,8 @@ const Predictions = {
       // Etiqueta de estado
       let stateHtml = '';
       if (state === 'live') {
-        stateHtml = `<span class="pred-state-badge pred-state-live">🔴 EN DIRECTO</span>`;
+        const minuteLabel = m.minute ? `· ⏱️ ${m.minute}'` : '';
+        stateHtml = `<span class="pred-state-badge pred-state-live" id="live-min-${m.id}">🔴 EN DIRECTO ${minuteLabel}</span>`;
       } else if (state === 'starting_soon') {
         stateHtml = `<span class="pred-state-badge pred-state-soon">⚡ Por comenzar · ${API.getTimeUntilMatch(m)}</span>`;
       } else if (state === 'closed' && !isLocked) {
@@ -75,11 +109,16 @@ const Predictions = {
 
             <div class="pred-vs-block">
               <span class="pred-vs">${
-                state === 'live'     ? `<span style="color:#ff4466">${m.scoreHome??0} — ${m.scoreAway??0}</span>` :
-                state === 'finished' && m.scoreHome !== null && m.scoreAway !== null
-                  ? `<span style="color:#ccc;font-size:1rem">${m.scoreHome} — ${m.scoreAway}</span>` : 'VS'
+                state === 'live'
+                  ? `<span style="color:#ff4466">${m.scoreHome??0} — ${m.scoreAway??0}</span>`
+                  : state === 'finished' && m.scoreHome !== null && m.scoreAway !== null
+                    ? `<span style="color:#ccc;font-size:1rem">${m.scoreHome} — ${m.scoreAway}</span>`
+                    : 'VS'
               }</span>
-              <span class="pred-date-badge">${this._formatDate(m.date)}</span>
+              ${state === 'live' && m.minute
+                ? `<span class="pred-live-minute">⏱️ ${m.minute}'</span>`
+                : `<span class="pred-date-badge">${this._formatDate(m.date)}</span>`
+              }
             </div>
 
             <div class="pred-team-block">
@@ -158,6 +197,28 @@ const Predictions = {
       // Insertar antes de la lista, no al final
       list.parentElement.insertBefore(wcBtn, list);
       document.getElementById('btn-predict-wc').addEventListener('click', () => WorldCupPredictor.open());
+    }
+
+    // Botón historial de partidos (bind solo una vez, el botón vive en el HTML estático)
+    const histBtn2 = document.getElementById('btn-pred-history');
+    if (histBtn2 && !histBtn2._wccBound) {
+      histBtn2._wccBound = true;
+      histBtn2.addEventListener('click', () => {
+        const isHistory = histBtn2.dataset.mode === 'history';
+        if (isHistory) {
+          histBtn2.dataset.mode = '';
+          histBtn2.classList.remove('active');
+          Predictions.render(false);
+        } else {
+          histBtn2.dataset.mode = 'history';
+          histBtn2.classList.add('active');
+          Predictions.render(true);
+        }
+      });
+    }
+    // Restaurar estado visual activo si seguimos en modo historial
+    if (histBtn2 && histBtn2.dataset.mode === 'history') {
+      histBtn2.classList.add('active');
     }
   },
 
@@ -462,6 +523,10 @@ const Predictions = {
     }
 
     if (typeof App !== 'undefined') await App.refreshHeader();
+    // Fix #2: si el perfil está visible, actualizar sus stats también
+    if (typeof App !== 'undefined' && App._currentTab === 'profile') {
+      await Profile.render();
+    }
     if (newlyResolved.length) this._showResultModals(newlyResolved);
 
     return tirasGanadas;

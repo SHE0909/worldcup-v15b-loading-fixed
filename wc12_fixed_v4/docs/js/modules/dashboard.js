@@ -314,39 +314,88 @@ const Dashboard = {
     if (!el) return;
     const table = await API.getStandings();
 
+    // Tabla global: top 5 equipos con más puntos, desempate por victorias y GF
+    const globalTop = table
+      .slice()
+      .sort((a, b) =>
+        (b.pts - a.pts) ||
+        ((b.w || 0) - (a.w || 0)) ||
+        ((b.gf || 0) - (a.gf || 0)) ||
+        ((b.gf - b.gc) - (a.gf - a.gc))
+      )
+      .slice(0, 5);
+
+    const tabs = ['pts', 'wins', 'gf'];
+    const tabLabels = { pts: 'Pts', wins: 'Victorias', gf: 'Goles' };
+    const activeTab = this._standingsTab || 'pts';
+
+    const sortedForTab = (tabKey) => {
+      return table.slice().sort((a, b) => {
+        if (tabKey === 'pts')  return (b.pts||0) - (a.pts||0) || (b.w||0) - (a.w||0) || (b.gf||0) - (a.gf||0);
+        if (tabKey === 'wins') return (b.w||0) - (a.w||0) || (b.pts||0) - (a.pts||0) || (b.gf||0) - (a.gf||0);
+        if (tabKey === 'gf')   return (b.gf||0) - (a.gf||0) || (b.pts||0) - (a.pts||0) || (b.w||0) - (a.w||0);
+        return 0;
+      }).slice(0, 5);
+    };
+
+    const renderRows = (rows, tabKey) => rows.map((r, i) => {
+      const val = tabKey === 'pts' ? r.pts : tabKey === 'wins' ? (r.w||0) : (r.gf||0);
+      const medal = i === 0 ? '🥇' : i === 1 ? '🥈' : i === 2 ? '🥉' : `${i+1}`;
+      return `
+        <tr>
+          <td class="pos" style="font-size:0.9rem">${medal}</td>
+          <td>${r.flag || ''} ${r.team}</td>
+          <td style="color:var(--text-secondary)">${r.pj||0}</td>
+          <td style="color:var(--gold);font-weight:700">${val}</td>
+        </tr>
+      `;
+    }).join('');
+
     el.innerHTML = `
       <div style="overflow-x:hidden;width:100%">
-      <table class="stats-table standings-mini">
-        <thead>
-          <tr>
-            <th>#</th>
-            <th>Equipo</th>
-            <th>PJ</th>
-            <th>DG</th>
-            <th>Pts</th>
-          </tr>
-        </thead>
-        <tbody>
-          ${table.slice(0, 8).map((r, i) => {
-            const dg = (r.gf || 0) - (r.gc || 0);
-            const dgStr = dg > 0 ? `+${dg}` : `${dg}`;
-            return `
-              <tr class="${i < 2 ? 'tr-qualify' : i < 4 ? 'tr-maybe' : ''}">
-                <td class="pos">${r.pos}</td>
-                <td>${r.flag || ''} ${r.team}</td>
-                <td style="color:var(--text-secondary)">${r.pj}</td>
-                <td style="color:${dg >= 0 ? '#44ff88' : '#ff4466'}">${dgStr}</td>
-                <td class="pts">${r.pts}</td>
-              </tr>
-            `;
-          }).join('')}
-        </tbody>
-      </table>
-      <p style="font-size:0.6rem;color:var(--text-muted);margin-top:4px;text-align:right">
-        🟢 Clasifican | 🟡 Posible clasificación
-      </p>
+        <div class="standings-tabs" style="display:flex;gap:4px;margin-bottom:6px">
+          ${tabs.map(t => `
+            <button class="standings-tab-btn${t === activeTab ? ' active' : ''}" data-stab="${t}"
+              style="flex:1;padding:3px 6px;font-size:0.68rem;border:1px solid var(--border);border-radius:6px;background:${t === activeTab ? 'var(--accent)' : 'transparent'};color:${t === activeTab ? '#000' : 'var(--text-muted)'};cursor:pointer;font-weight:${t === activeTab ? '700' : '400'}">
+              ${tabLabels[t]}
+            </button>`).join('')}
+        </div>
+        <table class="stats-table standings-mini">
+          <thead>
+            <tr>
+              <th>#</th>
+              <th>Equipo</th>
+              <th>PJ</th>
+              <th style="color:var(--gold)">${tabLabels[activeTab]}</th>
+            </tr>
+          </thead>
+          <tbody id="standings-rows">
+            ${renderRows(sortedForTab(activeTab), activeTab)}
+          </tbody>
+        </table>
+        <p style="font-size:0.6rem;color:var(--text-muted);margin-top:4px;text-align:right">
+          Top 5 equipos · Mundial 2026
+        </p>
       </div>
     `;
+
+    // Tab switching
+    el.querySelectorAll('.standings-tab-btn').forEach(btn => {
+      btn.addEventListener('click', () => {
+        const key = btn.dataset.stab;
+        this._standingsTab = key;
+        el.querySelectorAll('.standings-tab-btn').forEach(b => {
+          b.classList.toggle('active', b.dataset.stab === key);
+          b.style.background = b.dataset.stab === key ? 'var(--accent)' : 'transparent';
+          b.style.color = b.dataset.stab === key ? '#000' : 'var(--text-muted)';
+          b.style.fontWeight = b.dataset.stab === key ? '700' : '400';
+        });
+        const thead = el.querySelector('thead tr th:last-child');
+        if (thead) thead.textContent = tabLabels[key];
+        const tbody = el.querySelector('#standings-rows');
+        if (tbody) tbody.innerHTML = renderRows(sortedForTab(key), key);
+      });
+    });
   },
 
   /* ── Favoritos con foto y click para stats ── */
