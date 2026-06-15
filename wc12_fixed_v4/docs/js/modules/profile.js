@@ -145,6 +145,7 @@ const Profile = {
     await Auth.updateUser(user);
     Toast.success('Foto de perfil actualizada');
     await this.render();
+    if (typeof window.fillDrawerUser === 'function') await window.fillDrawerUser();
   },
 
   renderFavorites(user) {

@@ -424,14 +424,15 @@
         if (nameEl)  nameEl.textContent  = u.name || u.email || 'Jugador';
         if (statsEl) statsEl.textContent = `🎴 ${u.tiradas ?? 0} · 🪙 ${u.monedas ?? 0}`;
         if (avatarEl) {
-          if (u.avatar) {
-            avatarEl.innerHTML = `<img src="${u.avatar}" style="width:100%;height:100%;border-radius:50%;object-fit:cover">`;
+          if (u.photoURL) {
+            avatarEl.innerHTML = `<img src="${u.photoURL}" style="width:100%;height:100%;border-radius:50%;object-fit:cover">`;
           } else {
             avatarEl.textContent = (u.name || u.email || '?')[0].toUpperCase();
           }
         }
       } catch(e) {}
     }
+    window.fillDrawerUser = fillDrawerUser;
     window.addEventListener('app:ready', fillDrawerUser);
     setTimeout(fillDrawerUser, 800);
   })();

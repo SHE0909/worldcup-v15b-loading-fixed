@@ -68,6 +68,13 @@ const App = {
     await this.loadUserData(user);
     this.navigateTo('dashboard');
 
+    try {
+      const finished = await API.getFinishedMatches();
+      if (finished && finished.length) {
+        await Predictions.evaluatePredictions(finished);
+      }
+    } catch(e) { console.error('Eval predicciones al iniciar falló:', e); }
+
     const daily = await Gacha.claimDaily();
     if (daily.ok) Toast.success('🎁 ¡Tirada diaria reclamada! +1 tirada');
 
