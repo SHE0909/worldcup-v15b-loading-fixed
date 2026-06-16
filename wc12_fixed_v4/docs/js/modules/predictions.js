@@ -74,7 +74,7 @@ const Predictions = {
       } else if (state === 'upcoming' && !isLocked) {
         const timeLeft = API.getTimeUntilMatch(m);
         // Avisar cuando cierra pronto (dentro de las próximas 4h pero aún abierto)
-        const matchTs = new Date(`${m.date}T${m.time}:00-06:00`).getTime();
+        const matchTs = new Date(`${m.date}T${m.time}:00${API._venueOffset ? API._venueOffset(m.venue) : '-06:00'}`).getTime();
         const diffH   = (matchTs - Date.now()) / 3600000;
         if (diffH <= 5) {
           stateHtml = `<span class="pred-state-badge pred-state-warning">⏰ Cierra ${timeLeft}</span>`;

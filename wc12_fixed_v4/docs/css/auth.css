@@ -4,6 +4,12 @@
    ============================================= */
 
 *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+/* Evita que "Alto Contraste" de Windows sobreescriba los colores del app */
+@media (forced-colors: active) {
+  *, *::before, *::after { forced-color-adjust: none; }
+}
+
 html { font-size: 16px; scroll-behavior: smooth; }
 body {
   font-family: 'Barlow', sans-serif;

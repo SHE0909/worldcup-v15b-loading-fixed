@@ -60,7 +60,7 @@ const Dashboard = {
       if (isLiveByStatus || isLiveByTime) {
         // Verificar que no haya pasado más de 115 min desde el inicio
         if (m.date && m.time) {
-          const start   = new Date(`${m.date}T${m.time}:00-06:00`);
+          const start   = new Date(`${m.date}T${m.time}:00${typeof API !== 'undefined' && API._venueOffset ? API._venueOffset(m.venue) : '-06:00'}`);
           const diffMin = (Date.now() - start.getTime()) / 60000;
           if (diffMin > 115) continue; // ya terminó, no mostrar como live
         }
@@ -156,7 +156,8 @@ const Dashboard = {
       // Sanitizar: si el caché dice 'live' pero ya pasaron más de 115 min → forzar finished
       // Esto evita que partidos terminados sigan apareciendo como "en vivo" por caché stale
       if (m.status === 'live' && m.date && m.time) {
-        const start   = new Date(`${m.date}T${m.time}:00-06:00`);
+        const _off  = typeof API !== 'undefined' && API._venueOffset ? API._venueOffset(m.venue) : '-06:00';
+        const start   = new Date(`${m.date}T${m.time}:00${_off}`);
         const diffMin = (Date.now() - start.getTime()) / 60000;
         if (diffMin > 115) return { ...m, status: 'finished' };
       }
@@ -187,7 +188,8 @@ const Dashboard = {
       if (m.date === todayStr) return true;
       // Verificar si la hora UTC del partido cae en el día local de hoy
       if (m.time && (m.date === todayStr || m.date > todayStr)) {
-        const matchUTC = new Date(`${m.date}T${m.time}:00-06:00`);
+        const _off = typeof API !== 'undefined' && API._venueOffset ? API._venueOffset(m.venue) : '-06:00';
+        const matchUTC = new Date(`${m.date}T${m.time}:00${_off}`);
         const matchLocal = new Date(matchUTC.getFullYear(), matchUTC.getMonth(), matchUTC.getDate());
         const todayLocal = new Date(now.getFullYear(), now.getMonth(), now.getDate());
         return matchUTC >= todayLocal && matchUTC < new Date(todayLocal.getTime() + 86400000);

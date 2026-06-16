@@ -374,7 +374,7 @@ const Battle = {
       <div class="btp-players">
         ${userTeam.players.slice(0,5).map(p => `
           <div class="btp-player">
-            <span class="btp-emoji">${p.emoji||'⚽'}</span>
+            <span class="btp-emoji">${Array.isArray(p.emoji) ? p.emoji.join('') : (p.emoji||'⚽')}</span>
             <span class="btp-pname">${p.name.split(' ')[0]}</span>
             <span class="btp-rating ${p.rareza}">${p.rating||75}</span>
           </div>
@@ -390,7 +390,7 @@ const Battle = {
       <div class="btp-players">
         ${cpuTeam.players.slice(0,5).map(p => `
           <div class="btp-player">
-            <span class="btp-emoji">${p.emoji||'⚽'}</span>
+            <span class="btp-emoji">${Array.isArray(p.emoji) ? p.emoji.join('') : (p.emoji||'⚽')}</span>
             <span class="btp-pname">${p.name.split(' ')[0]}</span>
             <span class="btp-rating ${p.rareza}">${p.rating||75}</span>
           </div>
@@ -824,7 +824,7 @@ const Battle = {
         <div style="text-align:center;padding:0.5rem">
           <div style="font-size:0.75rem;color:var(--text-muted);margin-bottom:0.5rem">Jugador ${questionIdx+1} de ${toGuess.length} · Aciertos: ${score}</div>
           <div class="guess-emoji-circle">
-            <span class="guess-emoji-pop">${correct.emoji || '❓'}</span>
+            <span class="guess-emoji-pop">${Array.isArray(correct.emoji) ? correct.emoji.join(' ') : (correct.emoji || '❓')}</span>
           </div>
           <p style="margin-bottom:0.75rem;font-weight:600">¿Quién es este jugador?</p>
           <div style="display:grid;grid-template-columns:1fr 1fr;gap:0.5rem">

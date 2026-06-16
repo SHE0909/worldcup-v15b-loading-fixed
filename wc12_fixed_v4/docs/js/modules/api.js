@@ -7,7 +7,7 @@
  *   3. getFinishedMatches()  → worldcup26.ir /get/games?status=finished
  *   4. getStandings()        → worldcup26.ir /get/groups
  *   5. getTeams()            → worldcup26.ir /get/teams
- *   6. Fotos                 → TheSportsDB (sin cambios)
+ *   6. Fotos                 → CDN jsDelivr (por ID de figurita)
  *   7. MOCK                  → fallback si worldcup26.ir falla
  *
  * worldcup26.ir: API gratuita, sin key, sin límite de requests,
@@ -31,12 +31,7 @@ const API_STATUS = {
   lastSuccess: null,
 };
 
-const API_CONFIG = {
-  sportsDB: {
-    base:    'https://www.thesportsdb.com/api/v1/json/3',
-    enabled: true
-  }
-};
+
 
 /* ── Banderas por país ── */
 const TEAM_FLAGS = {
@@ -90,27 +85,27 @@ function yesterdayStr() {
 const _ALL_MATCHES = [
   /* ── JORNADA 1 ─────────────────────────────────────────── */
   // 11 junio
-  { id:'wc26_1',  home:'México',           away:'Sudáfrica',       homeFlag:'🇲🇽', awayFlag:'🇿🇦', date:'2026-06-11', time:'13:00', competition:'Grupo A — J1', type:'worldcup', venue:'Estadio Azteca, CDMX',        status:'finished', scoreHome:2, scoreAway:0, exactScore:'2-0', finalResult:'home' },
-  { id:'wc26_2',  home:'Corea del Sur',    away:'Rep. Checa',      homeFlag:'🇰🇷', awayFlag:'🇨🇿', date:'2026-06-11', time:'20:00', competition:'Grupo A — J1', type:'worldcup', venue:'Estadio Akron, Guadalajara',   status:'scheduled' },
+  { id:'wc26_1',  home:'México',           away:'Sudáfrica',       homeFlag:'🇲🇽', awayFlag:'🇿🇦', date:'2026-06-11', time:'14:00', competition:'Grupo A — J1', type:'worldcup', venue:'Estadio Azteca, CDMX',        status:'finished', scoreHome:2, scoreAway:0, exactScore:'2-0', finalResult:'home' },
+  { id:'wc26_2',  home:'Corea del Sur',    away:'Rep. Checa',      homeFlag:'🇰🇷', awayFlag:'🇨🇿', date:'2026-06-11', time:'19:00', competition:'Grupo A — J1', type:'worldcup', venue:'Estadio Akron, Guadalajara',   status:'finished', scoreHome:2, scoreAway:1, exactScore:'2-1', finalResult:'home' },
   // 12 junio
-  { id:'wc26_3',  home:'Canadá',           away:'Bosnia y Herz.',  homeFlag:'🇨🇦', awayFlag:'🇧🇦', date:'2026-06-12', time:'13:00', competition:'Grupo B — J1', type:'worldcup', venue:'BMO Field, Toronto',            status:'scheduled' },
-  { id:'wc26_4',  home:'Estados Unidos',   away:'Paraguay',        homeFlag:'🇺🇸', awayFlag:'🇵🇾', date:'2026-06-12', time:'19:00', competition:'Grupo D — J1', type:'worldcup', venue:'SoFi Stadium, Los Ángeles',    status:'scheduled' },
+  { id:'wc26_3',  home:'Canadá',           away:'Bosnia y Herz.',  homeFlag:'🇨🇦', awayFlag:'🇧🇦', date:'2026-06-12', time:'12:00', competition:'Grupo B — J1', type:'worldcup', venue:'BMO Field, Toronto',            status:'finished', scoreHome:1, scoreAway:1, exactScore:'1-1', finalResult:'draw' },
+  { id:'wc26_4',  home:'Estados Unidos',   away:'Paraguay',        homeFlag:'🇺🇸', awayFlag:'🇵🇾', date:'2026-06-12', time:'16:00', competition:'Grupo D — J1', type:'worldcup', venue:'SoFi Stadium, Los Ángeles',    status:'finished', scoreHome:4, scoreAway:1, exactScore:'4-1', finalResult:'home' },
   // 13 junio
-  { id:'wc26_5',  home:'Qatar',            away:'Suiza',           homeFlag:'🇶🇦', awayFlag:'🇨🇭', date:'2026-06-13', time:'13:00', competition:'Grupo B — J1', type:'worldcup', venue:'Levi\'s Stadium, San Francisco',status:'scheduled' },
-  { id:'wc26_6',  home:'Brasil',           away:'Marruecos',       homeFlag:'🇧🇷', awayFlag:'🇲🇦', date:'2026-06-13', time:'16:00', competition:'Grupo C — J1', type:'worldcup', venue:'MetLife Stadium, Nueva York',   status:'scheduled' },
-  { id:'wc26_7',  home:'Haití',            away:'Escocia',         homeFlag:'🇭🇹', awayFlag:'🏴󠁧󠁢󠁳󠁣󠁴󠁿', date:'2026-06-13', time:'19:00', competition:'Grupo C — J1', type:'worldcup', venue:'Gillette Stadium, Boston',      status:'scheduled' },
+  { id:'wc26_5',  home:'Qatar',            away:'Suiza',           homeFlag:'🇶🇦', awayFlag:'🇨🇭', date:'2026-06-13', time:'10:00', competition:'Grupo B — J1', type:'worldcup', venue:'Levi\'s Stadium, San Francisco',status:'finished', scoreHome:1, scoreAway:1, exactScore:'1-1', finalResult:'draw' },
+  { id:'wc26_6',  home:'Brasil',           away:'Marruecos',       homeFlag:'🇧🇷', awayFlag:'🇲🇦', date:'2026-06-13', time:'18:00', competition:'Grupo C — J1', type:'worldcup', venue:'MetLife Stadium, Nueva York',   status:'finished', scoreHome:1, scoreAway:1, exactScore:'1-1', finalResult:'draw' },
+  { id:'wc26_7',  home:'Haití',            away:'Escocia',         homeFlag:'🇭🇹', awayFlag:'🏴󠁧󠁢󠁳󠁣󠁴󠁿', date:'2026-06-13', time:'21:00', competition:'Grupo C — J1', type:'worldcup', venue:'Gillette Stadium, Boston',      status:'finished', scoreHome:0, scoreAway:1, exactScore:'0-1', finalResult:'away' },
   // 13 junio noche (madrugada 14)
-  { id:'wc26_8',  home:'Australia',        away:'Turquía',         homeFlag:'🇦🇺', awayFlag:'🇹🇷', date:'2026-06-13', time:'22:00', competition:'Grupo D — J1', type:'worldcup', venue:'BC Place, Vancouver',            status:'scheduled' },
+  { id:'wc26_8',  home:'Australia',        away:'Turquía',         homeFlag:'🇦🇺', awayFlag:'🇹🇷', date:'2026-06-13', time:'19:00', competition:'Grupo D — J1', type:'worldcup', venue:'BC Place, Vancouver',            status:'finished', scoreHome:2, scoreAway:0, exactScore:'2-0', finalResult:'home' },
   // 14 junio
-  { id:'wc26_9',  home:'Alemania',         away:'Curazao',         homeFlag:'🇩🇪', awayFlag:'🇨🇼', date:'2026-06-14', time:'11:00', competition:'Grupo E — J1', type:'worldcup', venue:'NRG Stadium, Houston',           status:'scheduled' },
-  { id:'wc26_10', home:'Países Bajos',     away:'Japón',           homeFlag:'🇳🇱', awayFlag:'🇯🇵', date:'2026-06-14', time:'14:00', competition:'Grupo F — J1', type:'worldcup', venue:'AT&T Stadium, Dallas',           status:'scheduled' },
-  { id:'wc26_11', home:'Costa de Marfil',  away:'Ecuador',         homeFlag:'🇨🇮', awayFlag:'🇪🇨', date:'2026-06-14', time:'17:00', competition:'Grupo E — J1', type:'worldcup', venue:'Lincoln Financial, Filadelfia', status:'scheduled' },
-  { id:'wc26_12', home:'Túnez',            away:'Suecia',          homeFlag:'🇹🇳', awayFlag:'🇸🇪', date:'2026-06-14', time:'20:00', competition:'Grupo F — J1', type:'worldcup', venue:'Estadio BBVA, Monterrey',        status:'scheduled' },
+  { id:'wc26_9',  home:'Alemania',         away:'Curazao',         homeFlag:'🇩🇪', awayFlag:'🇨🇼', date:'2026-06-14', time:'12:00', competition:'Grupo E — J1', type:'worldcup', venue:'NRG Stadium, Houston',           status:'finished', scoreHome:7, scoreAway:1, exactScore:'7-1', finalResult:'home' },
+  { id:'wc26_10', home:'Países Bajos',     away:'Japón',           homeFlag:'🇳🇱', awayFlag:'🇯🇵', date:'2026-06-14', time:'15:00', competition:'Grupo F — J1', type:'worldcup', venue:'AT&T Stadium, Dallas',           status:'finished', scoreHome:2, scoreAway:2, exactScore:'2-2', finalResult:'draw' },
+  { id:'wc26_11', home:'Costa de Marfil',  away:'Ecuador',         homeFlag:'🇨🇮', awayFlag:'🇪🇨', date:'2026-06-14', time:'18:00', competition:'Grupo E — J1', type:'worldcup', venue:'Lincoln Financial, Filadelfia', status:'finished', scoreHome:1, scoreAway:0, exactScore:'1-0', finalResult:'home' },
+  { id:'wc26_12', home:'Suecia',           away:'Túnez',           homeFlag:'🇸🇪', awayFlag:'🇹🇳', date:'2026-06-14', time:'21:00', competition:'Grupo F — J1', type:'worldcup', venue:'Estadio BBVA, Monterrey',        status:'finished', scoreHome:5, scoreAway:1, exactScore:'5-1', finalResult:'home' },
   // 15 junio
-  { id:'wc26_13', home:'España',           away:'Cabo Verde',      homeFlag:'🇪🇸', awayFlag:'🇨🇻', date:'2026-06-15', time:'10:00', competition:'Grupo H — J1', type:'worldcup', venue:'Mercedes-Benz Stadium, Atlanta', status:'scheduled' },
-  { id:'wc26_14', home:'Arabia Saudí',      away:'Uruguay',         homeFlag:'🇸🇦', awayFlag:'🇺🇾', date:'2026-06-15', time:'16:00', competition:'Grupo H — J1', type:'worldcup', venue:'Hard Rock Stadium, Miami',       status:'scheduled' },
-  { id:'wc26_15', home:'Irán',             away:'Nueva Zelanda',   homeFlag:'🇮🇷', awayFlag:'🇳🇿', date:'2026-06-15', time:'19:00', competition:'Grupo G — J1', type:'worldcup', venue:'SoFi Stadium, Los Ángeles',    status:'scheduled' },
-  { id:'wc26_16', home:'Bélgica',          away:'Egipto',          homeFlag:'🇧🇪', awayFlag:'🇪🇬', date:'2026-06-15', time:'13:00', competition:'Grupo G — J1', type:'worldcup', venue:'Lumen Field, Seattle',           status:'scheduled' },
+  { id:'wc26_13', home:'España',           away:'Cabo Verde',      homeFlag:'🇪🇸', awayFlag:'🇨🇻', date:'2026-06-15', time:'12:00', competition:'Grupo H — J1', type:'worldcup', venue:'Mercedes-Benz Stadium, Atlanta', status:'finished', scoreHome:0, scoreAway:0, exactScore:'0-0', finalResult:'draw' },
+  { id:'wc26_14', home:'Arabia Saudita',   away:'Uruguay',         homeFlag:'🇸🇦', awayFlag:'🇺🇾', date:'2026-06-15', time:'18:00', competition:'Grupo H — J1', type:'worldcup', venue:'Hard Rock Stadium, Miami',       status:'finished', scoreHome:1, scoreAway:1, exactScore:'1-1', finalResult:'draw' },
+  { id:'wc26_15', home:'Irán',             away:'Nueva Zelanda',   homeFlag:'🇮🇷', awayFlag:'🇳🇿', date:'2026-06-15', time:'18:00', competition:'Grupo G — J1', type:'worldcup', venue:'SoFi Stadium, Los Ángeles',    status:'scheduled' },
+  { id:'wc26_16', home:'Bélgica',          away:'Egipto',          homeFlag:'🇧🇪', awayFlag:'🇪🇬', date:'2026-06-15', time:'12:00', competition:'Grupo G — J1', type:'worldcup', venue:'Lumen Field, Seattle',           status:'finished', scoreHome:1, scoreAway:1, exactScore:'1-1', finalResult:'draw' },
   // 16 junio
   { id:'wc26_17', home:'Francia',          away:'Senegal',         homeFlag:'🇫🇷', awayFlag:'🇸🇳', date:'2026-06-16', time:'13:00', competition:'Grupo I — J1', type:'worldcup', venue:'MetLife Stadium, Nueva York',   status:'scheduled' },
   { id:'wc26_18', home:'Irak',             away:'Noruega',         homeFlag:'🇮🇶', awayFlag:'🇳🇴', date:'2026-06-16', time:'16:00', competition:'Grupo I — J1', type:'worldcup', venue:'Gillette Stadium, Boston',      status:'scheduled' },
@@ -138,10 +133,10 @@ const _ALL_MATCHES = [
   { id:'wc26_34', home:'Alemania',         away:'Ecuador',         homeFlag:'🇩🇪', awayFlag:'🇪🇨', date:'2026-06-20', time:'17:00', competition:'Grupo E — J2', type:'worldcup', venue:'AT&T Stadium, Dallas',           status:'scheduled' },
   { id:'wc26_35', home:'Suecia',           away:'Países Bajos',    homeFlag:'🇸🇪', awayFlag:'🇳🇱', date:'2026-06-20', time:'20:00', competition:'Grupo F — J2', type:'worldcup', venue:'Estadio BBVA, Monterrey',        status:'scheduled' },
   // 21 junio
-  { id:'wc26_36', home:'España',           away:'Arabia Saudí',     homeFlag:'🇪🇸', awayFlag:'🇸🇦', date:'2026-06-21', time:'10:00', competition:'Grupo H — J2', type:'worldcup', venue:'Mercedes-Benz Stadium, Atlanta', status:'scheduled' },
-  { id:'wc26_37', home:'Nueva Zelanda',    away:'Egipto',          homeFlag:'🇳🇿', awayFlag:'🇪🇬', date:'2026-06-21', time:'19:00', competition:'Grupo G — J2', type:'worldcup', venue:'BC Place, Vancouver',            status:'scheduled' },
+  { id:'wc26_36', home:'España',           away:'Arabia Saudita',     homeFlag:'🇪🇸', awayFlag:'🇸🇦', date:'2026-06-21', time:'10:00', competition:'Grupo H — J2', type:'worldcup', venue:'Mercedes-Benz Stadium, Atlanta', status:'scheduled' },
+  { id:'wc26_37', home:'Nueva Zelanda',    away:'Egipto',          homeFlag:'🇳🇿', awayFlag:'🇪🇬', date:'2026-06-21', time:'13:00', competition:'Grupo G — J2', type:'worldcup', venue:'BC Place, Vancouver',            status:'scheduled' },
   { id:'wc26_38', home:'Uruguay',          away:'Cabo Verde',      homeFlag:'🇺🇾', awayFlag:'🇨🇻', date:'2026-06-21', time:'16:00', competition:'Grupo H — J2', type:'worldcup', venue:'Hard Rock Stadium, Miami',       status:'scheduled' },
-  { id:'wc26_39', home:'Irán',             away:'Bélgica',         homeFlag:'🇮🇷', awayFlag:'🇧🇪', date:'2026-06-21', time:'13:00', competition:'Grupo G — J2', type:'worldcup', venue:'Lumen Field, Seattle',           status:'scheduled' },
+  { id:'wc26_39', home:'Irán',             away:'Bélgica',         homeFlag:'🇮🇷', awayFlag:'🇧🇪', date:'2026-06-21', time:'19:00', competition:'Grupo G — J2', type:'worldcup', venue:'Lumen Field, Seattle',           status:'scheduled' },
   // 22 junio
   { id:'wc26_40', home:'Argentina',        away:'Austria',         homeFlag:'🇦🇷', awayFlag:'🇦🇹', date:'2026-06-22', time:'11:00', competition:'Grupo J — J2', type:'worldcup', venue:'AT&T Stadium, Dallas',           status:'scheduled' },
   { id:'wc26_41', home:'Francia',          away:'Irak',            homeFlag:'🇫🇷', awayFlag:'🇮🇶', date:'2026-06-22', time:'15:00', competition:'Grupo I — J2', type:'worldcup', venue:'Lincoln Financial, Filadelfia', status:'scheduled' },
@@ -171,7 +166,7 @@ const _ALL_MATCHES = [
   { id:'wc26_59', home:'Túnez',            away:'Japón',           homeFlag:'🇹🇳', awayFlag:'🇯🇵', date:'2026-06-26', time:'14:00', competition:'Grupo F — J3', type:'worldcup', venue:'NRG Stadium, Houston',           status:'scheduled' },
   { id:'wc26_60', home:'Bélgica',          away:'Nueva Zelanda',   homeFlag:'🇧🇪', awayFlag:'🇳🇿', date:'2026-06-26', time:'21:00', competition:'Grupo G — J3', type:'worldcup', venue:'BC Place, Vancouver',            status:'scheduled' },
   { id:'wc26_61', home:'Egipto',           away:'Irán',            homeFlag:'🇪🇬', awayFlag:'🇮🇷', date:'2026-06-26', time:'21:00', competition:'Grupo G — J3', type:'worldcup', venue:'Lumen Field, Seattle',           status:'scheduled' },
-  { id:'wc26_62', home:'Cabo Verde',       away:'Arabia Saudí',     homeFlag:'🇨🇻', awayFlag:'🇸🇦', date:'2026-06-26', time:'18:00', competition:'Grupo H — J3', type:'worldcup', venue:'NRG Stadium, Houston',           status:'scheduled' },
+  { id:'wc26_62', home:'Cabo Verde',       away:'Arabia Saudita',     homeFlag:'🇨🇻', awayFlag:'🇸🇦', date:'2026-06-26', time:'18:00', competition:'Grupo H — J3', type:'worldcup', venue:'NRG Stadium, Houston',           status:'scheduled' },
   { id:'wc26_63', home:'Uruguay',          away:'España',          homeFlag:'🇺🇾', awayFlag:'🇪🇸', date:'2026-06-26', time:'18:00', competition:'Grupo H — J3', type:'worldcup', venue:'Estadio Akron, Guadalajara',    status:'scheduled' },
   // 27 junio
   { id:'wc26_64', home:'Noruega',          away:'Francia',         homeFlag:'🇳🇴', awayFlag:'🇫🇷', date:'2026-06-27', time:'13:00', competition:'Grupo I — J3', type:'worldcup', venue:'Gillette Stadium, Boston',      status:'scheduled' },
@@ -224,7 +219,7 @@ const MOCK = {
     // Grupo H
     { pos:1, team:'España',        flag:'🇪🇸', group:'H', pj:0,w:0,d:0,l:0,gf:0,gc:0,pts:0 },
     { pos:2, team:'Uruguay',       flag:'🇺🇾', group:'H', pj:0,w:0,d:0,l:0,gf:0,gc:0,pts:0 },
-    { pos:3, team:'Arabia Saudí',flag:'🇸🇦', group:'H', pj:0,w:0,d:0,l:0,gf:0,gc:0,pts:0 },
+    { pos:3, team:'Arabia Saudita',flag:'🇸🇦', group:'H', pj:0,w:0,d:0,l:0,gf:0,gc:0,pts:0 },
     { pos:4, team:'Cabo Verde',    flag:'🇨🇻', group:'H', pj:0,w:0,d:0,l:0,gf:0,gc:0,pts:0 },
     // Grupo I
     { pos:1, team:'Francia',       flag:'🇫🇷', group:'I', pj:0,w:0,d:0,l:0,gf:0,gc:0,pts:0 },
@@ -278,7 +273,7 @@ const MOCK = {
     { id:'wc26_t_NZL', name:'Nueva Zelanda',  flag:'🇳🇿', group:'G' },
     { id:'wc26_t_ESP', name:'España',         flag:'🇪🇸', group:'H' },
     { id:'wc26_t_URU', name:'Uruguay',        flag:'🇺🇾', group:'H' },
-    { id:'wc26_t_KSA', name:'Arabia Saudí', flag:'🇸🇦', group:'H' },
+    { id:'wc26_t_KSA', name:'Arabia Saudita', flag:'🇸🇦', group:'H' },
     { id:'wc26_t_CPV', name:'Cabo Verde',     flag:'🇨🇻', group:'H' },
     { id:'wc26_t_FRA', name:'Francia',        flag:'🇫🇷', group:'I' },
     { id:'wc26_t_NOR', name:'Noruega',        flag:'🇳🇴', group:'I' },
@@ -539,9 +534,7 @@ const API = {
   _memCache: {},
   _init() { this._invalidateOldCache(); },
   _teamsCache: null,
-  _photoMemCache: {},
-  _LS_PHOTO_KEY: 'wcc_photos_v3',
-  _PHOTO_MAP: {},
+  _PHOTO_BASE_URL: 'https://cdn.jsdelivr.net/gh/josuehdz420/wcc-assets@main/figuritas/',
 
   _TTL: {
     live:      2  * 60 * 1000,
@@ -620,11 +613,7 @@ const API = {
     return await this._fetch(`${WC26_BASE}${endpoint}`);
   },
 
-  /* ── TheSportsDB fetch ── */
-  async _sdb(endpoint) {
-    if (!API_CONFIG.sportsDB.enabled) return null;
-    return await this._fetch(`${API_CONFIG.sportsDB.base}${endpoint}`);
-  },
+
 
   /* ══════════════════════════════════════════
      PARTIDOS EN VIVO
@@ -839,7 +828,7 @@ const API = {
   },
 
   /* ══════════════════════════════════════════
-     JUGADORES (sin cambios — TheSportsDB)
+     JUGADORES
   ══════════════════════════════════════════ */
   async getPlayers(query = '') {
     const data = MOCK.players || [];
@@ -857,13 +846,43 @@ const API = {
   },
 
   /* ══════════════════════════════════════════
+     ZONA HORARIA POR SEDE
+     Los horarios en _ALL_MATCHES son hora local
+     de la ciudad sede. Este helper devuelve el
+     offset UTC correcto para parsear correctamente.
+  ══════════════════════════════════════════ */
+  _venueOffset(venue) {
+    if (!venue) return '-06:00';
+    const v = venue.toLowerCase();
+    // UTC-7 (PDT): Los Ángeles, San Francisco, Vancouver, Seattle
+    if (v.includes('sofi') || v.includes('los ángeles') || v.includes('los angeles') ||
+        v.includes('levi') || v.includes('san francisco') ||
+        v.includes('bc place') || v.includes('vancouver') ||
+        v.includes('lumen') || v.includes('seattle')) return '-07:00';
+    // UTC-5 (CDT): Dallas, Houston, Kansas City
+    if (v.includes('at&t') || v.includes('dallas') ||
+        v.includes('nrg') || v.includes('houston') ||
+        v.includes('arrowhead') || v.includes('kansas')) return '-05:00';
+    // UTC-4 (EDT): Nueva York, Boston, Filadelfia, Atlanta, Miami, Toronto
+    if (v.includes('metlife') || v.includes('nueva york') || v.includes('new york') ||
+        v.includes('gillette') || v.includes('boston') ||
+        v.includes('lincoln') || v.includes('filadelfia') ||
+        v.includes('mercedes') || v.includes('atlanta') ||
+        v.includes('hard rock') || v.includes('miami') ||
+        v.includes('bmo') || v.includes('toronto')) return '-04:00';
+    // UTC-6 (CDT): México (CDMX, Guadalajara, Monterrey) — default
+    return '-06:00';
+  },
+
+  /* ══════════════════════════════════════════
      ESTADO DEL PARTIDO
   ══════════════════════════════════════════ */
   getMatchState(m) {
     if (m.status === 'live')     return 'live';
     if (m.status === 'finished') return 'finished';
     if (!m.date || !m.time)      return 'upcoming';
-    const matchTs = new Date(`${m.date}T${m.time}:00-06:00`).getTime();
+    const offset  = this._venueOffset(m.venue);
+    const matchTs = new Date(`${m.date}T${m.time}:00${offset}`).getTime();
     const diffMin = (Date.now() - matchTs) / 60000;
     if (diffMin > 115) return 'finished';
     if (diffMin > 0)   return 'live';
@@ -874,7 +893,8 @@ const API = {
 
   getTimeUntilMatch(m) {
     if (!m.date || !m.time) return '';
-    const diffMs = new Date(`${m.date}T${m.time}:00-06:00`).getTime() - Date.now();
+    const offset  = this._venueOffset(m.venue);
+    const diffMs = new Date(`${m.date}T${m.time}:00${offset}`).getTime() - Date.now();
     if (diffMs <= 0) return '';
     const h   = Math.floor(diffMs / 3600000);
     const min = Math.floor((diffMs % 3600000) / 60000);
@@ -1044,82 +1064,27 @@ const API = {
   },
 
   /* ══════════════════════════════════════════
-     FOTOS — TheSportsDB (sin cambios)
+     FOTOS — CDN jsDelivr por ID de figurita
   ══════════════════════════════════════════ */
-  _migrateLegacyPhotoCache() {
-    try {
-      if (localStorage.getItem('wcc_photos_v1')) localStorage.removeItem('wcc_photos_v1');
-      if (localStorage.getItem('wcc_photos_v2')) localStorage.removeItem('wcc_photos_v2');
-    } catch(_) {}
+  getPhotoSync(fig) {
+    if (!fig?.id) return null;
+    return `${this._PHOTO_BASE_URL}${fig.id}.png`;
   },
-  _photoStore() {
-    try { const r=localStorage.getItem(this._LS_PHOTO_KEY); return r?JSON.parse(r):{}; } catch(_){return{};}
+  async getPhotoById(figId) {
+    if (!figId) return null;
+    return `${this._PHOTO_BASE_URL}${figId}.png`;
   },
-  _photoSave(store) {
-    try { localStorage.setItem(this._LS_PHOTO_KEY, JSON.stringify(store)); } catch(_) {}
-  },
-  async _idbGetPhoto(figId) {
-    try { const r=await DB.get('photo_cache',figId); return r?.url??null; } catch(_){return null;}
-  },
-  async _idbSetPhoto(figId, url) {
-    try { await DB.put('photo_cache',{id:figId,url,ts:Date.now()}); } catch(_){}
-  },
-  async getPhotoById(figId, sdbName) {
-    if (this._photoMemCache[figId]!==undefined) return this._photoMemCache[figId];
-    const ls=this._photoStore();
-    if (ls[figId]!==undefined) { this._photoMemCache[figId]=ls[figId]; return ls[figId]; }
-    const idbUrl=await this._idbGetPhoto(figId);
-    if (idbUrl!==null) { this._photoMemCache[figId]=idbUrl; ls[figId]=idbUrl; this._photoSave(ls); return idbUrl; }
-    const url=await this.getPlayerPhoto(sdbName);
-    if (url) { this._photoMemCache[figId]=url; ls[figId]=url; this._photoSave(ls); this._idbSetPhoto(figId,url); }
-    return url||null;
-  },
-  async getPlayerPhoto(playerName) {
-    try {
-      const data=await this._sdb(`/searchplayers.php?p=${encodeURIComponent(playerName)}`);
-      const players=data?.player;
-      if (players?.length) {
-        const nl=playerName.toLowerCase();
-        const exact=players.find(p=>p.strPlayer?.toLowerCase()===nl);
-        const partial=!exact&&players.find(p=>{ const pn=p.strPlayer?.toLowerCase()||''; return pn.includes(nl)||nl.includes(pn.split(' ')[0]); });
-        const p=exact||partial||null;
-        const url=p?.strCutout||p?.strThumb||p?.strFanart1||null;
-        if (url) return url;
-      }
-    } catch(_){}
-    try {
-      const res=await this._fetch(`https://en.wikipedia.org/api/rest_v1/page/summary/${encodeURIComponent(playerName.replace(/ /g,'_'))}`);
-      const thumb=res?.thumbnail?.source||res?.originalimage?.source||null;
-      if (thumb) return thumb;
-    } catch(_){}
+  async getPlayerPhoto() {
     return null;
   },
-  getPhotoSync(fig) {
-    if (!fig) return null;
-    const m=this._photoMemCache[fig.id];
-    if (m) return m;
-    try { const ls=this._photoStore(); return ls[fig.id]||null; } catch(_){return null;}
+  async getPlayerPhotosCached() {
+    return null;
   },
-  async getPlayerPhotosCached(playerName) {
-    const k='n_'+playerName;
-    if (this._photoMemCache[k]!==undefined) return this._photoMemCache[k];
-    const ls=this._photoStore();
-    if (ls[k]!==undefined) { this._photoMemCache[k]=ls[k]; return ls[k]; }
-    const url=await this.getPlayerPhoto(playerName);
-    if (url) { this._photoMemCache[k]=url; ls[k]=url; this._photoSave(ls); }
-    return url||null;
-  },
-  async precachePhotos(figuritas) {
-    if (!figuritas?.length) return;
-    this._migrateLegacyPhotoCache();
-    const pool=(typeof Gacha!=='undefined')?Gacha.getPool():[];
-    const toFetch=figuritas.map(f=>pool.find(p=>p.id===f.id)).filter(fig=>fig&&!this.getPhotoSync(fig));
-    for (let i=0;i<toFetch.length;i+=5) {
-      await Promise.allSettled(toFetch.slice(i,i+5).map(fig=>this.getPhotoById(fig.id,fig.sdbName||fig.name)));
-    }
+  async precachePhotos() {
+    return;
   },
   clearPhotoCache() {
-    this._teamsCache=null; this._memCache={}; this._photoMemCache={};
+    this._teamsCache = null; this._memCache = {};
   },
 
   /* ══════════════════════════════════════════
@@ -1131,11 +1096,10 @@ const API = {
     return {
       apiFootball:  { enabled: false, hasKey: false },
       footballData: { enabled: false, hasKey: false },
-      sportsDB:     { enabled: true,  hasKey: true  }
+      sportsDB:     { enabled: false, hasKey: false }
     };
   }
 };
 
 // Limpiar caché viejas al cargar el módulo
 API._init();
-

@@ -1,7 +1,8 @@
 /**
- * album.js — Álbum Virtual y Equipo Ideal  v8-final
- * FIXES: slot picker funcional, equipo_ideal guardado en IndexedDB,
- *        Battle lo lee, fotos async no bloquean UI
+ * album.js — Álbum Virtual y Equipo Ideal  v9
+ * FIXES: _enrichOwned() sincroniza figuritas guardadas con el pool actual,
+ *        _emojiStr() soporta emoji como string o array (gacha v7+),
+ *        slot picker y equipo ideal siempre muestran jugadores actualizados.
  */
 
 /* Formaciones disponibles */
@@ -72,12 +73,32 @@ const PLAYER_STATS = buildPlayerStats();
 
 
 
-/* Fotos: usar API.getPhotoById(fig.id, fig.sdbName||fig.name) — localStorage */
-
 const Album = {
   _currentFilter: 'all',
 
-  /* ── Foto: usa localStorage via API.getPhotoById ── */
+  /**
+   * Sincroniza los IDs guardados en user.figuritas con el pool ACTUAL.
+   * Preserva duplicados y fecha de obtención, pero nombre/pos/rating/emoji
+   * siempre vienen del pool vigente. IDs que ya no existen en el pool se descartan.
+   */
+  _enrichOwned(rawFigs) {
+    const pool = Gacha.getPool();
+    return (rawFigs || [])
+      .map(uf => {
+        const p = pool.find(x => x.id === uf.id);
+        if (!p) return null;
+        return { ...p, duplicados: uf.duplicados || 0, obtenida: uf.obtenida };
+      })
+      .filter(Boolean);
+  },
+
+  /** Normaliza emoji: soporta string ('⚽') y array (['🇵🇹','🐐','⚽']) */
+  _emojiStr(val) {
+    if (!val) return '⚽';
+    return Array.isArray(val) ? val.join('') : val;
+  },
+
+  /* ── Foto: CDN jsDelivr via API.getPhotoById ── */
   async _getPhoto(fig) {
     try {
       const timeout = new Promise(r => setTimeout(() => r(null), 8000));
@@ -92,7 +113,7 @@ const Album = {
   async render(filter = 'all') {
     this._currentFilter = filter;
     const user     = await Auth.currentUser();
-    const owned    = user?.figuritas || [];
+    const owned    = this._enrichOwned(user?.figuritas);
     const pool     = Gacha.getPool();
     const filtered = filter === 'all' ? pool : pool.filter(f => f.rareza === filter);
     const ownedSet = new Set(owned.map(f => f.id));
@@ -122,8 +143,8 @@ const Album = {
       const photoHtml = has
         ? (cached
             ? `<img src="${cached}" class="album-slot-img" alt="${fig.name}" referrerpolicy="no-referrer" loading="lazy"
-                    onerror="this.style.display='none';this.parentNode.querySelector('.album-slot-emoji-fb').style.display='inline'"><span class="album-slot-emoji album-slot-emoji-fb" style="display:none">${fig.emoji}</span>`
-            : `<span class="album-slot-emoji">${fig.emoji}</span>`)
+                    onerror="this.style.display='none';this.parentNode.querySelector('.album-slot-emoji-fb').style.display='inline'"><span class="album-slot-emoji album-slot-emoji-fb" style="display:none">${this._emojiStr(fig.emoji)}</span>`
+            : `<span class="album-slot-emoji">${this._emojiStr(fig.emoji)}</span>`)
         : `<span class="album-slot-unknown">❓</span>`;
       return `
         <div class="album-slot ${has?'owned':'empty'} ${fig.rareza}" data-id="${fig.id}">
@@ -169,9 +190,9 @@ const Album = {
           ? `<div class="modal-player-photo">
                <img referrerpolicy="no-referrer" src="${photo}" alt="${fig.name}"
                     style="width:100%;height:100%;object-fit:cover;object-position:top center;border-radius:8px;"
-                    onerror="this.parentNode.innerHTML='<span style=font-size:4rem>${fig.emoji}</span>'"/>
+                    onerror="this.parentNode.innerHTML='<span style=font-size:2rem>${this._emojiStr(fig.emoji)}</span>'"/>
              </div>`
-          : `<div style="font-size:4rem;margin-bottom:0.75rem">${fig.emoji}</div>`}
+          : `<div style="font-size:2.5rem;margin-bottom:0.75rem">${this._emojiStr(fig.emoji)}</div>`}
         <h2 class="modal-player-name">${fig.name}</h2>
         <p class="modal-player-team">${fig.flag||''} ${fig.team}</p>
         <div style="display:flex;gap:0.5rem;justify-content:center;margin-bottom:1rem;flex-wrap:wrap">
@@ -197,7 +218,7 @@ const Album = {
   ══════════════════════════════════════════ */
   async renderIdealTeam() {
     const user      = await Auth.currentUser();
-    const owned     = user?.figuritas || [];
+    const owned     = this._enrichOwned(user?.figuritas);
     const saved     = user?.equipo_ideal || {};
     const formation = user?.formacion || '4-3-3';
     const rows      = getFormationRows(formation);
@@ -245,7 +266,7 @@ const Album = {
               photo
                 ? `<img referrerpolicy="no-referrer" src="${photo}" class="slot-photo-img" alt="${fig.name}"
                         onerror="this.style.display='none'">`
-                : `<span style="font-size:1.3rem">${fig.emoji}</span>`
+                : `<span style="font-size:1.3rem">${this._emojiStr(fig.emoji)}</span>`
             }</div>
              <span class="slot-player-name">${fig.name.split(' ')[0]}</span>
              <span class="formation-pos">${pos}</span>`
@@ -298,8 +319,8 @@ const Album = {
             ${photo
               ? `<img referrerpolicy="no-referrer" src="${photo}" alt="${f.name}"
                       style="width:100%;height:100%;object-fit:cover;object-position:top center;"
-                      onerror="this.parentNode.innerHTML='<span style=font-size:1.5rem>${f.emoji}</span>'">`
-              : `<span style="font-size:1.5rem">${f.emoji}</span>`}
+                      onerror="this.parentNode.innerHTML='<span style=font-size:1rem>${this._emojiStr(f.emoji)}</span>'">`
+              : `<span style="font-size:1.5rem">${this._emojiStr(f.emoji)}</span>`}
           </div>
           <span class="slot-pick-name">${f.name.split(' ')[0]}</span>
           <span class="rarity-badge badge-${f.rareza}" style="position:static;font-size:0.48rem">⭐${f.rating}</span>
@@ -375,7 +396,8 @@ const Album = {
   },
 
   /* Construir array de jugadores del equipo ideal para Battle */
-  buildIdealTeamPlayers(owned, saved, formation = '4-3-3') {
+buildIdealTeamPlayers(rawOwned, saved, formation = '4-3-3') {
+    const owned   = this._enrichOwned(rawOwned);
     const players = [];
     const rows    = getFormationRows(formation);
     rows.forEach((row, ri) => {
