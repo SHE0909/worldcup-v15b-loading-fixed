@@ -1,8 +1,4 @@
-/* =============================================
-   WORLD CUP COLLECTOR — UES
-   Main Stylesheet (compiled from SASS concepts)
-   Aesthetic: Dark / FIFA / EA Sports
-   ============================================= */
+
 
 /* ---- RESET & BASE ---- */
 *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
@@ -1671,5 +1667,236 @@ input, button { font-family: inherit; }
   .btn-pred-history-toggle {
     padding: 0.28rem 0.65rem;
     font-size: 0.66rem;
+  }
+}
+
+/* ══════════════════════════════════════════
+   FWC EN VIVO — Tab & Nav styles
+   ══════════════════════════════════════════ */
+
+/* ── Punto rojo animado en bottom nav ── */
+.nav-live {
+  position: relative;
+}
+.live-dot {
+  position: absolute;
+  top: 4px;
+  right: calc(50% - 18px);
+  width: 7px;
+  height: 7px;
+  background: #ff3344;
+  border-radius: 50%;
+  animation: livePulse 1.4s ease-in-out infinite;
+  box-shadow: 0 0 0 0 rgba(255,51,68,0.7);
+}
+.nav-live span:first-of-type {
+  color: #ff3344;
+}
+.nav-live.active {
+  color: #ff3344 !important;
+}
+
+/* ── Punto rojo animado en drawer nav ── */
+.drawer-nav-live {
+  position: relative;
+  color: #ff3344 !important;
+  font-weight: 700;
+}
+.live-dot-badge {
+  display: inline-flex;
+  width: 8px;
+  height: 8px;
+  background: #ff3344;
+  border-radius: 50%;
+  margin-left: auto;
+  animation: livePulse 1.4s ease-in-out infinite;
+  box-shadow: 0 0 0 0 rgba(255,51,68,0.7);
+}
+.drawer-nav-live .dni svg {
+  stroke: #ff3344;
+}
+
+@keyframes livePulse {
+  0%   { box-shadow: 0 0 0 0 rgba(255,51,68,0.7); }
+  70%  { box-shadow: 0 0 0 6px rgba(255,51,68,0); }
+  100% { box-shadow: 0 0 0 0 rgba(255,51,68,0); }
+}
+
+/* ── Badge "EN VIVO" junto al título del header ── */
+/* ── Badge EN VIVO en el header ── */
+.live-badge-header {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  background: #ff3344;
+  color: #fff;
+  font-size: 0.6rem;
+  font-weight: 800;
+  letter-spacing: 0.8px;
+  padding: 2px 7px;
+  border-radius: 20px;
+  vertical-align: middle;
+  margin-left: 8px;
+  animation: livePulse 1.4s ease-in-out infinite;
+}
+
+/* ── Notice de calidad encima del video ── */
+.live-quality-notice {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  background: rgba(255, 51, 68, 0.08);
+  border: 1px solid rgba(255, 51, 68, 0.25);
+  border-radius: 10px;
+  padding: 0.75rem 1rem;
+  margin: 0 0 0.75rem;
+  font-size: 0.8rem;
+  color: var(--text-secondary, #ccc);
+  line-height: 1.45;
+}
+.live-quality-notice svg {
+  color: #ff3344;
+  stroke: #ff3344;
+}
+.live-quality-notice strong {
+  color: var(--text-primary, #fff);
+}
+
+/* ── Layout: mobile (columna única) ── */
+.live-body {
+  display: flex;
+  flex-direction: column;
+  gap: 1.5rem;
+}
+
+/* ── Contenedor del iframe 16:9 con borde neon ── */
+.live-player-wrap {
+  position: relative;
+  width: 100%;
+  padding-top: 56.25%;
+  background: #000;
+  border-radius: 14px;
+  overflow: hidden;
+  min-height: 260px;
+  /* Borde neon mejorado */
+  border: 2px solid #00e5a0;
+  box-shadow:
+    0 0 10px rgba(0, 229, 160, 0.7),
+    0 0 28px rgba(0, 229, 160, 0.4),
+    0 0 60px rgba(0, 229, 160, 0.15);
+}
+.live-player-wrap iframe {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  border: none;
+}
+
+/* ── Ocultar logo SVG del header en móvil ── */
+@media (max-width: 767px) {
+  #tab-live .section-header svg:first-child {
+    display: none;
+  }
+  /* Ocultar logo del drawer en móvil */
+  .drawer-logo {
+    display: none !important;
+  }
+  .live-player-wrap {
+    padding-top: 56.25%;
+    min-height: 200px;
+    border-radius: 10px;
+  }
+  .live-body {
+    gap: 1.75rem;
+  }
+  .live-quality-notice {
+    font-size: 0.75rem;
+    padding: 0.6rem 0.8rem;
+  }
+}
+
+@media (max-width: 480px) {
+  .live-player-wrap {
+    padding-top: 56.25%;
+    min-height: 180px;
+  }
+  .live-body {
+    gap: 2rem;
+  }
+}
+
+/* ── Sección discord ── */
+.live-discord-section {
+  /* sin padding extra, lo maneja live-body gap */
+}
+
+/* ── Ajustes del header de la tab ── */
+#tab-live .section-header {
+  padding-bottom: 0.25rem;
+}
+
+/* ── Desktop: el tab-live rompe el max-width del app-main ── */
+@media (min-width: 768px) {
+  /* Hack full-bleed: sale del contenedor limitado a 900px */
+  #tab-live {
+    width: 100vw;
+    position: relative;
+    left: 50%;
+    right: 50%;
+    margin-left: -50vw;
+    margin-right: -50vw;
+    padding: 0 1.5rem;
+    box-sizing: border-box;
+    max-width: 100vw;
+  }
+  .live-body {
+    display: grid;
+    grid-template-columns: 1fr 300px;
+    align-items: start;
+    gap: 1.25rem;
+    max-width: 1400px;
+    margin: 0 auto;
+  }
+  .live-quality-notice {
+    max-width: 1400px;
+    margin-left: auto;
+    margin-right: auto;
+    margin-bottom: 0.75rem;
+  }
+  #tab-live .section-header {
+    max-width: 1400px;
+    margin-left: auto;
+    margin-right: auto;
+  }
+  .live-player-wrap {
+    padding-top: 56.25%;
+    min-height: unset;
+  }
+  .live-discord-section {
+    position: sticky;
+    top: 1rem;
+  }
+}
+
+/* ── Desktop grande (≥1200px): más espacio al video ── */
+@media (min-width: 1200px) {
+  .live-body {
+    grid-template-columns: 1fr 340px;
+    gap: 1.75rem;
+    max-width: 1600px;
+  }
+  .live-quality-notice,
+  #tab-live .section-header {
+    max-width: 1600px;
+  }
+  .live-quality-notice {
+    font-size: 0.85rem;
+  }
+  .live-player-wrap {
+    box-shadow:
+      0 0 14px rgba(0, 229, 160, 0.7),
+      0 0 38px rgba(0, 229, 160, 0.4),
+      0 0 80px rgba(0, 229, 160, 0.15);
   }
 }
