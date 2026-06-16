@@ -1,12 +1,5 @@
-/**
- * stats.js — Estadísticas v3
- * FIX: lista completa de jugadores del Mundial 2026 (64 equipos, ~400 jugadores)
- * FIX: seguimiento muestra foto+stats al clickear desde Dashboard
- */
-
-/* ── Pool completo de jugadores del Mundial 2026 (representativo) ── */
 const ALL_PLAYERS = [
-  /* ══ ARGENTINA ══ */
+  
   {id:'sp01', name:'Emiliano Martínez',  team:'Argentina', flag:'🇦🇷', goals:0,assists:0, pos:'POR', caps:38,  rating:87},
   {id:'sp02', name:'Nahuel Molina',       team:'Argentina', flag:'🇦🇷', goals:0,assists:0, pos:'DEF', caps:43,  rating:81},
   {id:'sp03', name:'Cristian Romero',     team:'Argentina', flag:'🇦🇷', goals:0,assists:0, pos:'DEF', caps:34,  rating:85},
@@ -18,7 +11,7 @@ const ALL_PLAYERS = [
   {id:'sp09', name:'Lionel Messi',        team:'Argentina', flag:'🇦🇷', goals:0,assists:0, pos:'DEL', caps:187, rating:93},
   {id:'sp10', name:'Julián Álvarez',      team:'Argentina', flag:'🇦🇷', goals:0,assists:0, pos:'DEL', caps:38,  rating:85},
   {id:'sp11', name:'Lautaro Martínez',    team:'Argentina', flag:'🇦🇷', goals:0,assists:0, pos:'DEL', caps:62,  rating:86},
-  /* ══ BRASIL ══ */
+  
   {id:'sp12', name:'Alisson Becker',      team:'Brasil',    flag:'🇧🇷', goals:0,assists:0, pos:'POR', caps:72,  rating:89},
   {id:'sp13', name:'Danilo',              team:'Brasil',    flag:'🇧🇷', goals:0,assists:0, pos:'DEF', caps:84,  rating:81},
   {id:'sp14', name:'Marquinhos',          team:'Brasil',    flag:'🇧🇷', goals:0,assists:0, pos:'DEF', caps:84,  rating:86},
@@ -30,7 +23,7 @@ const ALL_PLAYERS = [
   {id:'sp20', name:'Raphinha',            team:'Brasil',    flag:'🇧🇷', goals:0,assists:0, pos:'DEL', caps:52,  rating:86},
   {id:'sp21', name:'Vinicius Jr.',        team:'Brasil',    flag:'🇧🇷', goals:0,assists:0, pos:'DEL', caps:55,  rating:91},
   {id:'sp22', name:'Rodrygo',             team:'Brasil',    flag:'🇧🇷', goals:0,assists:0, pos:'DEL', caps:38,  rating:84},
-  /* ══ FRANCIA ══ */
+  
   {id:'sp23', name:'Mike Maignan',        team:'Francia',   flag:'🇫🇷', goals:0,assists:0, pos:'POR', caps:28,  rating:87},
   {id:'sp24', name:'Jules Koundé',        team:'Francia',   flag:'🇫🇷', goals:0,assists:0, pos:'DEF', caps:40,  rating:84},
   {id:'sp25', name:'Dayot Upamecano',     team:'Francia',   flag:'🇫🇷', goals:0,assists:0, pos:'DEF', caps:36,  rating:84},
@@ -42,7 +35,7 @@ const ALL_PLAYERS = [
   {id:'sp31', name:'Ousmane Dembélé',     team:'Francia',   flag:'🇫🇷', goals:0,assists:0, pos:'DEL', caps:57,  rating:84},
   {id:'sp32', name:'Kylian Mbappé',       team:'Francia',   flag:'🇫🇷', goals:0,assists:0, pos:'DEL', caps:82,  rating:92},
   {id:'sp33', name:'Marcus Thuram',       team:'Francia',   flag:'🇫🇷', goals:0,assists:0, pos:'DEL', caps:30,  rating:83},
-  /* ══ ESPAÑA ══ */
+  
   {id:'sp34', name:'Unai Simón',          team:'España',    flag:'🇪🇸', goals:0,assists:0, pos:'POR', caps:28,  rating:84},
   {id:'sp35', name:'Dani Carvajal',       team:'España',    flag:'🇪🇸', goals:0,assists:0, pos:'DEF', caps:77,  rating:84},
   {id:'sp36', name:'Aymeric Laporte',     team:'España',    flag:'🇪🇸', goals:0,assists:0, pos:'DEF', caps:20,  rating:83},
@@ -54,7 +47,7 @@ const ALL_PLAYERS = [
   {id:'sp42', name:'Lamine Yamal',        team:'España',    flag:'🇪🇸', goals:0,assists:0, pos:'DEL', caps:20,  rating:88},
   {id:'sp43', name:'Álvaro Morata',       team:'España',    flag:'🇪🇸', goals:0,assists:0, pos:'DEL', caps:72,  rating:82},
   {id:'sp44', name:'Nico Williams',       team:'España',    flag:'🇪🇸', goals:0,assists:0, pos:'DEL', caps:18,  rating:85},
-  /* ══ PORTUGAL ══ */
+  
   {id:'sp45', name:'Diogo Costa',         team:'Portugal',  flag:'🇵🇹', goals:0,assists:0, pos:'POR', caps:22,  rating:84},
   {id:'sp46', name:'João Cancelo',        team:'Portugal',  flag:'🇵🇹', goals:0,assists:0, pos:'DEF', caps:56,  rating:85},
   {id:'sp47', name:'Rúben Dias',          team:'Portugal',  flag:'🇵🇹', goals:0,assists:0, pos:'DEF', caps:74,  rating:88},
@@ -66,7 +59,7 @@ const ALL_PLAYERS = [
   {id:'sp53', name:'Cristiano Ronaldo',   team:'Portugal',  flag:'🇵🇹', goals:0,assists:0, pos:'DEL', caps:215, rating:88},
   {id:'sp54', name:'Diogo Jota',          team:'Portugal',  flag:'🇵🇹', goals:0,assists:0, pos:'DEL', caps:49,  rating:84},
   {id:'sp55', name:'Rafael Leão',         team:'Portugal',  flag:'🇵🇹', goals:0,assists:0, pos:'DEL', caps:32,  rating:85},
-  /* ══ ALEMANIA ══ */
+  
   {id:'sp56', name:'Manuel Neuer',        team:'Alemania',  flag:'🇩🇪', goals:0,assists:0, pos:'POR', caps:124, rating:86},
   {id:'sp57', name:'Joshua Kimmich',      team:'Alemania',  flag:'🇩🇪', goals:0,assists:0, pos:'DEF', caps:94,  rating:87},
   {id:'sp58', name:'Antonio Rüdiger',     team:'Alemania',  flag:'🇩🇪', goals:0,assists:0, pos:'DEF', caps:71,  rating:86},
@@ -78,7 +71,7 @@ const ALL_PLAYERS = [
   {id:'sp64', name:'Florian Wirtz',       team:'Alemania',  flag:'🇩🇪', goals:0,assists:0, pos:'MED', caps:30,  rating:87},
   {id:'sp65', name:'Thomas Müller',       team:'Alemania',  flag:'🇩🇪', goals:0,assists:0, pos:'DEL', caps:131, rating:83},
   {id:'sp66', name:'Kai Havertz',         team:'Alemania',  flag:'🇩🇪', goals:0,assists:0, pos:'DEL', caps:60,  rating:84},
-  /* ══ INGLATERRA ══ */
+  
   {id:'sp67', name:'Jordan Pickford',     team:'Inglaterra',flag:'🏴󠁧󠁢󠁥󠁮󠁧󠁿', goals:0,assists:0, pos:'POR', caps:60,  rating:85},
   {id:'sp68', name:'Trent Alexander-Arnold',team:'Inglaterra',flag:'🏴󠁧󠁢󠁥󠁮󠁧󠁿',goals:0,assists:0,pos:'DEF',caps:52, rating:86},
   {id:'sp69', name:'John Stones',         team:'Inglaterra',flag:'🏴󠁧󠁢󠁥󠁮󠁧󠁿', goals:0,assists:0, pos:'DEF', caps:73,  rating:85},
@@ -90,7 +83,7 @@ const ALL_PLAYERS = [
   {id:'sp75', name:'Bukayo Saka',         team:'Inglaterra',flag:'🏴󠁧󠁢󠁥󠁮󠁧󠁿', goals:0,assists:0, pos:'DEL', caps:50,  rating:87},
   {id:'sp76', name:'Harry Kane',          team:'Inglaterra',flag:'🏴󠁧󠁢󠁥󠁮󠁧󠁿', goals:0,assists:0, pos:'DEL', caps:92,  rating:88},
   {id:'sp77', name:'Phil Foden',          team:'Inglaterra',flag:'🏴󠁧󠁢󠁥󠁮󠁧󠁿', goals:0,assists:0, pos:'DEL', caps:42,  rating:87},
-  /* ══ PAÍSES BAJOS ══ */
+  
   {id:'sp78', name:'Bart Verbruggen',     team:'Países Bajos',flag:'🇳🇱', goals:0,assists:0, pos:'POR', caps:14, rating:82},
   {id:'sp79', name:'Denzel Dumfries',     team:'Países Bajos',flag:'🇳🇱', goals:0,assists:0, pos:'DEF', caps:58, rating:83},
   {id:'sp80', name:'Virgil van Dijk',     team:'Países Bajos',flag:'🇳🇱', goals:0,assists:0, pos:'DEF', caps:64, rating:87},
@@ -102,7 +95,7 @@ const ALL_PLAYERS = [
   {id:'sp86', name:'Cody Gakpo',          team:'Países Bajos',flag:'🇳🇱', goals:0,assists:0, pos:'DEL', caps:38, rating:84},
   {id:'sp87', name:'Memphis Depay',       team:'Países Bajos',flag:'🇳🇱', goals:0,assists:0, pos:'DEL', caps:108,rating:83},
   {id:'sp88', name:'Donyell Malen',       team:'Países Bajos',flag:'🇳🇱', goals:0,assists:0, pos:'DEL', caps:30, rating:82},
-  /* ══ BÉLGICA ══ */
+  
   {id:'sp89', name:'Thibaut Courtois',    team:'Bélgica',   flag:'🇧🇪', goals:0,assists:0, pos:'POR', caps:102, rating:90},
   {id:'sp90', name:'Thomas Meunier',      team:'Bélgica',   flag:'🇧🇪', goals:0,assists:0, pos:'DEF', caps:92,  rating:79},
   {id:'sp91', name:'Toby Alderweireld',   team:'Bélgica',   flag:'🇧🇪', goals:0,assists:0, pos:'DEF', caps:127, rating:82},
@@ -114,7 +107,7 @@ const ALL_PLAYERS = [
   {id:'sp97', name:'Romelu Lukaku',       team:'Bélgica',   flag:'🇧🇪', goals:0,assists:0, pos:'DEL', caps:112, rating:84},
   {id:'sp98', name:'Dries Mertens',       team:'Bélgica',   flag:'🇧🇪', goals:0,assists:0, pos:'DEL', caps:109, rating:81},
   {id:'sp99', name:'Leandro Trossard',    team:'Bélgica',   flag:'🇧🇪', goals:0,assists:0, pos:'DEL', caps:40,  rating:83},
-  /* ══ MARRUECOS ══ */
+  
   {id:'sp100',name:'Yassine Bounou',      team:'Marruecos', flag:'🇲🇦', goals:0,assists:0, pos:'POR', caps:66,  rating:86},
   {id:'sp101',name:'Achraf Hakimi',       team:'Marruecos', flag:'🇲🇦', goals:0,assists:0, pos:'DEF', caps:75,  rating:86},
   {id:'sp102',name:'Nayef Aguerd',        team:'Marruecos', flag:'🇲🇦', goals:0,assists:0, pos:'DEF', caps:42,  rating:82},
@@ -126,7 +119,7 @@ const ALL_PLAYERS = [
   {id:'sp108',name:'Youssef En-Nesyri',   team:'Marruecos', flag:'🇲🇦', goals:0,assists:0, pos:'DEL', caps:58,  rating:82},
   {id:'sp109',name:'Sofiane Boufal',      team:'Marruecos', flag:'🇲🇦', goals:0,assists:0, pos:'DEL', caps:48,  rating:81},
   {id:'sp110',name:'Abderrazak Hamdallah',team:'Marruecos', flag:'🇲🇦', goals:0,assists:0, pos:'DEL', caps:48,  rating:80},
-  /* ══ JAPÓN ══ */
+  
   {id:'sp111',name:'Shuichi Gonda',       team:'Japón',     flag:'🇯🇵', goals:0,assists:0, pos:'POR', caps:58,  rating:80},
   {id:'sp112',name:'Hiroki Sakai',        team:'Japón',     flag:'🇯🇵', goals:0,assists:0, pos:'DEF', caps:68,  rating:79},
   {id:'sp113',name:'Maya Yoshida',        team:'Japón',     flag:'🇯🇵', goals:0,assists:0, pos:'DEF', caps:136, rating:79},
@@ -138,7 +131,7 @@ const ALL_PLAYERS = [
   {id:'sp119',name:'Kaoru Mitoma',        team:'Japón',     flag:'🇯🇵', goals:0,assists:0, pos:'DEL', caps:40,  rating:84},
   {id:'sp120',name:'Ritsu Doan',          team:'Japón',     flag:'🇯🇵', goals:0,assists:0, pos:'DEL', caps:50,  rating:82},
   {id:'sp121',name:'Daichi Kamada',       team:'Japón',     flag:'🇯🇵', goals:0,assists:0, pos:'DEL', caps:44,  rating:82},
-  /* ══ MÉXICO ══ */
+  
   {id:'sp122',name:'Guillermo Ochoa',     team:'México',    flag:'🇲🇽', goals:0,assists:0, pos:'POR', caps:152, rating:82},
   {id:'sp123',name:'Jorge Sánchez',       team:'México',    flag:'🇲🇽', goals:0,assists:0, pos:'DEF', caps:38,  rating:78},
   {id:'sp124',name:'César Montes',        team:'México',    flag:'🇲🇽', goals:0,assists:0, pos:'DEF', caps:40,  rating:79},
@@ -150,7 +143,7 @@ const ALL_PLAYERS = [
   {id:'sp130',name:'Hirving Lozano',      team:'México',    flag:'🇲🇽', goals:0,assists:0, pos:'DEL', caps:76,  rating:82},
   {id:'sp131',name:'Santiago Giménez',    team:'México',    flag:'🇲🇽', goals:0,assists:0, pos:'DEL', caps:32,  rating:83},
   {id:'sp132',name:'Chucky Lozano',       team:'México',    flag:'🇲🇽', goals:0,assists:0, pos:'DEL', caps:76,  rating:82},
-  /* ══ ESTADOS UNIDOS ══ */
+  
   {id:'sp133',name:'Matt Turner',         team:'EEUU',      flag:'🇺🇸', goals:0,assists:0, pos:'POR', caps:36,  rating:80},
   {id:'sp134',name:'Sergino Dest',        team:'EEUU',      flag:'🇺🇸', goals:0,assists:0, pos:'DEF', caps:38,  rating:80},
   {id:'sp135',name:'Tim Ream',            team:'EEUU',      flag:'🇺🇸', goals:0,assists:0, pos:'DEF', caps:62,  rating:78},
@@ -162,7 +155,7 @@ const ALL_PLAYERS = [
   {id:'sp141',name:'Christian Pulisic',   team:'EEUU',      flag:'🇺🇸', goals:0,assists:0, pos:'DEL', caps:69,  rating:83},
   {id:'sp142',name:'Ricardo Pepi',        team:'EEUU',      flag:'🇺🇸', goals:0,assists:0, pos:'DEL', caps:24,  rating:80},
   {id:'sp143',name:'Gio Reyna',           team:'EEUU',      flag:'🇺🇸', goals:0,assists:0, pos:'DEL', caps:30,  rating:81},
-  /* ══ NORUEGA ══ */
+  
   {id:'sp144',name:'Ørjan Nyland',        team:'Noruega',   flag:'🇳🇴', goals:0,assists:0, pos:'POR', caps:48,  rating:80},
   {id:'sp145',name:'Kristoffer Ajer',     team:'Noruega',   flag:'🇳🇴', goals:0,assists:0, pos:'DEF', caps:52,  rating:81},
   {id:'sp146',name:'Leo Østigård',        team:'Noruega',   flag:'🇳🇴', goals:0,assists:0, pos:'DEF', caps:30,  rating:79},
@@ -174,7 +167,7 @@ const ALL_PLAYERS = [
   {id:'sp152',name:'Erling Haaland',      team:'Noruega',   flag:'🇳🇴', goals:0,assists:0, pos:'DEL', caps:34,  rating:91},
   {id:'sp153',name:'Alexander Sørloth',   team:'Noruega',   flag:'🇳🇴', goals:0,assists:0, pos:'DEL', caps:58,  rating:82},
   {id:'sp154',name:'Mohamed Elyounoussi',team:'Noruega',   flag:'🇳🇴', goals:0,assists:0, pos:'DEL', caps:74,  rating:79},
-  /* ══ URUGUAY ══ */
+  
   {id:'sp155',name:'Sergio Rochet',       team:'Uruguay',   flag:'🇺🇾', goals:0,assists:0, pos:'POR', caps:28,  rating:81},
   {id:'sp156',name:'Nahitan Nández',      team:'Uruguay',   flag:'🇺🇾', goals:0,assists:0, pos:'DEF', caps:52,  rating:81},
   {id:'sp157',name:'José María Giménez',  team:'Uruguay',   flag:'🇺🇾', goals:0,assists:0, pos:'DEF', caps:60,  rating:83},
@@ -186,7 +179,7 @@ const ALL_PLAYERS = [
   {id:'sp163',name:'Darwin Núñez',        team:'Uruguay',   flag:'🇺🇾', goals:0,assists:0, pos:'DEL', caps:39,  rating:85},
   {id:'sp164',name:'Luis Suárez',         team:'Uruguay',   flag:'🇺🇾', goals:0,assists:0, pos:'DEL', caps:142, rating:82},
   {id:'sp165',name:'Facundo Torres',      team:'Uruguay',   flag:'🇺🇾', goals:0,assists:0, pos:'DEL', caps:22,  rating:80},
-  /* ══ COLOMBIA ══ */
+  
   {id:'sp166',name:'Camilo Vargas',       team:'Colombia',  flag:'🇨🇴', goals:0,assists:0, pos:'POR', caps:40,  rating:79},
   {id:'sp167',name:'Santiago Arias',      team:'Colombia',  flag:'🇨🇴', goals:0,assists:0, pos:'DEF', caps:58,  rating:78},
   {id:'sp168',name:'Yerry Mina',          team:'Colombia',  flag:'🇨🇴', goals:0,assists:0, pos:'DEF', caps:49,  rating:80},
@@ -198,7 +191,7 @@ const ALL_PLAYERS = [
   {id:'sp174',name:'Luis Díaz',           team:'Colombia',  flag:'🇨🇴', goals:0,assists:0, pos:'DEL', caps:42,  rating:86},
   {id:'sp175',name:'Falcao García',       team:'Colombia',  flag:'🇨🇴', goals:0,assists:0, pos:'DEL', caps:109, rating:79},
   {id:'sp176',name:'Rafael Santos Borré', team:'Colombia',  flag:'🇨🇴', goals:0,assists:0, pos:'DEL', caps:44,  rating:80},
-  /* ══ SENEGAL ══ */
+  
   {id:'sp177',name:'Edouard Mendy',       team:'Senegal',   flag:'🇸🇳', goals:0,assists:0, pos:'POR', caps:54,  rating:83},
   {id:'sp178',name:'Youssouf Sabaly',     team:'Senegal',   flag:'🇸🇳', goals:0,assists:0, pos:'DEF', caps:40,  rating:79},
   {id:'sp179',name:'Kalidou Koulibaly',   team:'Senegal',   flag:'🇸🇳', goals:0,assists:0, pos:'DEF', caps:92,  rating:85},
@@ -210,7 +203,7 @@ const ALL_PLAYERS = [
   {id:'sp185',name:'Sadio Mané',          team:'Senegal',   flag:'🇸🇳', goals:0,assists:0, pos:'DEL', caps:99,  rating:84},
   {id:'sp186',name:'Famara Diédhiou',     team:'Senegal',   flag:'🇸🇳', goals:0,assists:0, pos:'DEL', caps:44,  rating:79},
   {id:'sp187',name:'Boulaye Dia',         team:'Senegal',   flag:'🇸🇳', goals:0,assists:0, pos:'DEL', caps:22,  rating:80},
-  /* ══ CANADÁ ══ */
+  
   {id:'sp188',name:'Maxime Crépeau',      team:'Canadá',    flag:'🇨🇦', goals:0,assists:0, pos:'POR', caps:36,  rating:79},
   {id:'sp189',name:'Richie Laryea',       team:'Canadá',    flag:'🇨🇦', goals:0,assists:0, pos:'DEF', caps:40,  rating:78},
   {id:'sp190',name:'Steven Vitória',      team:'Canadá',    flag:'🇨🇦', goals:0,assists:0, pos:'DEF', caps:30,  rating:78},
@@ -222,7 +215,7 @@ const ALL_PLAYERS = [
   {id:'sp196',name:'Cyle Larin',          team:'Canadá',    flag:'🇨🇦', goals:0,assists:0, pos:'DEL', caps:60,  rating:80},
   {id:'sp197',name:'Jonathan David',      team:'Canadá',    flag:'🇨🇦', goals:0,assists:0, pos:'DEL', caps:36,  rating:84},
   {id:'sp198',name:'Tajon Buchanan',      team:'Canadá',    flag:'🇨🇦', goals:0,assists:0, pos:'DEL', caps:34,  rating:80},
-  /* ══ SUIZA ══ */
+  
   {id:'sp199',name:'Yann Sommer',         team:'Suiza',     flag:'🇨🇭', goals:0,assists:0, pos:'POR', caps:94,  rating:85},
   {id:'sp200',name:'Silvan Widmer',       team:'Suiza',     flag:'🇨🇭', goals:0,assists:0, pos:'DEF', caps:44,  rating:80},
   {id:'sp201',name:'Manuel Akanji',       team:'Suiza',     flag:'🇨🇭', goals:0,assists:0, pos:'DEF', caps:52,  rating:84},
@@ -234,7 +227,7 @@ const ALL_PLAYERS = [
   {id:'sp207',name:'Ruben Vargas',        team:'Suiza',     flag:'🇨🇭', goals:0,assists:0, pos:'DEL', caps:32,  rating:80},
   {id:'sp208',name:'Breel Embolo',        team:'Suiza',     flag:'🇨🇭', goals:0,assists:0, pos:'DEL', caps:52,  rating:81},
   {id:'sp209',name:'Haris Seferovic',     team:'Suiza',     flag:'🇨🇭', goals:0,assists:0, pos:'DEL', caps:88,  rating:79},
-  /* ══ CROACIA ══ */
+  
   {id:'sp210',name:'Dominik Livaković',   team:'Croacia',   flag:'🇭🇷', goals:0,assists:0, pos:'POR', caps:48,  rating:84},
   {id:'sp211',name:'Josip Juranović',     team:'Croacia',   flag:'🇭🇷', goals:0,assists:0, pos:'DEF', caps:48,  rating:80},
   {id:'sp212',name:'Domagoj Vida',        team:'Croacia',   flag:'🇭🇷', goals:0,assists:0, pos:'DEF', caps:104, rating:79},
@@ -246,7 +239,7 @@ const ALL_PLAYERS = [
   {id:'sp218',name:'Ivan Perišić',        team:'Croacia',   flag:'🇭🇷', goals:0,assists:0, pos:'DEL', caps:123, rating:82},
   {id:'sp219',name:'Andrej Kramarić',     team:'Croacia',   flag:'🇭🇷', goals:0,assists:0, pos:'DEL', caps:82,  rating:82},
   {id:'sp220',name:'Bruno Petković',      team:'Croacia',   flag:'🇭🇷', goals:0,assists:0, pos:'DEL', caps:42,  rating:79},
-  /* ══ DINAMARCA ══ */
+  
   {id:'sp221',name:'Kasper Schmeichel',   team:'Dinamarca', flag:'🇩🇰', goals:0,assists:0, pos:'POR', caps:92,  rating:83},
   {id:'sp222',name:'Henrik Dalsgaard',    team:'Dinamarca', flag:'🇩🇰', goals:0,assists:0, pos:'DEF', caps:50,  rating:78},
   {id:'sp223',name:'Andreas Christensen', team:'Dinamarca', flag:'🇩🇰', goals:0,assists:0, pos:'DEF', caps:60,  rating:84},
@@ -258,7 +251,7 @@ const ALL_PLAYERS = [
   {id:'sp229',name:'Mikkel Damsgaard',    team:'Dinamarca', flag:'🇩🇰', goals:0,assists:0, pos:'DEL', caps:30,  rating:81},
   {id:'sp230',name:'Jonas Wind',          team:'Dinamarca', flag:'🇩🇰', goals:0,assists:0, pos:'DEL', caps:22,  rating:79},
   {id:'sp231',name:'Kasper Dolberg',      team:'Dinamarca', flag:'🇩🇰', goals:0,assists:0, pos:'DEL', caps:40,  rating:79},
-  /* ══ NIGERIA ══ */
+  
   {id:'sp232',name:'Francis Uzoho',       team:'Nigeria',   flag:'🇳🇬', goals:0,assists:0, pos:'POR', caps:32,  rating:78},
   {id:'sp233',name:'Ola Aina',            team:'Nigeria',   flag:'🇳🇬', goals:0,assists:0, pos:'DEF', caps:44,  rating:79},
   {id:'sp234',name:'William Troost-Ekong',team:'Nigeria',   flag:'🇳🇬', goals:0,assists:0, pos:'DEF', caps:62,  rating:80},
@@ -270,7 +263,7 @@ const ALL_PLAYERS = [
   {id:'sp240',name:'Victor Osimhen',      team:'Nigeria',   flag:'🇳🇬', goals:0,assists:0, pos:'DEL', caps:32,  rating:86},
   {id:'sp241',name:'Samuel Chukwueze',    team:'Nigeria',   flag:'🇳🇬', goals:0,assists:0, pos:'DEL', caps:44,  rating:81},
   {id:'sp242',name:'Kelechi Iheanacho',   team:'Nigeria',   flag:'🇳🇬', goals:0,assists:0, pos:'DEL', caps:52,  rating:79},
-  /* ══ PERÚ ══ */
+  
   {id:'sp243',name:'Pedro Gallese',       team:'Perú',      flag:'🇵🇪', goals:0,assists:0, pos:'POR', caps:68,  rating:80},
   {id:'sp244',name:'Luis Advíncula',      team:'Perú',      flag:'🇵🇪', goals:0,assists:0, pos:'DEF', caps:94,  rating:79},
   {id:'sp245',name:'Alexander Callens',   team:'Perú',      flag:'🇵🇪', goals:0,assists:0, pos:'DEF', caps:42,  rating:78},
@@ -282,7 +275,7 @@ const ALL_PLAYERS = [
   {id:'sp251',name:'André Carrillo',      team:'Perú',      flag:'🇵🇪', goals:0,assists:0, pos:'DEL', caps:102, rating:78},
   {id:'sp252',name:'Paolo Guerrero',      team:'Perú',      flag:'🇵🇪', goals:0,assists:0, pos:'DEL', caps:108, rating:77},
   {id:'sp253',name:'Edison Flores',       team:'Perú',      flag:'🇵🇪', goals:0,assists:0, pos:'DEL', caps:76,  rating:78},
-  /* ══ ECUADOR ══ */
+  
   {id:'sp254',name:'Hernán Galíndez',     team:'Ecuador',   flag:'🇪🇨', goals:0,assists:0, pos:'POR', caps:30,  rating:79},
   {id:'sp255',name:'Angelo Preciado',     team:'Ecuador',   flag:'🇪🇨', goals:0,assists:0, pos:'DEF', caps:38,  rating:78},
   {id:'sp256',name:'Piero Hincapié',      team:'Ecuador',   flag:'🇪🇨', goals:0,assists:0, pos:'DEF', caps:34,  rating:82},
@@ -294,7 +287,7 @@ const ALL_PLAYERS = [
   {id:'sp262',name:'Enner Valencia',      team:'Ecuador',   flag:'🇪🇨', goals:0,assists:0, pos:'DEL', caps:87,  rating:82},
   {id:'sp263',name:'Jeremy Sarmiento',    team:'Ecuador',   flag:'🇪🇨', goals:0,assists:0, pos:'DEL', caps:24,  rating:79},
   {id:'sp264',name:'Gonzalo Plata',       team:'Ecuador',   flag:'🇪🇨', goals:0,assists:0, pos:'DEL', caps:36,  rating:79},
-  /* ══ AUSTRALIA ══ */
+  
   {id:'sp265',name:'Mat Ryan',            team:'Australia', flag:'🇦🇺', goals:0,assists:0, pos:'POR', caps:82,  rating:80},
   {id:'sp266',name:'Nathaniel Atkinson',  team:'Australia', flag:'🇦🇺', goals:0,assists:0, pos:'DEF', caps:24,  rating:76},
   {id:'sp267',name:'Harry Souttar',       team:'Australia', flag:'🇦🇺', goals:0,assists:0, pos:'DEF', caps:26,  rating:79},
@@ -306,7 +299,7 @@ const ALL_PLAYERS = [
   {id:'sp273',name:'Mathew Leckie',       team:'Australia', flag:'🇦🇺', goals:0,assists:0, pos:'DEL', caps:90,  rating:78},
   {id:'sp274',name:'Mitchell Duke',       team:'Australia', flag:'🇦🇺', goals:0,assists:0, pos:'DEL', caps:40,  rating:76},
   {id:'sp275',name:'Craig Goodwin',       team:'Australia', flag:'🇦🇺', goals:0,assists:0, pos:'DEL', caps:30,  rating:76},
-  /* ══ IRÁN ══ */
+  
   {id:'sp276',name:'Alireza Beiranvand',  team:'Irán',      flag:'🇮🇷', goals:0,assists:0, pos:'POR', caps:62,  rating:80},
   {id:'sp277',name:'Sadegh Moharrami',    team:'Irán',      flag:'🇮🇷', goals:0,assists:0, pos:'DEF', caps:44,  rating:77},
   {id:'sp278',name:'Majid Hosseini',      team:'Irán',      flag:'🇮🇷', goals:0,assists:0, pos:'DEF', caps:38,  rating:78},
@@ -318,7 +311,7 @@ const ALL_PLAYERS = [
   {id:'sp284',name:'Sardar Azmoun',       team:'Irán',      flag:'🇮🇷', goals:0,assists:0, pos:'DEL', caps:68,  rating:80},
   {id:'sp285',name:'Mehdi Taremi',        team:'Irán',      flag:'🇮🇷', goals:0,assists:0, pos:'DEL', caps:78,  rating:82},
   {id:'sp286',name:'Alireza Jahanbakhsh', team:'Irán',      flag:'🇮🇷', goals:0,assists:0, pos:'DEL', caps:90,  rating:79},
-  /* ══ ARABIA SAUDITA ══ */
+  
   {id:'sp287',name:'Mohammed Al-Owais',   team:'Arabia Saudita',flag:'🇸🇦', goals:0,assists:0, pos:'POR', caps:56, rating:80},
   {id:'sp288',name:'Saud Abdulhamid',     team:'Arabia Saudita',flag:'🇸🇦', goals:0,assists:0, pos:'DEF', caps:48, rating:78},
   {id:'sp289',name:'Ali Al-Bulaihi',      team:'Arabia Saudita',flag:'🇸🇦', goals:0,assists:0, pos:'DEF', caps:52, rating:77},
@@ -330,7 +323,7 @@ const ALL_PLAYERS = [
   {id:'sp295',name:'Salem Al-Dawsari',    team:'Arabia Saudita',flag:'🇸🇦', goals:0,assists:0, pos:'DEL', caps:89, rating:78},
   {id:'sp296',name:'Firas Al-Buraikan',   team:'Arabia Saudita',flag:'🇸🇦', goals:0,assists:0, pos:'DEL', caps:38, rating:77},
   {id:'sp297',name:'Abdullah Al-Hamdan',  team:'Arabia Saudita',flag:'🇸🇦', goals:0,assists:0, pos:'DEL', caps:28, rating:77},
-  /* ══ GHANA ══ */
+  
   {id:'sp298',name:'Lawrence Ati-Zigi',   team:'Ghana',     flag:'🇬🇭', goals:0,assists:0, pos:'POR', caps:32,  rating:79},
   {id:'sp299',name:'Andrew Ayew',         team:'Ghana',     flag:'🇬🇭', goals:0,assists:0, pos:'DEF', caps:76,  rating:78},
   {id:'sp300',name:'Alexander Djiku',     team:'Ghana',     flag:'🇬🇭', goals:0,assists:0, pos:'DEF', caps:36,  rating:78},
@@ -342,7 +335,7 @@ const ALL_PLAYERS = [
   {id:'sp306',name:'Jordan Ayew',         team:'Ghana',     flag:'🇬🇭', goals:0,assists:0, pos:'DEL', caps:90,  rating:78},
   {id:'sp307',name:'Mohammed Kudus',      team:'Ghana',     flag:'🇬🇭', goals:0,assists:0, pos:'DEL', caps:30,  rating:82},
   {id:'sp308',name:'Inaki Williams',      team:'Ghana',     flag:'🇬🇭', goals:0,assists:0, pos:'DEL', caps:14,  rating:80},
-  /* ══ SUDÁFRICA ══ */
+  
   {id:'sp309',name:'Ronwen Williams',     team:'Sudáfrica', flag:'🇿🇦', goals:0,assists:0, pos:'POR', caps:38,  rating:79},
   {id:'sp310',name:'Sifiso Hlanti',       team:'Sudáfrica', flag:'🇿🇦', goals:0,assists:0, pos:'DEF', caps:30,  rating:76},
   {id:'sp311',name:'Rushine de Reuck',    team:'Sudáfrica', flag:'🇿🇦', goals:0,assists:0, pos:'DEF', caps:30,  rating:76},
@@ -362,14 +355,14 @@ const Stats = {
 
   async render(tab = 'teams') {
     this._currentTab = tab;
-    // Restaurar el input de búsqueda si hay query guardada
+    
     const input = document.getElementById('search-input');
     if (input && this._lastQuery) input.value = this._lastQuery;
     const content = document.getElementById('stats-content');
     if (!content) return;
     content.innerHTML = '<div class="spinner"></div>';
     try {
-      // Usar la última query al cambiar de tab para no perder la búsqueda
+      
       const q = this._lastQuery;
       if (tab === 'teams')   await this.renderTeams(content, q);
       if (tab === 'players') await this.renderPlayers(content, q);
@@ -382,9 +375,9 @@ const Stats = {
 
   async renderTeams(container, query = '') {
     let teams = await API.getTeams(query);
-    // BUG FIX: si la API devuelve vacío, asegurarse de tener datos
+    
     if (!teams || teams.length === 0) {
-      teams = await API.getTeams(query); // un reintento
+      teams = await API.getTeams(query); 
     }
     const user    = await Auth.currentUser();
     const favIds  = new Set((user?.favoritos || []).map(f => f.id));
@@ -423,7 +416,7 @@ const Stats = {
 
     container.querySelectorAll('.fav-btn').forEach(btn => {
       btn.addEventListener('click', async () => {
-        const isFav = await Profile.isFavorite(btn.dataset.id, 'team'); // BUG FIX: pasar tipo
+        const isFav = await Profile.isFavorite(btn.dataset.id, 'team'); 
         if (isFav) {
           await Profile.removeFavorite(btn.dataset.id, 'team');
           btn.textContent = '☆'; btn.classList.remove('active');
@@ -436,8 +429,8 @@ const Stats = {
   },
 
   async renderPlayers(container, query = '') {
-    // BUG FIX: usar ALL_PLAYERS como base completa, enriquecer con datos de API si disponibles
-    // API.getPlayers() usa IDs 'p01', ALL_PLAYERS usa 'sp01' → fusionar por nombre
+    
+    
     let merged = [...ALL_PLAYERS];
     try {
       const apiPlayers = await API.getPlayers('');
@@ -446,7 +439,7 @@ const Stats = {
         for (const p of apiPlayers) {
           if (!allNames.has(p.name.toLowerCase())) merged.push(p);
         }
-        // Actualizar stats (goles/asistencias) de los que ya están en merged
+        
         apiPlayers.forEach(ap => {
           const existing = merged.find(p => p.name.toLowerCase() === ap.name.toLowerCase());
           if (existing && (ap.goals > 0 || ap.assists > 0)) {
@@ -455,8 +448,8 @@ const Stats = {
           }
         });
       }
-    } catch(_) { /* usar ALL_PLAYERS como fallback */ }
-    // Filter by query
+    } catch(_) {  }
+    
     const q       = query.toLowerCase();
     const players = q
       ? merged.filter(p => p.name.toLowerCase().includes(q) || matchesSearch(p.team, query))
@@ -500,7 +493,7 @@ const Stats = {
 
     container.querySelectorAll('.fav-btn').forEach(btn => {
       btn.addEventListener('click', async () => {
-        const isFav = await Profile.isFavorite(btn.dataset.id, 'player'); // BUG FIX: pasar tipo
+        const isFav = await Profile.isFavorite(btn.dataset.id, 'player'); 
         if (isFav) {
           await Profile.removeFavorite(btn.dataset.id, 'player');
           btn.textContent = '☆'; btn.classList.remove('active');
@@ -533,7 +526,7 @@ const Stats = {
       </div>`;
   },
 
-  /* ── Grupos A–L completos desde la API ── */
+  
   async renderGroups(container) {
     container.innerHTML = '<div class="spinner"></div>';
     try {

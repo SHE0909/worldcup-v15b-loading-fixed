@@ -1,10 +1,5 @@
-/**
- * auth.js — Sistema de autenticación (registro, login, logout)
- * Usa IndexedDB como almacenamiento. Contraseñas hasheadas con SHA-256.
- */
-
 const Auth = {
-  /* ---- Hash simple con Web Crypto API ---- */
+  
   async hashPassword(password) {
     const encoder = new TextEncoder();
     const data    = encoder.encode(password);
@@ -14,7 +9,7 @@ const Auth = {
       .join('');
   },
 
-  /* ---- Validaciones ---- */
+  
   validateEmail(email) {
     return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
   },
@@ -23,7 +18,7 @@ const Auth = {
     return password.length >= 6;
   },
 
-  /* ---- Registro ---- */
+  
   async register({ name, email, password }) {
     if (!name || name.trim().length < 2)
       return { ok: false, field: 'name', msg: 'El nombre debe tener al menos 2 caracteres' };
@@ -45,7 +40,7 @@ const Auth = {
       passwordHash:     hash,
       createdAt:        new Date().toISOString(),
       tiradas:          5,
-      freeSpinsClaimed: true,   // marca permanente: tiradas iniciales ya entregadas
+      freeSpinsClaimed: true,   
       monedas:          0,
       figuritas:        [],
       favoritos:        [],
@@ -59,7 +54,7 @@ const Auth = {
     return { ok: true };
   },
 
-  /* ---- Login ---- */
+  
   async login({ email, password }) {
     if (!this.validateEmail(email))
       return { ok: false, field: 'email', msg: 'Correo inválido' };
@@ -74,7 +69,7 @@ const Auth = {
 
     await DB.setSession(email);
 
-    // Cuenta especial: bonus de tiradas en cada login
+    
     if (email.toLowerCase().trim() === 'marruecosparaelmundial@gmail.com') {
       const fresh = await DB.getUser(email);
       if (fresh) await DB.updateUser(email, { tiradas: (fresh.tiradas || 0) + 50 });
@@ -83,12 +78,12 @@ const Auth = {
     return { ok: true, user };
   },
 
-  /* ---- Logout ---- */
+  
   async logout() {
     await DB.clearSession();
   },
 
-  /* ---- Recuperar sesión al cargar la app ---- */
+  
   async recoverSession() {
     const email = await DB.getSession();
     if (!email) return null;
@@ -96,12 +91,12 @@ const Auth = {
     return user || null;
   },
 
-  /* ---- Obtener usuario actual ---- */
+  
   async currentUser() {
     return await this.recoverSession();
   },
 
-  /* ---- Actualizar datos del usuario ---- */
+  
   async updateUser(updatedUser) {
     await DB.saveUser(updatedUser);
   }

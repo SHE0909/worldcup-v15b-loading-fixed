@@ -1,9 +1,5 @@
-
-
-/* ---- RESET & BASE ---- */
 *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 
-/* Evita que "Alto Contraste" de Windows sobreescriba los colores del app */
 @media (forced-colors: active) {
   *, *::before, *::after { forced-color-adjust: none; }
 }
@@ -21,7 +17,6 @@ a:hover { text-decoration: underline; }
 img { max-width: 100%; }
 input, button { font-family: inherit; }
 
-/* ---- CSS VARIABLES ---- */
 :root {
   color-scheme: dark;
   --bg-base:        #080c14;
@@ -40,7 +35,7 @@ input, button { font-family: inherit; }
   --text-secondary: #7a8fa8;
   --text-muted:     #3d5068;
 
-  /* Rarities */
+  
   --common:    #8ba3b8;
   --rare:      #4aa8ff;
   --epic:      #b44fff;
@@ -56,13 +51,9 @@ input, button { font-family: inherit; }
   --shadow-glow: 0 0 20px var(--accent-glow);
 }
 
-/* ---- SCREENS ---- */
 .screen { display: none; min-height: 100vh; }
 .screen.active { display: block; }
 
-/* ============================================
-   AUTH SCREEN
-   ============================================ */
 #screen-auth {
   position: relative;
   display: flex;
@@ -165,7 +156,6 @@ input, button { font-family: inherit; }
   margin-bottom: 1.5rem;
 }
 
-/* ---- FORM ELEMENTS ---- */
 .form-group {
   margin-bottom: 1rem;
 }
@@ -208,7 +198,6 @@ input, button { font-family: inherit; }
   color: var(--text-secondary);
 }
 
-/* ---- BUTTONS ---- */
 .btn {
   display: inline-flex;
   align-items: center;
@@ -262,9 +251,6 @@ input, button { font-family: inherit; }
 }
 .btn-icon:hover { color: var(--accent); }
 
-/* ============================================
-   APP SHELL
-   ============================================ */
 #screen-app {
   display: none;
   flex-direction: column;
@@ -272,7 +258,6 @@ input, button { font-family: inherit; }
 }
 #screen-app.active { display: flex; }
 
-/* HEADER */
 .app-header {
   position: sticky; top: 0; z-index: 100;
   height: var(--header-height);
@@ -314,7 +299,6 @@ input, button { font-family: inherit; }
 }
 .header-stat strong { color: var(--accent); }
 
-/* NAV */
 .app-nav {
   position: fixed;
   bottom: 0; left: 0; right: 0;
@@ -359,7 +343,6 @@ input, button { font-family: inherit; }
   border-radius: 0 0 4px 4px;
 }
 
-/* MAIN */
 .app-main {
   flex: 1;
   overflow-y: auto;
@@ -368,7 +351,6 @@ input, button { font-family: inherit; }
 .tab-section { display: none; animation: fadeUp 0.3s ease; }
 .tab-section.active { display: block; }
 
-/* SECTION HEADER */
 .section-header {
   display: flex;
   align-items: center;
@@ -391,9 +373,6 @@ input, button { font-family: inherit; }
   font-family: 'Barlow Condensed', sans-serif;
 }
 
-/* ============================================
-   CARDS & COMMON COMPONENTS
-   ============================================ */
 .card {
   background: var(--bg-card);
   border: 1px solid var(--border);
@@ -406,9 +385,6 @@ input, button { font-family: inherit; }
   transform: translateY(-2px);
 }
 
-/* ============================================
-   DASHBOARD
-   ============================================ */
 .dashboard-grid {
   display: grid;
   grid-template-columns: 1fr 1fr;
@@ -474,9 +450,6 @@ input, button { font-family: inherit; }
   padding: 1rem 0;
 }
 
-/* ============================================
-   STATS
-   ============================================ */
 .search-bar {
   display: flex;
   gap: 0.5rem;
@@ -556,9 +529,6 @@ input, button { font-family: inherit; }
   color: var(--gold);
 }
 
-/* ============================================
-   GACHA
-   ============================================ */
 .gacha-center {
   display: flex;
   flex-direction: column;
@@ -672,9 +642,6 @@ input, button { font-family: inherit; }
 .rarity.epic     { background: rgba(180,79,255,0.15); color: var(--epic); border: 1px solid var(--epic); }
 .rarity.legendary { background: rgba(255,215,0,0.15); color: var(--legendary); border: 1px solid var(--legendary); }
 
-/* ============================================
-   ALBUM
-   ============================================ */
 .album-filters {
   display: flex;
   gap: 0.5rem;
@@ -757,7 +724,6 @@ input, button { font-family: inherit; }
   border-radius: 3px;
 }
 
-/* IDEAL TEAM */
 .ideal-team {
   background: var(--bg-card);
   border: 1px solid var(--border);
@@ -809,9 +775,6 @@ input, button { font-family: inherit; }
   text-transform: uppercase;
 }
 
-/* ============================================
-   PREDICTIONS
-   ============================================ */
 .predictions-list {
   display: flex;
   flex-direction: column;
@@ -872,9 +835,6 @@ input, button { font-family: inherit; }
   margin-top: 0.5rem;
 }
 
-/* ============================================
-   PROFILE
-   ============================================ */
 .profile-card {
   background: var(--bg-card);
   border: 1px solid var(--border);
@@ -986,9 +946,6 @@ input, button { font-family: inherit; }
   flex-wrap: wrap;
 }
 
-/* ============================================
-   TOAST
-   ============================================ */
 .toast {
   position: fixed;
   bottom: calc(var(--nav-height) + 1rem);
@@ -1016,9 +973,6 @@ input, button { font-family: inherit; }
 .toast.error   { border-color: #ff4466; color: #ff4466; }
 .toast.warn    { border-color: var(--gold); color: var(--gold); }
 
-/* ============================================
-   MODAL
-   ============================================ */
 .modal-overlay {
   position: fixed; inset: 0;
   background: rgba(0,0,0,0.7);
@@ -1048,26 +1002,17 @@ input, button { font-family: inherit; }
 }
 .modal-close:hover { color: var(--text-primary); }
 
-/* ============================================
-   STANDINGS TABLE (dashboard)
-   ============================================ */
 .standings-mini { font-size: 0.8rem; }
 .standings-mini tr { border-bottom: 1px solid var(--border); }
 .standings-mini td { padding: 0.3rem 0.5rem; }
 .standings-mini .pos { color: var(--text-muted); font-family: 'Barlow Condensed', sans-serif; }
 .standings-mini .pts { color: var(--accent); font-weight: 700; font-family: 'Barlow Condensed', sans-serif; }
 
-/* ============================================
-   SCROLLBAR
-   ============================================ */
 ::-webkit-scrollbar { width: 6px; height: 6px; }
 ::-webkit-scrollbar-track { background: var(--bg-surface); }
 ::-webkit-scrollbar-thumb { background: var(--border-bright); border-radius: 3px; }
 ::-webkit-scrollbar-thumb:hover { background: var(--accent-dark); }
 
-/* ============================================
-   RESPONSIVE
-   ============================================ */
 @media (max-width: 480px) {
   .profile-card { flex-direction: column; text-align: center; }
   .profile-stats { justify-content: center; }
@@ -1075,9 +1020,6 @@ input, button { font-family: inherit; }
   .gacha-btns .btn { width: 100%; }
 }
 
-/* ============================================
-   LOADING SPINNER
-   ============================================ */
 .spinner {
   width: 32px; height: 32px;
   border: 3px solid var(--border);
@@ -1088,20 +1030,12 @@ input, button { font-family: inherit; }
 }
 @keyframes spin { to { transform: rotate(360deg); } }
 
-/* ============================================
-   MISC
-   ============================================ */
 .text-accent { color: var(--accent); }
 .text-gold { color: var(--gold); }
 .text-muted { color: var(--text-muted); }
 .mt-1 { margin-top: 0.5rem; }
 .mb-1 { margin-bottom: 0.5rem; }
 
-/* ============================================
-   MEJORAS v2 — Nuevos estilos y correcciones
-   ============================================ */
-
-/* ── Figurita card: nueva animación de entrada ── */
 .figurita-card {
   animation: cardReveal 0.4s ease-out both;
 }
@@ -1131,7 +1065,6 @@ input, button { font-family: inherit; }
   font-family: 'Barlow Condensed', sans-serif;
 }
 
-/* ── Gacha: efecto brillo en legendaria ── */
 .figurita-card.legendary {
   animation: cardReveal 0.4s ease-out both, legendaryGlow 2s ease-in-out infinite alternate;
 }
@@ -1140,7 +1073,6 @@ input, button { font-family: inherit; }
   to   { box-shadow: 0 0 20px var(--legendary), 0 0 40px var(--legendary), inset 0 0 10px rgba(255,215,0,0.1); }
 }
 
-/* ── Pity counter badge ── */
 .pity-info {
   font-size: 0.7rem;
   color: var(--text-muted);
@@ -1164,7 +1096,6 @@ input, button { font-family: inherit; }
   transition: width 0.4s ease;
 }
 
-/* ── Dashboard: partidos en vivo mejorados ── */
 .match-teams-row {
   display: flex;
   justify-content: space-between;
@@ -1193,12 +1124,10 @@ input, button { font-family: inherit; }
   white-space: nowrap;
 }
 
-/* ── Standings: filas highlight ── */
 .tr-qualify td { color: #44ff88; }
 .tr-qualify td:first-child { color: var(--gold); font-weight: 700; }
 .tr-maybe td:first-child { color: var(--text-secondary); }
 
-/* ── Predicciones: mejoras visuales ── */
 .pred-meta {
   display: flex;
   justify-content: space-between;
@@ -1256,7 +1185,6 @@ input, button { font-family: inherit; }
 .pred-result.loss    { color: #ff4466; }
 .pred-result.pending { color: var(--gold); }
 
-/* ── Perfil: bet-item mejorado ── */
 .bet-left {
   display: flex;
   flex-direction: column;
@@ -1265,13 +1193,11 @@ input, button { font-family: inherit; }
 .bet-match { color: var(--text-secondary); font-size: 0.75rem; }
 .bet-pick  { color: var(--text-primary); font-size: 0.8rem; font-weight: 600; }
 
-/* ── Monedas en header ── */
 #hdr-monedas {
   font-size: 0.75rem;
   color: var(--gold);
 }
 
-/* ── Album slot: animación hover mejorada ── */
 .album-slot {
   transition: transform 0.15s ease, box-shadow 0.15s ease;
 }
@@ -1290,7 +1216,6 @@ input, button { font-family: inherit; }
   box-shadow: 0 0 8px rgba(74,168,255,0.3);
 }
 
-/* ── Botón convertir duplicados ── */
 #btn-convert-dupes {
   width: 100%;
   margin-top: 0.5rem;
@@ -1300,7 +1225,6 @@ input, button { font-family: inherit; }
   cursor: not-allowed;
 }
 
-/* ── Auth: indicador de fuerza de contraseña ── */
 .pass-strength {
   height: 3px;
   border-radius: 2px;
@@ -1310,7 +1234,6 @@ input, button { font-family: inherit; }
   width: 0%;
 }
 
-/* ── Empty state mejorado ── */
 .empty-state {
   font-size: 0.8rem;
   color: var(--text-muted);
@@ -1319,7 +1242,6 @@ input, button { font-family: inherit; }
   font-style: italic;
 }
 
-/* ── Album: slot de figurita especial para legendarias ── */
 .album-slot.legendary.owned::after {
   content: '';
   position: absolute;
@@ -1329,7 +1251,6 @@ input, button { font-family: inherit; }
   pointer-events: none;
 }
 
-/* ── Gacha: esfera pulsante cuando hay tiradas ── */
 .gacha-sphere.has-tiradas .sphere-inner {
   animation: spherePulse 2s ease-in-out infinite;
 }
@@ -1338,14 +1259,12 @@ input, button { font-family: inherit; }
   50% { transform: scale(1.05); }
 }
 
-/* ── Header: monedas ── */
 .header-right {
   display: flex;
   align-items: center;
   gap: 0.75rem;
 }
 
-/* ── Tablet/Desktop improvements ── */
 @media (min-width: 768px) {
   .dashboard-grid {
     grid-template-columns: repeat(2, 1fr);
@@ -1380,9 +1299,6 @@ input, button { font-family: inherit; }
   }
 }
 
-/* ══════════════════════════════════════════
-   LOADING SCREEN
-══════════════════════════════════════════ */
 #screen-loading {
   display: none;
   background: var(--bg-deep, #0a0e1a);
@@ -1412,9 +1328,6 @@ input, button { font-family: inherit; }
   to   { transform: rotate(360deg); }
 }
 
-/* ══════════════════════════════════════════
-   API STATUS BAR
-══════════════════════════════════════════ */
 .api-status-bar {
   display: none;
   align-items: center;
@@ -1442,9 +1355,6 @@ input, button { font-family: inherit; }
   color: #00c864;
 }
 
-/* ══════════════════════════════════════════
-   BTN CON LOADING STATE
-══════════════════════════════════════════ */
 .btn-loading {
   position: relative;
   transition: opacity 0.2s;
@@ -1454,11 +1364,6 @@ input, button { font-family: inherit; }
   cursor: not-allowed;
 }
 
-/* ═══════════════════════════════════════════════════════════
-   v16 DESIGN IMPROVEMENTS
-   ═══════════════════════════════════════════════════════════ */
-
-/* Mejorar cards generales */
 .card, .widget-card, .battle-mode-card {
   transition: transform 0.2s ease, box-shadow 0.2s ease, border-color 0.2s ease !important;
 }
@@ -1467,7 +1372,6 @@ input, button { font-family: inherit; }
   box-shadow: 0 8px 32px rgba(0,0,0,0.6), 0 0 0 1px var(--border-bright) !important;
 }
 
-/* Tabs más estilizadas */
 .tab-btn {
   position: relative;
   overflow: hidden;
@@ -1482,12 +1386,10 @@ input, button { font-family: inherit; }
 }
 .tab-btn.active::after { left: 0; right: 0; }
 
-/* Badges de rareza con brillo */
 .badge-legendary { box-shadow: 0 0 8px rgba(255,215,0,0.4); }
 .badge-goat      { box-shadow: 0 0 12px rgba(255,34,68,0.5); }
 .badge-epic      { box-shadow: 0 0 8px rgba(180,79,255,0.4); }
 
-/* Números grandes con gradiente */
 .stat-value, .profile-stat-number {
   background: linear-gradient(135deg, var(--accent) 0%, #a78bfa 100%);
   -webkit-background-clip: text;
@@ -1495,7 +1397,6 @@ input, button { font-family: inherit; }
   background-clip: text;
 }
 
-/* Barra de progreso animada */
 .progress-fill, .pity-fill {
   position: relative;
   overflow: hidden;
@@ -1514,18 +1415,15 @@ input, button { font-family: inherit; }
   100% { left: 200%; }
 }
 
-/* Secciones con borde superior de color */
 .section-card {
   border-top: 3px solid var(--accent) !important;
 }
 
-/* Toast mejorado */
 .toast {
   backdrop-filter: blur(16px) !important;
   border: 1px solid rgba(255,255,255,0.1) !important;
 }
 
-/* Historial de predicciones — mejora visual */
 .bet-item {
   border-left: 3px solid var(--border);
   transition: border-color 0.2s;
@@ -1533,7 +1431,6 @@ input, button { font-family: inherit; }
 .bet-item:has(.bet-result.win) { border-left-color: #44ff88; }
 .bet-item:has(.bet-result.loss) { border-left-color: #ff4466; }
 
-/* Botones principales — gradiente suave */
 .btn-primary {
   background: linear-gradient(135deg, var(--accent) 0%, #0099bb 100%) !important;
   box-shadow: 0 4px 15px rgba(0,212,255,0.25) !important;
@@ -1543,7 +1440,6 @@ input, button { font-family: inherit; }
   transform: translateY(-1px) !important;
 }
 
-/* Animación al ganar puntos en quiz */
 @keyframes pointsFloat {
   0%   { opacity:1; transform:translateY(0) scale(1); }
   50%  { opacity:1; transform:translateY(-24px) scale(1.2); }
@@ -1560,7 +1456,6 @@ input, button { font-family: inherit; }
   animation: pointsFloat 1s ease-out forwards;
 }
 
-/* ── PWA Install Button in Profile ── */
 .btn-install-pwa-profile {
   display: flex;
   align-items: center;
@@ -1584,8 +1479,6 @@ input, button { font-family: inherit; }
   box-shadow: 0 5px 20px rgba(0, 212, 255, 0.5);
 }
 
-/* ── Predicciones: botón historial ── */
-/* ── Predicciones: header con botón historial ── */
 .pred-section-header {
   display: flex;
   align-items: center;
@@ -1638,7 +1531,6 @@ input, button { font-family: inherit; }
   box-shadow: 0 2px 16px rgba(255, 215, 0, 0.4);
 }
 
-/* ── Standings tabs ── */
 .standings-tab-btn {
   transition: background 0.15s, color 0.15s;
 }
@@ -1646,7 +1538,6 @@ input, button { font-family: inherit; }
   opacity: 0.85;
 }
 
-/* ── Minuto en vivo en card de predicción ── */
 .pred-live-minute {
   font-size: 0.7rem;
   font-family: 'Barlow Condensed', sans-serif;
@@ -1656,7 +1547,6 @@ input, button { font-family: inherit; }
   animation: blink 1.5s infinite;
 }
 
-/* ── Mobile: botón historial responsive ── */
 @media (max-width: 480px) {
   .pred-section-header {
     gap: 0.5rem;
@@ -1670,11 +1560,6 @@ input, button { font-family: inherit; }
   }
 }
 
-/* ══════════════════════════════════════════
-   FWC EN VIVO — Tab & Nav styles
-   ══════════════════════════════════════════ */
-
-/* ── Punto rojo animado en bottom nav ── */
 .nav-live {
   position: relative;
 }
@@ -1696,7 +1581,6 @@ input, button { font-family: inherit; }
   color: #ff3344 !important;
 }
 
-/* ── Punto rojo animado en drawer nav ── */
 .drawer-nav-live {
   position: relative;
   color: #ff3344 !important;
@@ -1722,8 +1606,6 @@ input, button { font-family: inherit; }
   100% { box-shadow: 0 0 0 0 rgba(255,51,68,0); }
 }
 
-/* ── Badge "EN VIVO" junto al título del header ── */
-/* ── Badge EN VIVO en el header ── */
 .live-badge-header {
   display: inline-flex;
   align-items: center;
@@ -1740,7 +1622,6 @@ input, button { font-family: inherit; }
   animation: livePulse 1.4s ease-in-out infinite;
 }
 
-/* ── Notice de calidad encima del video ── */
 .live-quality-notice {
   display: flex;
   align-items: center;
@@ -1762,14 +1643,12 @@ input, button { font-family: inherit; }
   color: var(--text-primary, #fff);
 }
 
-/* ── Layout: mobile (columna única) ── */
 .live-body {
   display: flex;
   flex-direction: column;
   gap: 1.5rem;
 }
 
-/* ── Contenedor del iframe 16:9 con borde neon ── */
 .live-player-wrap {
   position: relative;
   width: 100%;
@@ -1778,7 +1657,7 @@ input, button { font-family: inherit; }
   border-radius: 14px;
   overflow: hidden;
   min-height: 260px;
-  /* Borde neon mejorado */
+  
   border: 2px solid #00e5a0;
   box-shadow:
     0 0 10px rgba(0, 229, 160, 0.7),
@@ -1793,12 +1672,11 @@ input, button { font-family: inherit; }
   border: none;
 }
 
-/* ── Ocultar logo SVG del header en móvil ── */
 @media (max-width: 767px) {
   #tab-live .section-header svg:first-child {
     display: none;
   }
-  /* Ocultar logo del drawer en móvil */
+  
   .drawer-logo {
     display: none !important;
   }
@@ -1818,27 +1696,25 @@ input, button { font-family: inherit; }
 
 @media (max-width: 480px) {
   .live-player-wrap {
-    padding-top: 56.25%;
-    min-height: 180px;
+    padding-top: 0;
+    height: calc(100dvh - var(--header-height) - var(--nav-height) - 1rem);
+    min-height: 280px;
   }
   .live-body {
     gap: 2rem;
   }
 }
 
-/* ── Sección discord ── */
 .live-discord-section {
-  /* sin padding extra, lo maneja live-body gap */
+  
 }
 
-/* ── Ajustes del header de la tab ── */
 #tab-live .section-header {
   padding-bottom: 0.25rem;
 }
 
-/* ── Desktop: el tab-live rompe el max-width del app-main ── */
 @media (min-width: 768px) {
-  /* Hack full-bleed: sale del contenedor limitado a 900px */
+  
   #tab-live {
     width: 100vw;
     position: relative;
@@ -1872,6 +1748,7 @@ input, button { font-family: inherit; }
   .live-player-wrap {
     padding-top: 56.25%;
     min-height: unset;
+    max-height: calc(100vh - var(--header-height) - var(--nav-height) - 2rem);
   }
   .live-discord-section {
     position: sticky;
@@ -1879,7 +1756,6 @@ input, button { font-family: inherit; }
   }
 }
 
-/* ── Desktop grande (≥1200px): más espacio al video ── */
 @media (min-width: 1200px) {
   .live-body {
     grid-template-columns: 1fr 340px;

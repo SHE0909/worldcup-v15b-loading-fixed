@@ -1,11 +1,3 @@
-/**
- * album.js — Álbum Virtual y Equipo Ideal  v9
- * FIXES: _enrichOwned() sincroniza figuritas guardadas con el pool actual,
- *        _emojiStr() soporta emoji como string o array (gacha v7+),
- *        slot picker y equipo ideal siempre muestran jugadores actualizados.
- */
-
-/* Formaciones disponibles */
 const FORMATIONS = {
   '4-3-3': [
     { slots: ['POR'] },
@@ -50,11 +42,6 @@ function getFormationRows(name) {
   return FORMATIONS[name] || FORMATIONS['4-3-3'];
 }
 
-/**
- * PLAYER_STATS — generado dinámicamente desde FIGURITAS_POOL (gacha.js)
- * Garantiza que album y dashboard siempre muestren los mismos datos.
- * Se construye una sola vez al cargar la página.
- */
 function buildPlayerStats() {
   const map = {};
   const pool = (typeof FIGURITAS_POOL !== 'undefined') ? FIGURITAS_POOL : [];
@@ -71,16 +58,10 @@ function buildPlayerStats() {
 }
 const PLAYER_STATS = buildPlayerStats();
 
-
-
 const Album = {
   _currentFilter: 'all',
 
-  /**
-   * Sincroniza los IDs guardados en user.figuritas con el pool ACTUAL.
-   * Preserva duplicados y fecha de obtención, pero nombre/pos/rating/emoji
-   * siempre vienen del pool vigente. IDs que ya no existen en el pool se descartan.
-   */
+  
   _enrichOwned(rawFigs) {
     const pool = Gacha.getPool();
     return (rawFigs || [])
@@ -92,13 +73,13 @@ const Album = {
       .filter(Boolean);
   },
 
-  /** Normaliza emoji: soporta string ('⚽') y array (['🇵🇹','🐐','⚽']) */
+  
   _emojiStr(val) {
     if (!val) return '⚽';
     return Array.isArray(val) ? val.join('') : val;
   },
 
-  /* ── Foto: CDN jsDelivr via API.getPhotoById ── */
+  
   async _getPhoto(fig) {
     try {
       const timeout = new Promise(r => setTimeout(() => r(null), 8000));
@@ -109,7 +90,7 @@ const Album = {
     } catch(_) { return null; }
   },
 
-  /* ── Render álbum ── */
+  
   async render(filter = 'all') {
     this._currentFilter = filter;
     const user     = await Auth.currentUser();
@@ -126,9 +107,9 @@ const Album = {
     const grid = document.getElementById('album-grid');
     if (!grid) return;
 
-    // Migrar/invalidar cachés legacy de fotos (v1, v2 con URLs de Wikipedia rotas)
-    // La migración real la hace API._migrateLegacyPhotoCache() en precachePhotos.
-    // Aquí solo nos aseguramos de que no queden claves v1/v2 en localStorage.
+    
+    
+    
     try {
       if (localStorage.getItem('wcc_photos_v1')) localStorage.removeItem('wcc_photos_v1');
       if (localStorage.getItem('wcc_photos_v2')) localStorage.removeItem('wcc_photos_v2');
@@ -138,7 +119,7 @@ const Album = {
       const uFig  = owned.find(f => f.id === fig.id);
       const has   = !!uFig;
       const dupes = uFig?.duplicados || 0;
-      // getPhotoSync: mapa hardcodeado → memoria → localStorage (sin async, sin race conditions)
+      
       const cached    = has ? API.getPhotoSync(fig) : null;
       const photoHtml = has
         ? (cached
@@ -159,9 +140,9 @@ const Album = {
       el.addEventListener('click', () => this.showCardDetail(el.dataset.id, owned))
     );
 
-    // Solo buscar en red para figuras sin foto accesible de forma síncrona
+    
     filtered.filter(f => ownedSet.has(f.id)).forEach(fig => {
-      if (API.getPhotoSync(fig)) return; // ya está disponible, no ir a la red
+      if (API.getPhotoSync(fig)) return; 
       this._getPhoto(fig).then(url => {
         if (!url) return;
         const wrap = document.getElementById(`aphoto-${fig.id}`);
@@ -172,13 +153,13 @@ const Album = {
       });
     });
   },
-  /* ── Modal carta ── */
+  
   async showCardDetail(id, owned) {
     const fig   = Gacha.getPool().find(f => f.id === id);
     const uFig  = owned.find(f => f.id === id);
     if (!fig) return;
     const stats = PLAYER_STATS[fig.id] || {};
-    const photo = await this._getPhoto(fig);  // localStorage via API.getPhotoById
+    const photo = await this._getPhoto(fig);  
     const isPOR = fig.pos === 'POR';
     const s1v   = isPOR ? (stats.saves??0) : (stats.goals??0);
     const s1l   = isPOR ? 'Paradas' : 'Goles';
@@ -213,9 +194,7 @@ const Album = {
       </div>`);
   },
 
-  /* ══════════════════════════════════════════
-     EQUIPO IDEAL
-  ══════════════════════════════════════════ */
+  
   async renderIdealTeam() {
     const user      = await Auth.currentUser();
     const owned     = this._enrichOwned(user?.figuritas);
@@ -223,7 +202,7 @@ const Album = {
     const formation = user?.formacion || '4-3-3';
     const rows      = getFormationRows(formation);
 
-    // Renderizar selector de formación
+    
     const selWrap = document.getElementById('formation-selector');
     if (selWrap) {
       selWrap.innerHTML = Object.keys(FORMATIONS).map(f =>
@@ -233,7 +212,7 @@ const Album = {
         btn.addEventListener('click', async () => {
           const u = await Auth.currentUser();
           u.formacion = btn.dataset.f;
-          // Limpiar alineación al cambiar formación
+          
           u.equipo_ideal = {};
           await Auth.updateUser(u);
           this.renderIdealTeam();
@@ -245,7 +224,7 @@ const Album = {
     const field = document.getElementById('formation-field');
     if (!field) return;
 
-    // Calcular qué IDs ya están asignados (para evitar repetidos)
+    
     const usedIds = new Set(Object.values(saved).filter(Boolean));
 
     field.innerHTML = '';
@@ -278,7 +257,7 @@ const Album = {
       field.appendChild(rowDiv);
     });
 
-    // Precargar fotos de slots asignados sin bloquear
+    
     Object.values(saved).filter(Boolean).forEach(id => {
       const fig = owned.find(f => f.id === id);
       if (fig && !API.getPhotoSync(fig)) {
@@ -287,21 +266,21 @@ const Album = {
     });
   },
 
-  /* ── Picker de jugador por posición ── */
+  
   openPicker(key, pos, owned, saved, user) {
-    // IDs ya usados en OTROS slots (el slot actual puede reusarse/quitarse)
+    
     const usedInOtherSlots = new Set(
       Object.entries(saved)
         .filter(([k, v]) => k !== key && v)
         .map(([, v]) => v)
     );
 
-    // Disponibles: correcta posición Y no usados en otro slot
+    
     const available = owned.filter(f =>
       f.pos === pos && !usedInOtherSlots.has(f.id)
     );
     if (!available.length) {
-      // Si no hay porque todos están usados, mostrar aviso específico
+      
       const posAny = owned.filter(f => f.pos === pos);
       if (posAny.length > 0) {
         Toast.warn(`Tus figuritas de ${pos} ya están todas asignadas`);
@@ -341,7 +320,7 @@ const Album = {
         ${cardsHtml}
       </div>`);
 
-    /* ── Evento delegado en el modal-box (no en overlay para no interferir con cerrar) ── */
+    
     const box = document.getElementById('modal-box');
     const overlay = document.getElementById('modal-overlay');
 
@@ -354,7 +333,7 @@ const Album = {
       const card = e.target.closest('[data-pick]');
       if (!card) return;
       if (e.target.closest('#modal-close')) {
-        // X button: no changes, just close
+        
         cleanupListeners();
         return;
       }
@@ -363,7 +342,7 @@ const Album = {
       if (pick === '__clear__') delete saved[key];
       else {
         saved[key] = pick;
-        // precargar foto del nuevo asignado
+        
         const f = owned.find(x => x.id === pick);
         if (f && !API.getPhotoSync(f)) await this._getPhoto(f);
       }
@@ -374,7 +353,7 @@ const Album = {
       Toast.success('Alineación actualizada ✅');
     };
 
-    // Si el usuario cierra el modal sin elegir (overlay o botón X), no cambiar nada
+    
     const onOverlayClose = () => {
       cleanupListeners();
     };
@@ -382,7 +361,7 @@ const Album = {
     box.addEventListener('click', handler);
     if (overlay) overlay.addEventListener('click', onOverlayClose);
 
-    // Precargar fotos disponibles en bg
+    
     available.forEach(f => {
       if (!API.getPhotoSync(f)) this._getPhoto(f);
     });
@@ -395,7 +374,7 @@ const Album = {
     Toast.success('Alineación guardada ✅');
   },
 
-  /* Construir array de jugadores del equipo ideal para Battle */
+  
 buildIdealTeamPlayers(rawOwned, saved, formation = '4-3-3') {
     const owned   = this._enrichOwned(rawOwned);
     const players = [];

@@ -1,39 +1,13 @@
-/**
- * api.js — v18  (worldcup26.ir como fuente principal — GRATIS, sin key)
- *
- * ESTRATEGIA v18:
- *   1. getLiveMatches()      → worldcup26.ir /get/games?status=live
- *   2. getUpcomingMatches()  → worldcup26.ir /get/games (todos los partidos)
- *   3. getFinishedMatches()  → worldcup26.ir /get/games?status=finished
- *   4. getStandings()        → worldcup26.ir /get/groups
- *   5. getTeams()            → worldcup26.ir /get/teams
- *   6. Fotos                 → CDN jsDelivr (por ID de figurita)
- *   7. MOCK                  → fallback si worldcup26.ir falla
- *
- * worldcup26.ir: API gratuita, sin key, sin límite de requests,
- * datos en tiempo real del Mundial 2026 (48 equipos, 104 partidos).
- * Documentación: https://worldcup26.ir/api-docs
- */
-
-/* ── URL base del worker (proxy a worldcup26.ir) ── */
 const WC26_BASE = 'https://winter-thunder-a7a0.cq22003.workers.dev';
 
-/**
- * USE_MOCK_ONLY = true → nunca llama al worker, siempre usa MOCK
- * Cambiar a false cuando el worker esté actualizado con worldcup26.ir
- */
 const USE_MOCK_ONLY = false;
 
-/* Estado global de la API */
 const API_STATUS = {
   usingMock:   false,
   lastError:   null,
   lastSuccess: null,
 };
 
-
-
-/* ── Banderas por país ── */
 const TEAM_FLAGS = {
   'México':'🇲🇽','Mexico':'🇲🇽','Brasil':'🇧🇷','Brazil':'🇧🇷',
   'Argentina':'🇦🇷','Francia':'🇫🇷','France':'🇫🇷','España':'🇪🇸','Spain':'🇪🇸',
@@ -73,93 +47,84 @@ function yesterdayStr() {
   const d = new Date(); d.setDate(d.getDate()-1); return localDateStr(d);
 }
 
-/* ══════════════════════════════════════════════
-   MOCK DATA — fallback de emergencia
-══════════════════════════════════════════════ */
-/* ─────────────────────────────────────────────────────────────
-   MOCK — Fixture completo Fase de Grupos Mundial 2026
-   IDs = wc26_<match_number> para coincidir con worldcup26.ir
-   Horarios en hora El Salvador (CST = UTC-6 = igual que México CDT)
-   Actualizado: 11 jun 2026
-───────────────────────────────────────────────────────────── */
 const _ALL_MATCHES = [
-  /* ── JORNADA 1 ─────────────────────────────────────────── */
-  // 11 junio
+  
+  
   { id:'wc26_1',  home:'México',           away:'Sudáfrica',       homeFlag:'🇲🇽', awayFlag:'🇿🇦', date:'2026-06-11', time:'14:00', competition:'Grupo A — J1', type:'worldcup', venue:'Estadio Azteca, CDMX',        status:'finished', scoreHome:2, scoreAway:0, exactScore:'2-0', finalResult:'home' },
   { id:'wc26_2',  home:'Corea del Sur',    away:'Rep. Checa',      homeFlag:'🇰🇷', awayFlag:'🇨🇿', date:'2026-06-11', time:'19:00', competition:'Grupo A — J1', type:'worldcup', venue:'Estadio Akron, Guadalajara',   status:'finished', scoreHome:2, scoreAway:1, exactScore:'2-1', finalResult:'home' },
-  // 12 junio
+  
   { id:'wc26_3',  home:'Canadá',           away:'Bosnia y Herz.',  homeFlag:'🇨🇦', awayFlag:'🇧🇦', date:'2026-06-12', time:'12:00', competition:'Grupo B — J1', type:'worldcup', venue:'BMO Field, Toronto',            status:'finished', scoreHome:1, scoreAway:1, exactScore:'1-1', finalResult:'draw' },
   { id:'wc26_4',  home:'Estados Unidos',   away:'Paraguay',        homeFlag:'🇺🇸', awayFlag:'🇵🇾', date:'2026-06-12', time:'16:00', competition:'Grupo D — J1', type:'worldcup', venue:'SoFi Stadium, Los Ángeles',    status:'finished', scoreHome:4, scoreAway:1, exactScore:'4-1', finalResult:'home' },
-  // 13 junio
+  
   { id:'wc26_5',  home:'Qatar',            away:'Suiza',           homeFlag:'🇶🇦', awayFlag:'🇨🇭', date:'2026-06-13', time:'10:00', competition:'Grupo B — J1', type:'worldcup', venue:'Levi\'s Stadium, San Francisco',status:'finished', scoreHome:1, scoreAway:1, exactScore:'1-1', finalResult:'draw' },
   { id:'wc26_6',  home:'Brasil',           away:'Marruecos',       homeFlag:'🇧🇷', awayFlag:'🇲🇦', date:'2026-06-13', time:'18:00', competition:'Grupo C — J1', type:'worldcup', venue:'MetLife Stadium, Nueva York',   status:'finished', scoreHome:1, scoreAway:1, exactScore:'1-1', finalResult:'draw' },
   { id:'wc26_7',  home:'Haití',            away:'Escocia',         homeFlag:'🇭🇹', awayFlag:'🏴󠁧󠁢󠁳󠁣󠁴󠁿', date:'2026-06-13', time:'21:00', competition:'Grupo C — J1', type:'worldcup', venue:'Gillette Stadium, Boston',      status:'finished', scoreHome:0, scoreAway:1, exactScore:'0-1', finalResult:'away' },
-  // 13 junio noche (madrugada 14)
+  
   { id:'wc26_8',  home:'Australia',        away:'Turquía',         homeFlag:'🇦🇺', awayFlag:'🇹🇷', date:'2026-06-13', time:'19:00', competition:'Grupo D — J1', type:'worldcup', venue:'BC Place, Vancouver',            status:'finished', scoreHome:2, scoreAway:0, exactScore:'2-0', finalResult:'home' },
-  // 14 junio
+  
   { id:'wc26_9',  home:'Alemania',         away:'Curazao',         homeFlag:'🇩🇪', awayFlag:'🇨🇼', date:'2026-06-14', time:'12:00', competition:'Grupo E — J1', type:'worldcup', venue:'NRG Stadium, Houston',           status:'finished', scoreHome:7, scoreAway:1, exactScore:'7-1', finalResult:'home' },
   { id:'wc26_10', home:'Países Bajos',     away:'Japón',           homeFlag:'🇳🇱', awayFlag:'🇯🇵', date:'2026-06-14', time:'15:00', competition:'Grupo F — J1', type:'worldcup', venue:'AT&T Stadium, Dallas',           status:'finished', scoreHome:2, scoreAway:2, exactScore:'2-2', finalResult:'draw' },
   { id:'wc26_11', home:'Costa de Marfil',  away:'Ecuador',         homeFlag:'🇨🇮', awayFlag:'🇪🇨', date:'2026-06-14', time:'18:00', competition:'Grupo E — J1', type:'worldcup', venue:'Lincoln Financial, Filadelfia', status:'finished', scoreHome:1, scoreAway:0, exactScore:'1-0', finalResult:'home' },
   { id:'wc26_12', home:'Suecia',           away:'Túnez',           homeFlag:'🇸🇪', awayFlag:'🇹🇳', date:'2026-06-14', time:'21:00', competition:'Grupo F — J1', type:'worldcup', venue:'Estadio BBVA, Monterrey',        status:'finished', scoreHome:5, scoreAway:1, exactScore:'5-1', finalResult:'home' },
-  // 15 junio
+  
   { id:'wc26_13', home:'España',           away:'Cabo Verde',      homeFlag:'🇪🇸', awayFlag:'🇨🇻', date:'2026-06-15', time:'12:00', competition:'Grupo H — J1', type:'worldcup', venue:'Mercedes-Benz Stadium, Atlanta', status:'finished', scoreHome:0, scoreAway:0, exactScore:'0-0', finalResult:'draw' },
   { id:'wc26_14', home:'Arabia Saudita',   away:'Uruguay',         homeFlag:'🇸🇦', awayFlag:'🇺🇾', date:'2026-06-15', time:'18:00', competition:'Grupo H — J1', type:'worldcup', venue:'Hard Rock Stadium, Miami',       status:'finished', scoreHome:1, scoreAway:1, exactScore:'1-1', finalResult:'draw' },
   { id:'wc26_15', home:'Irán',             away:'Nueva Zelanda',   homeFlag:'🇮🇷', awayFlag:'🇳🇿', date:'2026-06-15', time:'18:00', competition:'Grupo G — J1', type:'worldcup', venue:'SoFi Stadium, Los Ángeles',    status:'scheduled' },
   { id:'wc26_16', home:'Bélgica',          away:'Egipto',          homeFlag:'🇧🇪', awayFlag:'🇪🇬', date:'2026-06-15', time:'12:00', competition:'Grupo G — J1', type:'worldcup', venue:'Lumen Field, Seattle',           status:'finished', scoreHome:1, scoreAway:1, exactScore:'1-1', finalResult:'draw' },
-  // 16 junio
+  
   { id:'wc26_17', home:'Francia',          away:'Senegal',         homeFlag:'🇫🇷', awayFlag:'🇸🇳', date:'2026-06-16', time:'13:00', competition:'Grupo I — J1', type:'worldcup', venue:'MetLife Stadium, Nueva York',   status:'scheduled' },
   { id:'wc26_18', home:'Irak',             away:'Noruega',         homeFlag:'🇮🇶', awayFlag:'🇳🇴', date:'2026-06-16', time:'16:00', competition:'Grupo I — J1', type:'worldcup', venue:'Gillette Stadium, Boston',      status:'scheduled' },
   { id:'wc26_19', home:'Argentina',        away:'Argelia',         homeFlag:'🇦🇷', awayFlag:'🇩🇿', date:'2026-06-16', time:'19:00', competition:'Grupo J — J1', type:'worldcup', venue:'Arrowhead Stadium, Kansas City', status:'scheduled' },
   { id:'wc26_20', home:'Austria',          away:'Jordania',        homeFlag:'🇦🇹', awayFlag:'🇯🇴', date:'2026-06-16', time:'22:00', competition:'Grupo J — J1', type:'worldcup', venue:'Levi\'s Stadium, San Francisco',status:'scheduled' },
-  // 17 junio
+  
   { id:'wc26_21', home:'Portugal',         away:'RD Congo',        homeFlag:'🇵🇹', awayFlag:'🇨🇩', date:'2026-06-17', time:'12:00', competition:'Grupo K — J1', type:'worldcup', venue:'NRG Stadium, Houston',           status:'scheduled' },
   { id:'wc26_22', home:'Inglaterra',       away:'Croacia',         homeFlag:'🏴󠁧󠁢󠁥󠁮󠁧󠁿', awayFlag:'🇭🇷', date:'2026-06-17', time:'15:00', competition:'Grupo L — J1', type:'worldcup', venue:'AT&T Stadium, Dallas',           status:'scheduled' },
   { id:'wc26_23', home:'Ghana',            away:'Panamá',          homeFlag:'🇬🇭', awayFlag:'🇵🇦', date:'2026-06-17', time:'13:00', competition:'Grupo L — J1', type:'worldcup', venue:'BMO Field, Toronto',            status:'scheduled' },
   { id:'wc26_24', home:'Uzbekistán',       away:'Colombia',        homeFlag:'🇺🇿', awayFlag:'🇨🇴', date:'2026-06-17', time:'20:00', competition:'Grupo K — J1', type:'worldcup', venue:'Estadio Azteca, CDMX',          status:'scheduled' },
 
-  /* ── JORNADA 2 ─────────────────────────────────────────── */
-  // 18 junio
+  
+  
   { id:'wc26_25', home:'Rep. Checa',       away:'Sudáfrica',       homeFlag:'🇨🇿', awayFlag:'🇿🇦', date:'2026-06-18', time:'10:00', competition:'Grupo A — J2', type:'worldcup', venue:'Mercedes-Benz Stadium, Atlanta', status:'scheduled' },
   { id:'wc26_26', home:'Suiza',            away:'Bosnia y Herz.',  homeFlag:'🇨🇭', awayFlag:'🇧🇦', date:'2026-06-18', time:'13:00', competition:'Grupo B — J2', type:'worldcup', venue:'SoFi Stadium, Los Ángeles',    status:'scheduled' },
   { id:'wc26_27', home:'Escocia',          away:'Marruecos',       homeFlag:'🏴󠁧󠁢󠁳󠁣󠁴󠁿', awayFlag:'🇲🇦', date:'2026-06-18', time:'16:00', competition:'Grupo C — J2', type:'worldcup', venue:'Gillette Stadium, Boston',      status:'scheduled' },
   { id:'wc26_28', home:'México',           away:'Corea del Sur',   homeFlag:'🇲🇽', awayFlag:'🇰🇷', date:'2026-06-18', time:'19:00', competition:'Grupo A — J2', type:'worldcup', venue:'Estadio Akron, Guadalajara',    status:'scheduled' },
-  // 19 junio
+  
   { id:'wc26_29', home:'Estados Unidos',   away:'Australia',       homeFlag:'🇺🇸', awayFlag:'🇦🇺', date:'2026-06-19', time:'13:00', competition:'Grupo D — J2', type:'worldcup', venue:'Lumen Field, Seattle',           status:'scheduled' },
   { id:'wc26_30', home:'Brasil',           away:'Haití',           homeFlag:'🇧🇷', awayFlag:'🇭🇹', date:'2026-06-19', time:'19:00', competition:'Grupo C — J2', type:'worldcup', venue:'Lincoln Financial, Filadelfia', status:'scheduled' },
   { id:'wc26_31', home:'Turquía',          away:'Paraguay',        homeFlag:'🇹🇷', awayFlag:'🇵🇾', date:'2026-06-19', time:'22:00', competition:'Grupo D — J2', type:'worldcup', venue:'Levi\'s Stadium, San Francisco',status:'scheduled' },
-  // 20 junio
+  
   { id:'wc26_32', home:'Curazao',          away:'Costa de Marfil', homeFlag:'🇨🇼', awayFlag:'🇨🇮', date:'2026-06-20', time:'11:00', competition:'Grupo E — J2', type:'worldcup', venue:'NRG Stadium, Houston',           status:'scheduled' },
   { id:'wc26_33', home:'Japón',            away:'Túnez',           homeFlag:'🇯🇵', awayFlag:'🇹🇳', date:'2026-06-20', time:'14:00', competition:'Grupo F — J2', type:'worldcup', venue:'BC Place, Vancouver',            status:'scheduled' },
   { id:'wc26_34', home:'Alemania',         away:'Ecuador',         homeFlag:'🇩🇪', awayFlag:'🇪🇨', date:'2026-06-20', time:'17:00', competition:'Grupo E — J2', type:'worldcup', venue:'AT&T Stadium, Dallas',           status:'scheduled' },
   { id:'wc26_35', home:'Suecia',           away:'Países Bajos',    homeFlag:'🇸🇪', awayFlag:'🇳🇱', date:'2026-06-20', time:'20:00', competition:'Grupo F — J2', type:'worldcup', venue:'Estadio BBVA, Monterrey',        status:'scheduled' },
-  // 21 junio
+  
   { id:'wc26_36', home:'España',           away:'Arabia Saudita',     homeFlag:'🇪🇸', awayFlag:'🇸🇦', date:'2026-06-21', time:'10:00', competition:'Grupo H — J2', type:'worldcup', venue:'Mercedes-Benz Stadium, Atlanta', status:'scheduled' },
   { id:'wc26_37', home:'Nueva Zelanda',    away:'Egipto',          homeFlag:'🇳🇿', awayFlag:'🇪🇬', date:'2026-06-21', time:'13:00', competition:'Grupo G — J2', type:'worldcup', venue:'BC Place, Vancouver',            status:'scheduled' },
   { id:'wc26_38', home:'Uruguay',          away:'Cabo Verde',      homeFlag:'🇺🇾', awayFlag:'🇨🇻', date:'2026-06-21', time:'16:00', competition:'Grupo H — J2', type:'worldcup', venue:'Hard Rock Stadium, Miami',       status:'scheduled' },
   { id:'wc26_39', home:'Irán',             away:'Bélgica',         homeFlag:'🇮🇷', awayFlag:'🇧🇪', date:'2026-06-21', time:'19:00', competition:'Grupo G — J2', type:'worldcup', venue:'Lumen Field, Seattle',           status:'scheduled' },
-  // 22 junio
+  
   { id:'wc26_40', home:'Argentina',        away:'Austria',         homeFlag:'🇦🇷', awayFlag:'🇦🇹', date:'2026-06-22', time:'11:00', competition:'Grupo J — J2', type:'worldcup', venue:'AT&T Stadium, Dallas',           status:'scheduled' },
   { id:'wc26_41', home:'Francia',          away:'Irak',            homeFlag:'🇫🇷', awayFlag:'🇮🇶', date:'2026-06-22', time:'15:00', competition:'Grupo I — J2', type:'worldcup', venue:'Lincoln Financial, Filadelfia', status:'scheduled' },
   { id:'wc26_42', home:'Noruega',          away:'Senegal',         homeFlag:'🇳🇴', awayFlag:'🇸🇳', date:'2026-06-22', time:'18:00', competition:'Grupo I — J2', type:'worldcup', venue:'MetLife Stadium, Nueva York',   status:'scheduled' },
   { id:'wc26_43', home:'Jordania',         away:'Argelia',         homeFlag:'🇯🇴', awayFlag:'🇩🇿', date:'2026-06-22', time:'21:00', competition:'Grupo J — J2', type:'worldcup', venue:'Levi\'s Stadium, San Francisco',status:'scheduled' },
-  // 23 junio
+  
   { id:'wc26_44', home:'Portugal',         away:'Uzbekistán',      homeFlag:'🇵🇹', awayFlag:'🇺🇿', date:'2026-06-23', time:'11:00', competition:'Grupo K — J2', type:'worldcup', venue:'NRG Stadium, Houston',           status:'scheduled' },
   { id:'wc26_45', home:'Inglaterra',       away:'Ghana',           homeFlag:'🏴󠁧󠁢󠁥󠁮󠁧󠁿', awayFlag:'🇬🇭', date:'2026-06-23', time:'14:00', competition:'Grupo L — J2', type:'worldcup', venue:'Gillette Stadium, Boston',      status:'scheduled' },
   { id:'wc26_46', home:'Panamá',           away:'Croacia',         homeFlag:'🇵🇦', awayFlag:'🇭🇷', date:'2026-06-23', time:'17:00', competition:'Grupo L — J2', type:'worldcup', venue:'BMO Field, Toronto',            status:'scheduled' },
   { id:'wc26_47', home:'Colombia',         away:'RD Congo',        homeFlag:'🇨🇴', awayFlag:'🇨🇩', date:'2026-06-23', time:'20:00', competition:'Grupo K — J2', type:'worldcup', venue:'Estadio Akron, Guadalajara',    status:'scheduled' },
 
-  /* ── JORNADA 3 ─────────────────────────────────────────── */
-  // 24 junio
+  
+  
   { id:'wc26_48', home:'Suiza',            away:'Canadá',          homeFlag:'🇨🇭', awayFlag:'🇨🇦', date:'2026-06-24', time:'13:00', competition:'Grupo B — J3', type:'worldcup', venue:'BC Place, Vancouver',            status:'scheduled' },
   { id:'wc26_49', home:'Bosnia y Herz.',   away:'Qatar',           homeFlag:'🇧🇦', awayFlag:'🇶🇦', date:'2026-06-24', time:'13:00', competition:'Grupo B — J3', type:'worldcup', venue:'Lumen Field, Seattle',           status:'scheduled' },
   { id:'wc26_50', home:'Marruecos',        away:'Haití',           homeFlag:'🇲🇦', awayFlag:'🇭🇹', date:'2026-06-24', time:'16:00', competition:'Grupo C — J3', type:'worldcup', venue:'Mercedes-Benz Stadium, Atlanta', status:'scheduled' },
   { id:'wc26_51', home:'Escocia',          away:'Brasil',          homeFlag:'🏴󠁧󠁢󠁳󠁣󠁴󠁿', awayFlag:'🇧🇷', date:'2026-06-24', time:'16:00', competition:'Grupo C — J3', type:'worldcup', venue:'Hard Rock Stadium, Miami',       status:'scheduled' },
   { id:'wc26_52', home:'Rep. Checa',       away:'México',          homeFlag:'🇨🇿', awayFlag:'🇲🇽', date:'2026-06-24', time:'19:00', competition:'Grupo A — J3', type:'worldcup', venue:'Estadio Azteca, CDMX',          status:'scheduled' },
   { id:'wc26_53', home:'Sudáfrica',        away:'Corea del Sur',   homeFlag:'🇿🇦', awayFlag:'🇰🇷', date:'2026-06-24', time:'19:00', competition:'Grupo A — J3', type:'worldcup', venue:'Estadio Banorte, Monterrey',    status:'scheduled' },
-  // 25 junio
+  
   { id:'wc26_54', home:'Turquía',          away:'Estados Unidos',  homeFlag:'🇹🇷', awayFlag:'🇺🇸', date:'2026-06-25', time:'20:00', competition:'Grupo D — J3', type:'worldcup', venue:'SoFi Stadium, Los Ángeles',    status:'scheduled' },
   { id:'wc26_55', home:'Paraguay',         away:'Australia',       homeFlag:'🇵🇾', awayFlag:'🇦🇺', date:'2026-06-25', time:'20:00', competition:'Grupo D — J3', type:'worldcup', venue:'Levi\'s Stadium, San Francisco',status:'scheduled' },
-  // 26 junio
+  
   { id:'wc26_56', home:'Ecuador',          away:'Alemania',        homeFlag:'🇪🇨', awayFlag:'🇩🇪', date:'2026-06-26', time:'11:00', competition:'Grupo E — J3', type:'worldcup', venue:'AT&T Stadium, Dallas',           status:'scheduled' },
   { id:'wc26_57', home:'Costa de Marfil',  away:'Curazao',         homeFlag:'🇨🇮', awayFlag:'🇨🇼', date:'2026-06-26', time:'11:00', competition:'Grupo E — J3', type:'worldcup', venue:'Lincoln Financial, Filadelfia', status:'scheduled' },
   { id:'wc26_58', home:'Países Bajos',     away:'Suecia',          homeFlag:'🇳🇱', awayFlag:'🇸🇪', date:'2026-06-26', time:'14:00', competition:'Grupo F — J3', type:'worldcup', venue:'Estadio BBVA, Monterrey',        status:'scheduled' },
@@ -168,7 +133,7 @@ const _ALL_MATCHES = [
   { id:'wc26_61', home:'Egipto',           away:'Irán',            homeFlag:'🇪🇬', awayFlag:'🇮🇷', date:'2026-06-26', time:'21:00', competition:'Grupo G — J3', type:'worldcup', venue:'Lumen Field, Seattle',           status:'scheduled' },
   { id:'wc26_62', home:'Cabo Verde',       away:'Arabia Saudita',     homeFlag:'🇨🇻', awayFlag:'🇸🇦', date:'2026-06-26', time:'18:00', competition:'Grupo H — J3', type:'worldcup', venue:'NRG Stadium, Houston',           status:'scheduled' },
   { id:'wc26_63', home:'Uruguay',          away:'España',          homeFlag:'🇺🇾', awayFlag:'🇪🇸', date:'2026-06-26', time:'18:00', competition:'Grupo H — J3', type:'worldcup', venue:'Estadio Akron, Guadalajara',    status:'scheduled' },
-  // 27 junio
+  
   { id:'wc26_64', home:'Noruega',          away:'Francia',         homeFlag:'🇳🇴', awayFlag:'🇫🇷', date:'2026-06-27', time:'13:00', competition:'Grupo I — J3', type:'worldcup', venue:'Gillette Stadium, Boston',      status:'scheduled' },
   { id:'wc26_65', home:'Senegal',          away:'Irak',            homeFlag:'🇸🇳', awayFlag:'🇮🇶', date:'2026-06-27', time:'13:00', competition:'Grupo I — J3', type:'worldcup', venue:'BMO Field, Toronto',            status:'scheduled' },
   { id:'wc26_66', home:'Argelia',          away:'Austria',         homeFlag:'🇩🇿', awayFlag:'🇦🇹', date:'2026-06-27', time:'21:00', competition:'Grupo J — J3', type:'worldcup', venue:'Hard Rock Stadium, Miami',       status:'scheduled' },
@@ -181,62 +146,62 @@ const _ALL_MATCHES = [
 
 const MOCK = {
   standings: [
-    // Grupo A
+    
     { pos:1, team:'México',        flag:'🇲🇽', group:'A', pj:1,w:1,d:0,l:0,gf:2,gc:0,pts:3 },
     { pos:2, team:'Corea del Sur', flag:'🇰🇷', group:'A', pj:0,w:0,d:0,l:0,gf:0,gc:0,pts:0 },
     { pos:3, team:'Rep. Checa',    flag:'🇨🇿', group:'A', pj:0,w:0,d:0,l:0,gf:0,gc:0,pts:0 },
     { pos:4, team:'Sudáfrica',     flag:'🇿🇦', group:'A', pj:1,w:0,d:0,l:1,gf:0,gc:2,pts:0 },
-    // Grupo B
+    
     { pos:1, team:'Canadá',        flag:'🇨🇦', group:'B', pj:0,w:0,d:0,l:0,gf:0,gc:0,pts:0 },
     { pos:2, team:'Bosnia y Herz.',flag:'🇧🇦', group:'B', pj:0,w:0,d:0,l:0,gf:0,gc:0,pts:0 },
     { pos:3, team:'Qatar',         flag:'🇶🇦', group:'B', pj:0,w:0,d:0,l:0,gf:0,gc:0,pts:0 },
     { pos:4, team:'Suiza',         flag:'🇨🇭', group:'B', pj:0,w:0,d:0,l:0,gf:0,gc:0,pts:0 },
-    // Grupo C
+    
     { pos:1, team:'Brasil',        flag:'🇧🇷', group:'C', pj:0,w:0,d:0,l:0,gf:0,gc:0,pts:0 },
     { pos:2, team:'Marruecos',     flag:'🇲🇦', group:'C', pj:0,w:0,d:0,l:0,gf:0,gc:0,pts:0 },
     { pos:3, team:'Haití',         flag:'🇭🇹', group:'C', pj:0,w:0,d:0,l:0,gf:0,gc:0,pts:0 },
     { pos:4, team:'Escocia',       flag:'🏴󠁧󠁢󠁳󠁣󠁴󠁿', group:'C', pj:0,w:0,d:0,l:0,gf:0,gc:0,pts:0 },
-    // Grupo D
+    
     { pos:1, team:'Estados Unidos',flag:'🇺🇸', group:'D', pj:0,w:0,d:0,l:0,gf:0,gc:0,pts:0 },
     { pos:2, team:'Paraguay',      flag:'🇵🇾', group:'D', pj:0,w:0,d:0,l:0,gf:0,gc:0,pts:0 },
     { pos:3, team:'Australia',     flag:'🇦🇺', group:'D', pj:0,w:0,d:0,l:0,gf:0,gc:0,pts:0 },
     { pos:4, team:'Turquía',       flag:'🇹🇷', group:'D', pj:0,w:0,d:0,l:0,gf:0,gc:0,pts:0 },
-    // Grupo E
+    
     { pos:1, team:'Alemania',      flag:'🇩🇪', group:'E', pj:0,w:0,d:0,l:0,gf:0,gc:0,pts:0 },
     { pos:2, team:'Ecuador',       flag:'🇪🇨', group:'E', pj:0,w:0,d:0,l:0,gf:0,gc:0,pts:0 },
     { pos:3, team:'Costa de Marfil',flag:'🇨🇮',group:'E', pj:0,w:0,d:0,l:0,gf:0,gc:0,pts:0 },
     { pos:4, team:'Curazao',       flag:'🇨🇼', group:'E', pj:0,w:0,d:0,l:0,gf:0,gc:0,pts:0 },
-    // Grupo F
+    
     { pos:1, team:'Países Bajos',  flag:'🇳🇱', group:'F', pj:0,w:0,d:0,l:0,gf:0,gc:0,pts:0 },
     { pos:2, team:'Japón',         flag:'🇯🇵', group:'F', pj:0,w:0,d:0,l:0,gf:0,gc:0,pts:0 },
     { pos:3, team:'Suecia',        flag:'🇸🇪', group:'F', pj:0,w:0,d:0,l:0,gf:0,gc:0,pts:0 },
     { pos:4, team:'Túnez',         flag:'🇹🇳', group:'F', pj:0,w:0,d:0,l:0,gf:0,gc:0,pts:0 },
-    // Grupo G
+    
     { pos:1, team:'Bélgica',       flag:'🇧🇪', group:'G', pj:0,w:0,d:0,l:0,gf:0,gc:0,pts:0 },
     { pos:2, team:'Egipto',        flag:'🇪🇬', group:'G', pj:0,w:0,d:0,l:0,gf:0,gc:0,pts:0 },
     { pos:3, team:'Irán',          flag:'🇮🇷', group:'G', pj:0,w:0,d:0,l:0,gf:0,gc:0,pts:0 },
     { pos:4, team:'Nueva Zelanda', flag:'🇳🇿', group:'G', pj:0,w:0,d:0,l:0,gf:0,gc:0,pts:0 },
-    // Grupo H
+    
     { pos:1, team:'España',        flag:'🇪🇸', group:'H', pj:0,w:0,d:0,l:0,gf:0,gc:0,pts:0 },
     { pos:2, team:'Uruguay',       flag:'🇺🇾', group:'H', pj:0,w:0,d:0,l:0,gf:0,gc:0,pts:0 },
     { pos:3, team:'Arabia Saudita',flag:'🇸🇦', group:'H', pj:0,w:0,d:0,l:0,gf:0,gc:0,pts:0 },
     { pos:4, team:'Cabo Verde',    flag:'🇨🇻', group:'H', pj:0,w:0,d:0,l:0,gf:0,gc:0,pts:0 },
-    // Grupo I
+    
     { pos:1, team:'Francia',       flag:'🇫🇷', group:'I', pj:0,w:0,d:0,l:0,gf:0,gc:0,pts:0 },
     { pos:2, team:'Noruega',       flag:'🇳🇴', group:'I', pj:0,w:0,d:0,l:0,gf:0,gc:0,pts:0 },
     { pos:3, team:'Senegal',       flag:'🇸🇳', group:'I', pj:0,w:0,d:0,l:0,gf:0,gc:0,pts:0 },
     { pos:4, team:'Irak',          flag:'🇮🇶', group:'I', pj:0,w:0,d:0,l:0,gf:0,gc:0,pts:0 },
-    // Grupo J
+    
     { pos:1, team:'Argentina',     flag:'🇦🇷', group:'J', pj:0,w:0,d:0,l:0,gf:0,gc:0,pts:0 },
     { pos:2, team:'Austria',       flag:'🇦🇹', group:'J', pj:0,w:0,d:0,l:0,gf:0,gc:0,pts:0 },
     { pos:3, team:'Argelia',       flag:'🇩🇿', group:'J', pj:0,w:0,d:0,l:0,gf:0,gc:0,pts:0 },
     { pos:4, team:'Jordania',      flag:'🇯🇴', group:'J', pj:0,w:0,d:0,l:0,gf:0,gc:0,pts:0 },
-    // Grupo K
+    
     { pos:1, team:'Portugal',      flag:'🇵🇹', group:'K', pj:0,w:0,d:0,l:0,gf:0,gc:0,pts:0 },
     { pos:2, team:'Colombia',      flag:'🇨🇴', group:'K', pj:0,w:0,d:0,l:0,gf:0,gc:0,pts:0 },
     { pos:3, team:'Uzbekistán',    flag:'🇺🇿', group:'K', pj:0,w:0,d:0,l:0,gf:0,gc:0,pts:0 },
     { pos:4, team:'RD Congo',      flag:'🇨🇩', group:'K', pj:0,w:0,d:0,l:0,gf:0,gc:0,pts:0 },
-    // Grupo L
+    
     { pos:1, team:'Inglaterra',    flag:'🏴󠁧󠁢󠁥󠁮󠁧󠁿', group:'L', pj:0,w:0,d:0,l:0,gf:0,gc:0,pts:0 },
     { pos:2, team:'Croacia',       flag:'🇭🇷', group:'L', pj:0,w:0,d:0,l:0,gf:0,gc:0,pts:0 },
     { pos:3, team:'Panamá',        flag:'🇵🇦', group:'L', pj:0,w:0,d:0,l:0,gf:0,gc:0,pts:0 },
@@ -317,21 +282,6 @@ const MOCK = {
   predictableMatches: [],
 };
 
-/* ══════════════════════════════════════════════
-   HELPERS — mapear respuesta de worldcup26.ir
-══════════════════════════════════════════════ */
-
-/**
- * Mapea un partido de worldcup26.ir al formato interno de la app.
- * Estructura de worldcup26.ir:
- * {
- *   id, match_number, round, group_name,
- *   home_team, away_team, home_score, away_score,
- *   stadium, kickoff_utc, status,
- *   home_team_id, away_team_id
- * }
- */
-/* ── Traducción de nombres de equipo EN → ES (la API devuelve nombres en inglés) ── */
 const TEAM_NAME_ES = {
   'Mexico':'México', 'South Africa':'Sudáfrica', 'South Korea':'Corea del Sur',
   'Czech Republic':'Rep. Checa', 'Canada':'Canadá', 'Bosnia and Herzegovina':'Bosnia y Herz.',
@@ -351,11 +301,9 @@ const TEAM_NAME_ES = {
 };
 function translateTeamName(name) { return TEAM_NAME_ES[name] || name || ''; }
 
-/* ── Mapa inverso ES → EN, para que la búsqueda reconozca nombres en inglés ── */
 const TEAM_NAME_EN = {};
 Object.entries(TEAM_NAME_ES).forEach(([en, es]) => { TEAM_NAME_EN[es] = en; });
 
-/* ── Quita acentos/diacríticos para comparaciones de búsqueda ── */
 function _normalizeSearch(str) {
   return (str || '')
     .toString()
@@ -363,9 +311,6 @@ function _normalizeSearch(str) {
     .toLowerCase();
 }
 
-/* ── true si `text` (nombre en español, ej. de un equipo/jugador) coincide
-   con la búsqueda `q`, comparando también contra su alias en inglés.
-   Insensible a mayúsculas y acentos. ── */
 function matchesSearch(text, q) {
   if (!q) return true;
   const nq = _normalizeSearch(q);
@@ -375,7 +320,6 @@ function matchesSearch(text, q) {
   return false;
 }
 
-/* ── Traducción de etiquetas de fases eliminatorias (cuando aún no hay equipo definido) ── */
 function translateBracketLabel(label) {
   if (!label) return '';
   return label
@@ -386,13 +330,11 @@ function translateBracketLabel(label) {
     .replace(/^3rd Group (.+)$/, '3° Grupo $1');
 }
 
-/* ── Nombres legibles para las fases de eliminación directa ── */
 const KNOCKOUT_NAMES = {
   R32:'Dieciseisavos de Final', R16:'Octavos de Final', QF:'Cuartos de Final',
   SF:'Semifinal', '3RD':'Tercer Lugar', FINAL:'Final',
 };
 
-/* ── Parsear local_date "MM/DD/YYYY HH:MM" → { date:'YYYY-MM-DD', time:'HH:MM' } ── */
 function _parseWC26LocalDate(str) {
   if (!str) return { date: '', time: '' };
   const [datePart, timePart] = str.split(' ');
@@ -400,8 +342,8 @@ function _parseWC26LocalDate(str) {
   if (!mo || !da || !yr) return { date: '', time: timePart || '' };
   const [hh, mm] = (timePart || '0:0').split(':').map(Number);
 
-  // La API entrega local_date 1 hora detrás del horario real de El Salvador.
-  // Sumamos 1 hora aquí, manejando el rollover de día/mes/año.
+  
+  
   const dt = new Date(Number(yr), Number(mo) - 1, Number(da), hh, mm);
   dt.setHours(dt.getHours() + 1);
 
@@ -410,14 +352,13 @@ function _parseWC26LocalDate(str) {
   return { date, time };
 }
 
-/* ── Convertir kickoff_utc (ISO UTC) a hora El Salvador (UTC-6) ── */
 function _utcToSV(utcStr) {
   if (!utcStr) return { date: '', time: '' };
-  // kickoff_utc puede ser "2026-06-12T19:00:00Z" o "2026-06-12 19:00:00"
+  
   const iso = utcStr.includes('T') ? utcStr : utcStr.replace(' ', 'T') + 'Z';
   const d = new Date(iso);
   if (isNaN(d)) return { date: '', time: '' };
-  // El Salvador = UTC-6
+  
   const sv = new Date(d.getTime() - 6 * 3600000);
   const yr  = sv.getUTCFullYear();
   const mo  = String(sv.getUTCMonth() + 1).padStart(2, '0');
@@ -428,10 +369,10 @@ function _utcToSV(utcStr) {
 }
 
 function _mapWC26Match(m) {
-  // Preferir local_date (con corrección horaria conocida); fallback a kickoff_utc.
-  // NOTA: kickoff_utc de worldcup26.ir resultó poco confiable (desfasaba varios
-  // partidos hasta 3h respecto al horario real), por eso siempre que exista
-  // local_date se usa esa conversión y solo se recurre a kickoff_utc si falta.
+  
+  
+  
+  
   const { date, time } = m.local_date ? _parseWC26LocalDate(m.local_date) : _utcToSV(m.kickoff_utc);
 
   const isFinished = String(m.finished).toUpperCase() === 'TRUE';
@@ -442,7 +383,7 @@ function _mapWC26Match(m) {
   if (isFinished) status = 'finished';
   else if (isLive) status = 'live';
 
-  // Nombre de equipos: usar nombre real si existe, o traducir la etiqueta de bracket
+  
   const homeName = m.home_team_name_en
     ? translateTeamName(m.home_team_name_en)
     : translateBracketLabel(m.home_team_label);
@@ -450,7 +391,7 @@ function _mapWC26Match(m) {
     ? translateTeamName(m.away_team_name_en)
     : translateBracketLabel(m.away_team_label);
 
-  // Competencia: grupo (A-L) o fase eliminatoria (R32, R16, QF, SF, 3RD, FINAL)
+  
   let competition = 'Mundial 2026';
   if (m.group) {
     if (/^[A-L]$/.test(m.group)) competition = `Grupo ${m.group} — J${m.matchday || ''}`;
@@ -478,11 +419,6 @@ function _mapWC26Match(m) {
   };
 }
 
-/* ── Búsqueda de coincidencia en el fixture conocido (MOCK) por nombre de equipos ──
-   La API externa devuelve fechas/horas poco confiables para varios partidos
-   (desfases de hasta 3h). El fixture MOCK fue verificado manualmente contra
-   el calendario oficial (hora El Salvador), así que cuando un partido de la
-   API coincide con uno del fixture conocido, se usa SIEMPRE esa fecha/hora. */
 function _findKnownSchedule(home, away) {
   const nh = _normalizeSearch(home), na = _normalizeSearch(away);
   return _ALL_MATCHES.find(m => {
@@ -526,9 +462,6 @@ function _mapWC26Team(t) {
   };
 }
 
-/* ══════════════════════════════════════════════
-   API MODULE
-══════════════════════════════════════════════ */
 const API = {
 
   _memCache: {},
@@ -538,7 +471,7 @@ const API = {
 
   _TTL: {
     live:      2  * 60 * 1000,
-    upcoming:  5  * 60 * 1000,   // 5 min — datos del Mundial cambian frecuente
+    upcoming:  5  * 60 * 1000,   
     standings: 5  * 60 * 1000,
     finished:  10 * 60 * 1000,
     default:   5  * 60 * 1000,
@@ -560,7 +493,7 @@ const API = {
   },
   _memSet(key, data) { this._memCache[key] = { data, ts: Date.now() }; return data; },
 
-  /* Versión de caché — se incrementa cuando cambia el fixture/MOCK */
+  
   _CACHE_VERSION: 'v25',
 
   _lsCacheKey(key) { return `wcc_cache_${this._CACHE_VERSION}_${key}`; },
@@ -588,7 +521,7 @@ const API = {
     return data;
   },
 
-  /* ── fetch genérico con timeout ── */
+  
   async _fetch(url, headers = {}) {
     try {
       const ctrl  = new AbortController();
@@ -607,17 +540,13 @@ const API = {
     }
   },
 
-  /* ── worldcup26.ir fetch (via worker proxy) ── */
+  
   async _wc26(endpoint) {
-    if (USE_MOCK_ONLY) return null; // usar MOCK directamente
+    if (USE_MOCK_ONLY) return null; 
     return await this._fetch(`${WC26_BASE}${endpoint}`);
   },
 
-
-
-  /* ══════════════════════════════════════════
-     PARTIDOS EN VIVO
-  ══════════════════════════════════════════ */
+  
   async getLiveMatches() {
     const mem = this._memGet('live');
     if (mem) return mem;
@@ -639,9 +568,7 @@ const API = {
     return this._memSet('live', MOCK.liveMatches);
   },
 
-  /* ══════════════════════════════════════════
-     PRÓXIMOS Y HOY
-  ══════════════════════════════════════════ */
+  
   async getUpcomingMatches() {
     const mem = this._memGet('upcoming');
     if (mem) return mem;
@@ -674,9 +601,7 @@ const API = {
     return this._memSet('upcoming', MOCK.upcomingMatches);
   },
 
-  /* ══════════════════════════════════════════
-     PARTIDOS TERMINADOS
-  ══════════════════════════════════════════ */
+  
   async getFinishedMatches() {
     const mem = this._memGet('finished');
     if (mem) return mem;
@@ -709,19 +634,17 @@ const API = {
     return this._memSet('finished', MOCK.finishedMatches);
   },
 
-  /* ══════════════════════════════════════════
-     CLASIFICACIÓN / GRUPOS
-  ══════════════════════════════════════════ */
+  
   async getStandings() {
     const mem = this._memGet('standings');
     if (mem) return mem;
 
-    // Calculamos la tabla a partir de partidos finalizados reales.
-    // Si no hay datos reales, usamos el MOCK directamente (con resultados ya cargados).
+    
+    
     let finished = [];
     try { finished = await this.getFinishedMatches(); } catch(_) {}
 
-    // Si no hay partidos reales, devolver MOCK tal cual (ya tiene México 2-0)
+    
     if (!finished || finished.length === 0) {
       const mockRows = MOCK.standings.slice();
       const groups = {};
@@ -735,7 +658,7 @@ const API = {
       return this._memSet('standings', sorted);
     }
 
-    // Hay datos reales: recalcular desde cero sobre base de equipos del MOCK
+    
     const base = MOCK.standings.map(s => ({ ...s, pj:0, w:0, d:0, l:0, gf:0, gc:0, pts:0 }));
     const byTeam = {};
     base.forEach(s => { byTeam[s.team] = s; });
@@ -743,7 +666,7 @@ const API = {
     try {
       finished.forEach(m => {
         const h = byTeam[m.home], a = byTeam[m.away];
-        if (!h || !a) return; // partidos de eliminatoria / equipos sin grupo definido
+        if (!h || !a) return; 
         const hs = m.scoreHome ?? 0, as = m.scoreAway ?? 0;
         h.pj++; a.pj++;
         h.gf += hs; h.gc += as;
@@ -752,9 +675,9 @@ const API = {
         else if (hs < as) { a.w++; a.pts += 3; h.l++; }
         else              { h.d++; a.d++; h.pts++; a.pts++; }
       });
-    } catch(_) { /* si falla, queda en 0 */ }
+    } catch(_) {  }
 
-    // Reordenar cada grupo por pts, diferencia de goles y goles a favor
+    
     const groups = {};
     base.forEach(s => (groups[s.group] = groups[s.group] || []).push(s));
     const rows = [];
@@ -767,12 +690,10 @@ const API = {
     return this._memSet('standings', rows);
   },
 
-  /* ══════════════════════════════════════════
-     EQUIPOS
-  ══════════════════════════════════════════ */
+  
   async getTeams(query = '') {
-    // Siempre reconstruir desde standings frescos (nunca usar LS ni teamsCache)
-    // Usa _normalizeSearch para que "México"=="mexico"=="Mexico" hagan match
+    
+    
     const standings = await this.getStandings().catch(() => MOCK.standings);
     const standMap  = {};
     (standings || MOCK.standings).forEach(s => {
@@ -800,9 +721,7 @@ const API = {
     return this._teamsCache.filter(t => matchesSearch(t.name||'', query));
   },
 
-  /* ══════════════════════════════════════════
-     PARTIDOS DE UN EQUIPO
-  ══════════════════════════════════════════ */
+  
   async getTeamMatches(teamName) {
     const cacheKey = `team_matches_${teamName}`;
     const mem = this._memGet(cacheKey);
@@ -819,7 +738,7 @@ const API = {
       upcoming: mapped.filter(m => m.status !== 'finished'  && (norm(m.home||'').includes(tn) || norm(m.away||'').includes(tn))),
     });
 
-    // Intentar con la API real
+    
     const data = await this._wc26('/get/games');
     if (data) {
       const games  = Array.isArray(data) ? data : (data.games || data.matches || data.data || []);
@@ -829,7 +748,7 @@ const API = {
       }
     }
 
-    // Fallback: usar los partidos del MOCK hardcodeado (_ALL_MATCHES via getUpcomingMatches cache o MOCK directo)
+    
     const mockAll = [
       ...(MOCK.finishedMatches || []),
       ...(MOCK.upcomingMatches || []),
@@ -838,7 +757,7 @@ const API = {
       return this._memSet(cacheKey, filterFromMapped(mockAll));
     }
 
-    // Último recurso: buscar en la lista _ALL_MATCHES directamente
+    
     try {
       const allMatches = (typeof _ALL_MATCHES !== 'undefined') ? _ALL_MATCHES : [];
       if (allMatches.length > 0) {
@@ -850,9 +769,7 @@ const API = {
     return this._memSet(cacheKey, { played: [], upcoming: [] });
   },
 
-  /* ══════════════════════════════════════════
-     JUGADORES
-  ══════════════════════════════════════════ */
+  
   async getPlayers(query = '') {
     const data = MOCK.players || [];
     if (!query) return data;
@@ -868,38 +785,31 @@ const API = {
     return players.slice().sort((a,b) => (b.goals||0)-(a.goals||0));
   },
 
-  /* ══════════════════════════════════════════
-     ZONA HORARIA POR SEDE
-     Los horarios en _ALL_MATCHES son hora local
-     de la ciudad sede. Este helper devuelve el
-     offset UTC correcto para parsear correctamente.
-  ══════════════════════════════════════════ */
+  
   _venueOffset(venue) {
     if (!venue) return '-06:00';
     const v = venue.toLowerCase();
-    // UTC-7 (PDT): Los Ángeles, San Francisco, Vancouver, Seattle
+    
     if (v.includes('sofi') || v.includes('los ángeles') || v.includes('los angeles') ||
         v.includes('levi') || v.includes('san francisco') ||
         v.includes('bc place') || v.includes('vancouver') ||
         v.includes('lumen') || v.includes('seattle')) return '-07:00';
-    // UTC-5 (CDT): Dallas, Houston, Kansas City
+    
     if (v.includes('at&t') || v.includes('dallas') ||
         v.includes('nrg') || v.includes('houston') ||
         v.includes('arrowhead') || v.includes('kansas')) return '-05:00';
-    // UTC-4 (EDT): Nueva York, Boston, Filadelfia, Atlanta, Miami, Toronto
+    
     if (v.includes('metlife') || v.includes('nueva york') || v.includes('new york') ||
         v.includes('gillette') || v.includes('boston') ||
         v.includes('lincoln') || v.includes('filadelfia') ||
         v.includes('mercedes') || v.includes('atlanta') ||
         v.includes('hard rock') || v.includes('miami') ||
         v.includes('bmo') || v.includes('toronto')) return '-04:00';
-    // UTC-6 (CDT): México (CDMX, Guadalajara, Monterrey) — default
+    
     return '-06:00';
   },
 
-  /* ══════════════════════════════════════════
-     ESTADO DEL PARTIDO
-  ══════════════════════════════════════════ */
+  
   getMatchState(m) {
     if (m.status === 'live')     return 'live';
     if (m.status === 'finished') return 'finished';
@@ -909,8 +819,8 @@ const API = {
     const diffMin = (Date.now() - matchTs) / 60000;
     if (diffMin > 115) return 'finished';
     if (diffMin > 0)   return 'live';
-    if (diffMin > -60) return 'closed';        // <1h para el inicio: predicciones cerradas
-    if (diffMin > -180) return 'starting_soon'; // 1h-3h antes: aviso de cierre próximo
+    if (diffMin > -60) return 'closed';        
+    if (diffMin > -180) return 'starting_soon'; 
     return 'upcoming';
   },
 
@@ -926,9 +836,7 @@ const API = {
     return `En ${min}m`;
   },
 
-  /* ══════════════════════════════════════════
-     PARTIDOS PARA PREDICCIONES
-  ══════════════════════════════════════════ */
+  
   async getPredictableMatches() {
     const todayStr = localDateStr();
     const yestStr  = yesterdayStr();
@@ -943,9 +851,7 @@ const API = {
     return MOCK.predictableMatches;
   },
 
-  /* ══════════════════════════════════════════
-     ESTADIOS — GET /get/stadiums
-  ══════════════════════════════════════════ */
+  
   async getStadiums() {
     const mem = this._memGet('stadiums');
     if (mem) return mem;
@@ -964,7 +870,7 @@ const API = {
         if (mapped.length > 0) return this._memSet('stadiums', mapped);
       }
     } catch(_) {}
-    // MOCK estadios del Mundial 2026
+    
     return this._memSet('stadiums', [
       { id:1,  name:'MetLife Stadium',       city:'Nueva York/NJ',  country:'USA', capacity:82500 },
       { id:2,  name:'SoFi Stadium',          city:'Los Ángeles',    country:'USA', capacity:70240 },
@@ -985,54 +891,48 @@ const API = {
     ]);
   },
 
-  /* ══════════════════════════════════════════
-     DETALLE DE PARTIDO — GET /get/games/:id
-  ══════════════════════════════════════════ */
+  
   async getMatchDetail(matchId) {
     const cacheKey = `match_${matchId}`;
     const mem = this._memGet(cacheKey);
     if (mem) return mem;
     try {
-      // Extraer el id numérico del formato wc26_123
+      
       const numId = String(matchId).replace('wc26_', '');
       const data = await this._wc26(`/get/games/${numId}`);
       if (data) {
         const m = Array.isArray(data) ? data[0] : (data.game || data.match || data);
         if (m && m.id) {
           const mapped = _applyKnownSchedule(_mapWC26Match(m));
-          return this._memSet(cacheKey, mapped, 60); // cache 60s
+          return this._memSet(cacheKey, mapped, 60); 
         }
       }
     } catch(_) {}
-    // Fallback: buscar en datos locales
+    
     const all = await this.getUpcomingMatches();
     return all.find(m => m.id === matchId) || null;
   },
 
-  /* ══════════════════════════════════════════
-     TODOS LOS GRUPOS A–L (para tabla completa)
-  ══════════════════════════════════════════ */
+  
   async getAllGroups() {
     const mem = this._memGet('allGroups');
     if (mem) return mem;
     const standings = await this.getStandings();
-    // Agrupar por grupo
+    
     const groups = {};
     standings.forEach(t => {
       const g = t.group || 'Desconocido';
       if (!groups[g]) groups[g] = [];
       groups[g].push(t);
     });
-    // Ordenar equipos dentro de cada grupo por pts DESC, luego GF-GC DESC
+    
     Object.values(groups).forEach(arr => arr.sort((a,b) =>
       (b.pts - a.pts) || ((b.gf-b.gc) - (a.gf-a.gc)) || (b.gf - a.gf)
     ));
     return this._memSet('allGroups', groups, 120);
   },
 
-  /* ══════════════════════════════════════════
-     FORCE REFRESH
-  ══════════════════════════════════════════ */
+  
   async forceRefresh() {
     this._memCache  = {};
     this._teamsCache = null;
@@ -1049,7 +949,7 @@ const API = {
         this.getStandings(),
         this.getFinishedMatches(),
       ]);
-      // Re-cargar teams enriquecidos con standings actualizados
+      
       await this.getTeams('').catch(() => {});
       const apiConnected = (upcoming?.some?.(m => m.id?.startsWith?.('wc26_')));
       API_STATUS.usingMock = !apiConnected;
@@ -1064,9 +964,7 @@ const API = {
     }
   },
 
-  /* ══════════════════════════════════════════
-     PAGE VISIBILITY (pausa timers ocultos)
-  ══════════════════════════════════════════ */
+  
   _pausedTimers: [],
   pauseWhenHidden() {
     if (this._visibilityBound) return;
@@ -1086,9 +984,7 @@ const API = {
     return entry;
   },
 
-  /* ══════════════════════════════════════════
-     FOTOS — CDN jsDelivr por ID de figurita
-  ══════════════════════════════════════════ */
+  
   getPhotoSync(fig) {
     if (!fig?.id) return null;
     return `${this._PHOTO_BASE_URL}${fig.id}.png`;
@@ -1110,9 +1006,7 @@ const API = {
     this._teamsCache = null; this._memCache = {};
   },
 
-  /* ══════════════════════════════════════════
-     HELPERS LEGACY (compatibilidad)
-  ══════════════════════════════════════════ */
+  
   getCrest(name) { return `https://flagcdn.com/w80/${TEAM_FLAGS[name]?'':'xx'}.png`; },
   getFlag(name)  { return getFlag(name); },
   getApiStatus() {
@@ -1124,5 +1018,4 @@ const API = {
   }
 };
 
-// Limpiar caché viejas al cargar el módulo
 API._init();

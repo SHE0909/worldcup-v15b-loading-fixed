@@ -1,9 +1,3 @@
-/**
- * app.js — Controlador principal  v5
- * Mejoras: logout con diseño, gacha con fotos, status de API real
- */
-
-// --- Twemoji: convierte emojis (banderas, etc.) en imágenes para que se vean igual en todos los dispositivos ---
 function parseEmojis(node) {
   if (window.twemoji) {
     try { twemoji.parse(node || document.body, { folder: 'svg', ext: '.svg' }); } catch(_) {}
@@ -135,7 +129,7 @@ const App = {
       case 'dashboard':   await Dashboard.render(); break;
       case 'stats':       await Stats.render(Stats._currentTab || 'teams'); break;
       case 'gacha': {
-        // Limpiar resultado anterior al entrar a la tab
+        
         const prevResult = document.getElementById('gacha-result');
         if (prevResult) { prevResult.innerHTML = ''; prevResult.style.display = 'none'; }
         const u = await Auth.currentUser();
@@ -159,7 +153,7 @@ const App = {
       case 'battle':      await Battle.render(); break;
       case 'exchange':    await Exchange.render(); break;
       case 'profile':     await Profile.render(); break;
-      case 'live': /* iframe auto-plays, nothing to render */ break;
+      case 'live':  break;
     }
   },
 
@@ -185,7 +179,7 @@ const App = {
     document.getElementById('search-input')?.addEventListener('keydown', (e) => {
       if (e.key === 'Enter') document.getElementById('btn-search').click();
     });
-    // Búsqueda inteligente: filtra en vivo con cada tecla (debounce corto)
+    
     document.getElementById('search-input')?.addEventListener('input', (e) => {
       clearTimeout(this._searchDebounce);
       const value = e.target.value.trim();
@@ -240,7 +234,6 @@ const App = {
 
         await Dashboard.render();
         await this.loadUserData();
-
 
         Toast.success('Estadísticas actualizadas ✅');
       } catch(err) {
@@ -321,9 +314,7 @@ const App = {
     }
   },
 
-  /* ══════════════════════════════════════════
-     GACHA PULL — Animación sobre Panini
-  ══════════════════════════════════════════ */
+  
   async doPull(n) {
     const sobreWrapper = document.getElementById('sobre-wrapper');
     const sobreClosed  = document.getElementById('sobre-closed');
@@ -378,21 +369,19 @@ const App = {
       setTimeout(() => card.classList.add('card-flip-in'), i * 100);
     });
 
-    /* 7. Inyectar fotos en TODAS las cartas (incluidas duplicadas) después del render
-          Nota: querySelectorAll captura TODAS las cartas con el mismo data-id (duplicados) */
-    /* 7b. Inyectar fotos para cartas que no tenían foto en caché al renderizar
-           (incluye duplicados de sesiones anteriores). Usa onload para fade-in. */
-    // Inyectar fotos - deduplicado por id para no pedir la misma foto varias veces
+    
+    
+    
     const seenPhotoIds = new Set();
     pull.results.forEach(f => {
-      if (seenPhotoIds.has(f.id)) return; // ya procesado
+      if (seenPhotoIds.has(f.id)) return; 
       seenPhotoIds.add(f.id);
       Gacha.getPlayerPhoto(f).then(url => {
         if (!url) return;
-        // Inyectar en TODOS los wraps con este id (incluyendo duplicados)
+        
         const wraps = document.querySelectorAll(`#gacha-grid .fig-photo-wrap[data-id="${f.id}"]`);
         wraps.forEach(wrap => {
-          // Quitar img previa si existe (puede estar sin src por race condition)
+          
           const existingImg = wrap.querySelector('img.fig-photo');
           if (existingImg) existingImg.remove();
           const isCutout = url.includes('cutout') || url.includes('Cutout');
@@ -428,14 +417,14 @@ const App = {
     const leg  = pull.results.find(f => f.rareza === 'legendary');
     const epic = pull.results.find(f => f.rareza === 'epic');
 
-    // ── Animación especial Clash Royale al sacar legendaria/GOAT ──
+    
     if (goat || leg) {
       const rarityClass = goat ? 'reveal-goat' : 'reveal-legendary';
       const rarityLabel = goat ? '🐐 ¡¡G.O.A.T!!' : '✨ ¡LEGENDARIA!';
       const rarityColor = goat ? '#ff2244' : '#ffd700';
       const rarityName  = goat ? goat.name : leg.name;
 
-      // Overlay de partículas
+      
       const overlay = document.createElement('div');
       overlay.id = 'rarity-reveal-overlay';
       overlay.innerHTML = `
@@ -449,7 +438,7 @@ const App = {
         </div>`;
       document.body.appendChild(overlay);
 
-      // Generar partículas dinámicas
+      
       const particlesEl = overlay.querySelector('#rarity-particles');
       const colors = goat ? ['#ff2244','#ff6622','#ffcc00','#ffffff'] : ['#ffd700','#fff4a0','#fffbe6','#ffffff'];
       for (let i = 0; i < 40; i++) {
@@ -466,7 +455,7 @@ const App = {
         particlesEl.appendChild(p);
       }
 
-      // Quitar overlay después de la animación
+      
       setTimeout(() => {
         overlay.style.opacity = '0';
         overlay.style.transition = 'opacity 0.4s ease';

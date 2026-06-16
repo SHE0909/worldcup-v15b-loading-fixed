@@ -1,10 +1,3 @@
-/* =============================================
-   WORLD CUP COLLECTOR — UES
-   Main Stylesheet (compiled from SASS concepts)
-   Aesthetic: Dark / FIFA / EA Sports
-   ============================================= */
-
-/* ---- RESET & BASE ---- */
 *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 html { font-size: 16px; scroll-behavior: smooth; }
 body {
@@ -19,7 +12,6 @@ a:hover { text-decoration: underline; }
 img { max-width: 100%; }
 input, button { font-family: inherit; }
 
-/* ---- CSS VARIABLES ---- */
 :root {
   color-scheme: dark;
   --bg-base:        #080c14;
@@ -39,7 +31,7 @@ input, button { font-family: inherit; }
   --text-secondary: #7a8fa8;
   --text-muted:     #3d5068;
 
-  /* Rarities */
+  
   --common:    #8ba3b8;
   --rare:      #4aa8ff;
   --epic:      #b44fff;
@@ -56,11 +48,8 @@ input, button { font-family: inherit; }
   --shadow-glow: 0 0 20px var(--accent-glow);
 }
 
-/* ---- SCREENS ---- */
-
 .btn-icon:hover { color: var(--accent); }
 
-/* ── BOTÓN LOGOUT ── */
 #btn-logout {
   display: flex;
   align-items: center;
@@ -84,7 +73,6 @@ input, button { font-family: inherit; }
   box-shadow: 0 0 12px rgba(255, 85, 102, 0.3);
 }
 
-/* ── MODAL LOGOUT ── */
 .logout-overlay {
   position: fixed; inset: 0; z-index: 9999;
   background: rgba(8,12,20,0.85);
@@ -142,10 +130,6 @@ input, button { font-family: inherit; }
   transform: translateY(-1px);
 }
 
-/* ============================================
-   APP SHELL
-   ============================================ */
-/* En app.html, screen-app es el único elemento → siempre visible */
 #screen-app {
   display: flex;
   flex-direction: column;
@@ -153,7 +137,6 @@ input, button { font-family: inherit; }
   min-height: 100vh;
 }
 
-/* HEADER */
 .app-header {
   position: sticky; top: 0; z-index: 100;
   height: var(--header-height);
@@ -195,7 +178,6 @@ input, button { font-family: inherit; }
 }
 .header-stat strong { color: var(--accent); }
 
-/* NAV */
 .app-nav {
   position: sticky;
   top: var(--header-height);
@@ -246,7 +228,6 @@ input, button { font-family: inherit; }
   border-radius: 0 0 4px 4px;
 }
 
-/* MAIN */
 .app-main {
   flex: 1;
   padding: 1rem 1.25rem 2rem;
@@ -257,7 +238,6 @@ input, button { font-family: inherit; }
 .tab-section { display: none; animation: fadeUp 0.3s ease; width: 100%; }
 .tab-section.active { display: block; width: 100%; }
 
-/* SECTION HEADER */
 .section-header {
   display: flex;
   align-items: center;
@@ -280,9 +260,6 @@ input, button { font-family: inherit; }
   font-family: 'Barlow Condensed', sans-serif;
 }
 
-/* ============================================
-   CARDS & COMMON COMPONENTS
-   ============================================ */
 .card {
   background: var(--bg-card);
   border: 1px solid var(--border);
@@ -295,12 +272,6 @@ input, button { font-family: inherit; }
   transform: translateY(-2px);
 }
 
-/* ============================================
-   DASHBOARD LAYOUT — fuente única de verdad
-   Móvil (<768px):  1 columna, todo apilado
-   Tablet (768–1199px): sidebar 220px + main
-   Desktop (>=1200px): sidebar 1fr + main 1.6fr
-   ============================================ */
 .dashboard-grid {
   display: grid;
   gap: 0.75rem;
@@ -319,14 +290,14 @@ input, button { font-family: inherit; }
 .dash-main .dash-card {
   height: 100%;
 }
-/* Tablet */
+
 @media (min-width: 768px) {
   .dashboard-grid {
     grid-template-columns: 220px 1fr;
     gap: 1rem;
   }
 }
-/* Desktop */
+
 @media (min-width: 1200px) {
   .dashboard-grid {
     grid-template-columns: 1fr 1.6fr;
@@ -396,9 +367,6 @@ input, button { font-family: inherit; }
   padding: 1rem 0;
 }
 
-/* ============================================
-   STATS
-   ============================================ */
 .search-bar {
   display: flex;
   gap: 0.5rem;
@@ -478,9 +446,6 @@ input, button { font-family: inherit; }
   color: var(--gold);
 }
 
-/* ============================================
-   GACHA
-   ============================================ */
 .gacha-center {
   display: flex;
   flex-direction: column;
@@ -564,7 +529,6 @@ input, button { font-family: inherit; }
 }
 .figurita-card:hover { transform: translateY(-4px); }
 
-/* Rareza glow overlay */
 .fig-rarity-glow {
   position: absolute;
   inset: 0;
@@ -607,7 +571,6 @@ input, button { font-family: inherit; }
   text-shadow: 0 1px 2px rgba(0,0,0,0.4);
 }
 
-/* Foto del jugador */
 .fig-photo-wrap {
   width: 100%;
   aspect-ratio: 3 / 4;
@@ -648,7 +611,6 @@ input, button { font-family: inherit; }
   filter: drop-shadow(0 4px 12px rgba(0,0,0,0.5));
 }
 
-/* Información del jugador */
 .fig-info {
   padding: 0.5rem 0.4rem 0.4rem;
   position: relative;
@@ -751,9 +713,6 @@ input, button { font-family: inherit; }
 .rarity.epic     { background: rgba(180,79,255,0.15); color: var(--epic); border: 1px solid var(--epic); }
 .rarity.legendary { background: rgba(255,215,0,0.15); color: var(--legendary); border: 1px solid var(--legendary); }
 
-/* ============================================
-   ALBUM
-   ============================================ */
 .album-filters {
   display: flex;
   gap: 0.5rem;
@@ -836,7 +795,6 @@ input, button { font-family: inherit; }
   border-radius: 3px;
 }
 
-/* IDEAL TEAM */
 .ideal-team {
   background: var(--bg-card);
   border: 1px solid var(--border);
@@ -888,9 +846,6 @@ input, button { font-family: inherit; }
   text-transform: uppercase;
 }
 
-/* ============================================
-   PREDICTIONS
-   ============================================ */
 .predictions-list {
   display: flex;
   flex-direction: column;
@@ -951,10 +906,6 @@ input, button { font-family: inherit; }
   margin-top: 0.5rem;
 }
 
-/* ============================================
-   PROFILE
-   ============================================ */
-/* ── Edición de perfil ── */
 .profile-avatar-wrap {
   position: relative;
   flex-shrink: 0;
@@ -1106,9 +1057,6 @@ input, button { font-family: inherit; }
   flex-wrap: wrap;
 }
 
-/* ============================================
-   TOAST
-   ============================================ */
 .toast {
   position: fixed;
   bottom: calc(var(--nav-height) + 1rem);
@@ -1136,9 +1084,6 @@ input, button { font-family: inherit; }
 .toast.error   { border-color: #ff4466; color: #ff4466; }
 .toast.warn    { border-color: var(--gold); color: var(--gold); }
 
-/* ============================================
-   MODAL
-   ============================================ */
 .modal-overlay {
   position: fixed; inset: 0;
   background: rgba(0,0,0,0.7);
@@ -1168,31 +1113,22 @@ input, button { font-family: inherit; }
 }
 .modal-close:hover { color: var(--text-primary); }
 
-/* ============================================
-   STANDINGS TABLE (dashboard)
-   ============================================ */
 .standings-mini { font-size: 0.8rem; min-width: 0 !important; width: 100%; }
 .standings-mini tr { border-bottom: 1px solid var(--border); }
 .standings-mini td { padding: 0.3rem 0.4rem; }
 .standings-mini th { padding: 0.3rem 0.4rem; }
 .standings-mini .pos { color: var(--text-muted); font-family: 'Barlow Condensed', sans-serif; }
 .standings-mini .pts { color: var(--accent); font-weight: 700; font-family: 'Barlow Condensed', sans-serif; }
-/* La tabla de posiciones en el sidebar no necesita scroll horizontal */
+
 .card-standings .stats-table-wrap { overflow-x: visible; }
 .card-standings .standings-mini { min-width: 0 !important; }
 .card-standings td, .card-standings th { font-size: 0.72rem; padding: 0.25rem 0.3rem; }
 
-/* ============================================
-   SCROLLBAR
-   ============================================ */
 ::-webkit-scrollbar { width: 6px; height: 6px; }
 ::-webkit-scrollbar-track { background: var(--bg-surface); }
 ::-webkit-scrollbar-thumb { background: var(--border-bright); border-radius: 3px; }
 ::-webkit-scrollbar-thumb:hover { background: var(--accent-dark); }
 
-/* ============================================
-   RESPONSIVE
-   ============================================ */
 @media (max-width: 480px) {
   .profile-card { flex-direction: column; text-align: center; }
   .profile-stats { justify-content: center; }
@@ -1200,9 +1136,6 @@ input, button { font-family: inherit; }
   .gacha-btns .btn { width: 100%; }
 }
 
-/* ============================================
-   LOADING SPINNER
-   ============================================ */
 .spinner {
   width: 32px; height: 32px;
   border: 3px solid var(--border);
@@ -1213,20 +1146,12 @@ input, button { font-family: inherit; }
 }
 @keyframes spin { to { transform: rotate(360deg); } }
 
-/* ============================================
-   MISC
-   ============================================ */
 .text-accent { color: var(--accent); }
 .text-gold { color: var(--gold); }
 .text-muted { color: var(--text-muted); }
 .mt-1 { margin-top: 0.5rem; }
 .mb-1 { margin-bottom: 0.5rem; }
 
-/* ============================================
-   MEJORAS v2 — Nuevos estilos y correcciones
-   ============================================ */
-
-/* ── Figurita card: animación de entrada ── */
 .figurita-card {
   animation: cardReveal 0.4s ease-out both;
 }
@@ -1235,7 +1160,6 @@ input, button { font-family: inherit; }
   to   { opacity: 1; transform: translateY(0) scale(1); }
 }
 
-/* ── Gacha: efecto brillo en legendaria (override) ── */
 .figurita-card.legendary {
   animation: cardReveal 0.4s ease-out both, legendaryGlow 2s ease-in-out infinite alternate;
 }
@@ -1244,7 +1168,6 @@ input, button { font-family: inherit; }
   to   { box-shadow: 0 0 20px var(--legendary), 0 0 40px var(--legendary), inset 0 0 10px rgba(255,215,0,0.1); }
 }
 
-/* ── Pity counter badge ── */
 .pity-info {
   font-size: 0.7rem;
   color: var(--text-muted);
@@ -1268,7 +1191,6 @@ input, button { font-family: inherit; }
   transition: width 0.4s ease;
 }
 
-/* ── Dashboard: partidos en vivo mejorados ── */
 .match-teams-row {
   display: flex;
   justify-content: space-between;
@@ -1314,12 +1236,10 @@ input, button { font-family: inherit; }
   white-space: nowrap;
 }
 
-/* ── Standings: filas highlight ── */
 .tr-qualify td { color: #44ff88; }
 .tr-qualify td:first-child { color: var(--gold); font-weight: 700; }
 .tr-maybe td:first-child { color: var(--text-secondary); }
 
-/* ── Predicciones: mejoras visuales ── */
 .pred-meta {
   display: flex;
   justify-content: space-between;
@@ -1377,7 +1297,6 @@ input, button { font-family: inherit; }
 .pred-result.loss    { color: #ff4466; }
 .pred-result.pending { color: var(--gold); }
 
-/* ── Perfil: bet-item mejorado ── */
 .bet-left {
   display: flex;
   flex-direction: column;
@@ -1386,13 +1305,11 @@ input, button { font-family: inherit; }
 .bet-match { color: var(--text-secondary); font-size: 0.75rem; }
 .bet-pick  { color: var(--text-primary); font-size: 0.8rem; font-weight: 600; }
 
-/* ── Monedas en header ── */
 #hdr-monedas {
   font-size: 0.75rem;
   color: var(--gold);
 }
 
-/* ── Album slot: animación hover mejorada ── */
 .album-slot {
   transition: transform 0.15s ease, box-shadow 0.15s ease;
 }
@@ -1411,7 +1328,6 @@ input, button { font-family: inherit; }
   box-shadow: 0 0 8px rgba(74,168,255,0.3);
 }
 
-/* ── Botón convertir duplicados ── */
 #btn-convert-dupes {
   width: 100%;
   margin-top: 0.5rem;
@@ -1421,7 +1337,6 @@ input, button { font-family: inherit; }
   cursor: not-allowed;
 }
 
-/* ── Auth: indicador de fuerza de contraseña ── */
 .pass-strength {
   height: 3px;
   border-radius: 2px;
@@ -1431,7 +1346,6 @@ input, button { font-family: inherit; }
   width: 0%;
 }
 
-/* ── Empty state mejorado ── */
 .empty-state {
   font-size: 0.8rem;
   color: var(--text-muted);
@@ -1440,7 +1354,6 @@ input, button { font-family: inherit; }
   font-style: italic;
 }
 
-/* ── Album: slot de figurita especial para legendarias ── */
 .album-slot.legendary.owned::after {
   content: '';
   position: absolute;
@@ -1450,7 +1363,6 @@ input, button { font-family: inherit; }
   pointer-events: none;
 }
 
-/* ── Gacha: esfera pulsante cuando hay tiradas ── */
 .gacha-sphere.has-tiradas .sphere-inner {
   animation: spherePulse 2s ease-in-out infinite;
 }
@@ -1459,11 +1371,8 @@ input, button { font-family: inherit; }
   50% { transform: scale(1.05); }
 }
 
-/* ── Header: gap ajuste ── */
-
-/* ── Tablet/Desktop improvements ── */
 @media (min-width: 768px) {
-  /* dashboard-grid: handled by base rules at 768px */
+  
   .gacha-center {
     max-width: 600px;
     margin: 0 auto;
@@ -1479,7 +1388,7 @@ input, button { font-family: inherit; }
 }
 
 @media (min-width: 1024px) {
-  /* dashboard-grid: handled by base rules at 1200px */
+  
   .album-grid {
     grid-template-columns: repeat(auto-fill, minmax(80px, 1fr));
   }
@@ -1488,9 +1397,6 @@ input, button { font-family: inherit; }
   }
 }
 
-/* ══════════════════════════════════════════
-   LOADING SCREEN
-══════════════════════════════════════════ */
 #screen-loading {
   display: none;
   background: var(--bg-deep, #0a0e1a);
@@ -1520,9 +1426,6 @@ input, button { font-family: inherit; }
   to   { transform: rotate(360deg); }
 }
 
-/* ══════════════════════════════════════════
-   API STATUS BAR
-══════════════════════════════════════════ */
 .api-status-bar {
   display: none;
   align-items: center;
@@ -1550,9 +1453,6 @@ input, button { font-family: inherit; }
   color: #00c864;
 }
 
-/* ══════════════════════════════════════════
-   BTN CON LOADING STATE
-══════════════════════════════════════════ */
 .btn-loading {
   position: relative;
   transition: opacity 0.2s;
@@ -1562,9 +1462,6 @@ input, button { font-family: inherit; }
   cursor: not-allowed;
 }
 
-/* ══════════════════════════════════════════
-   API STATUS BAR
-══════════════════════════════════════════ */
 .api-status-bar {
   display: none;
   align-items: center;
@@ -1592,9 +1489,6 @@ input, button { font-family: inherit; }
   color: #00c864;
 }
 
-/* ============================================
-   BOTONES — Base styles (v6 fix)
-   ============================================ */
 .btn {
   display: inline-flex;
   align-items: center;
@@ -1652,9 +1546,6 @@ input, button { font-family: inherit; }
   transform: translateY(-2px);
 }
 
-/* ============================================
-   GACHA BUTTONS — Mejorado v6
-   ============================================ */
 .gacha-btns {
   display: flex;
   gap: 0.75rem;
@@ -1666,7 +1557,7 @@ input, button { font-family: inherit; }
   padding: 0.75rem 1rem;
   font-size: 0.95rem;
 }
-#btn-gacha-1  { /* Tirar x1 — acento */
+#btn-gacha-1  { 
   background: linear-gradient(135deg, #00d4ff, #0099bb);
   color: #080c14;
   box-shadow: 0 0 20px rgba(0,212,255,0.35);
@@ -1675,7 +1566,7 @@ input, button { font-family: inherit; }
   box-shadow: 0 0 32px rgba(0,212,255,0.6);
   transform: translateY(-3px);
 }
-#btn-gacha-10 { /* Tirar x10 — dorado */
+#btn-gacha-10 { 
   background: linear-gradient(135deg, #ffd700, #e6a800);
   color: #080c14;
   box-shadow: 0 0 20px rgba(255,215,0,0.3);
@@ -1685,9 +1576,6 @@ input, button { font-family: inherit; }
   transform: translateY(-3px);
 }
 
-/* ============================================
-   PREDICCIONES — Escudos y diseño v6
-   ============================================ */
 .pred-crest {
   width: 36px;
   height: 36px;
@@ -1761,7 +1649,6 @@ input, button { font-family: inherit; }
   border: 1px solid rgba(255,215,0,0.3);
 }
 
-/* Estado dinámico del partido */
 .pred-state-badge {
   display: inline-block;
   font-size: 0.58rem;
@@ -1793,7 +1680,7 @@ input, button { font-family: inherit; }
   color: #ff8c00;
   border: 1px solid rgba(255,140,0,0.35);
 }
-/* Fila de alineación */
+
 .pred-lineup-row {
   text-align: center;
   margin: 0.4rem 0 0.1rem;
@@ -1818,7 +1705,6 @@ input, button { font-family: inherit; }
   margin-top: 2px;
 }
 
-/* Botón confirmar dentro de predicciones */
 .btn-confirm-pred {
   width: 100%;
   margin-top: 0.5rem;
@@ -1841,7 +1727,6 @@ input, button { font-family: inherit; }
   transform: translateY(-1px);
 }
 
-/* Escudo/foto en gacha sphere */
 .gacha-sphere.has-tiradas {
   border-color: var(--gold);
   box-shadow: 0 0 40px rgba(255,215,0,0.4), inset 0 0 30px rgba(255,215,0,0.1);
@@ -1852,7 +1737,6 @@ input, button { font-family: inherit; }
   50% { box-shadow: 0 0 70px rgba(255,215,0,0.7), inset 0 0 40px rgba(255,215,0,0.2); }
 }
 
-/* Pity bar mejorada */
 .pity-section {
   width: 100%;
   max-width: 340px;
@@ -1879,9 +1763,6 @@ input, button { font-family: inherit; }
   transition: width 0.5s ease;
 }
 
-/* ============================================
-   INPUT MARCADOR EXACTO
-   ============================================ */
 .pred-exact-row {
   margin: 0.5rem 0;
 }
@@ -1907,9 +1788,6 @@ input, button { font-family: inherit; }
   font-size: 0.8rem;
 }
 
-/* ============================================
-   DASHBOARD — Match items con crests
-   ============================================ */
 .match-teams-row {
   display: flex;
   align-items: center;
@@ -1919,9 +1797,6 @@ input, button { font-family: inherit; }
   width: 100%;
 }
 
-/* ============================================
-   PWA INSTALL BANNER
-   ============================================ */
 .pwa-banner {
   position: fixed;
   top: 0; left: 0; right: 0;
@@ -1948,9 +1823,6 @@ input, button { font-family: inherit; }
   padding: 0.2rem;
 }
 
-/* ============================================
-   QUICK ACTIONS — Dashboard
-   ============================================ */
 .quick-actions {
   display: flex;
   gap: 0.5rem;
@@ -1987,9 +1859,6 @@ input, button { font-family: inherit; }
   transform: translateY(-2px);
 }
 
-/* ============================================
-   BATTLE MODULE
-   ============================================ */
 .battle-empty {
   text-align: center;
   padding: 3rem 1.5rem;
@@ -2146,7 +2015,6 @@ input, button { font-family: inherit; }
   border-top: 1px solid var(--border);
 }
 
-/* Battle Result Modal */
 .battle-result-modal { text-align: center; padding: 0.5rem 0; }
 .brm-header {
   font-family: 'Bebas Neue', cursive;
@@ -2198,13 +2066,11 @@ input, button { font-family: inherit; }
   margin: 0.75rem 0;
 }
 
-/* Penalty buttons */
 .penalty-dir-btn {
   padding: 0.5rem !important;
   font-size: 0.72rem !important;
 }
 
-/* Quiz */
 .quiz-progress-bar {
   height: 4px;
   background: var(--bg-surface);
@@ -2235,9 +2101,6 @@ input, button { font-family: inherit; }
   background: rgba(0,212,255,0.05);
 }
 
-/* ============================================
-   EXCHANGE MODULE
-   ============================================ */
 .exchange-dupes-summary {
   display: grid;
   grid-template-columns: repeat(4, 1fr);
@@ -2350,15 +2213,11 @@ input, button { font-family: inherit; }
   margin-bottom: 2rem;
 }
 
-/* Card reveal animation */
 @keyframes cardReveal {
   from { transform: rotateY(90deg) scale(0.8); opacity: 0; }
   to   { transform: rotateY(0deg) scale(1); opacity: 1; }
 }
 
-/* ============================================
-   PROFILE — Battle stats
-   ============================================ */
 .profile-battle-stats {
   display: flex;
   gap: 1rem;
@@ -2368,9 +2227,6 @@ input, button { font-family: inherit; }
   margin-top: 0.5rem;
 }
 
-/* ============================================
-   MOBILE RESPONSIVE — Battle & Exchange
-   ============================================ */
 @media (max-width: 480px) {
   .battle-modes {
     grid-template-columns: 1fr;
@@ -2395,9 +2251,6 @@ input, button { font-family: inherit; }
   }
 }
 
-/* ============================================
-   ÁLBUM — Fotos de jugadores en slots
-   ============================================ */
 .album-slot-photo {
   width: 100%;
   flex: 1;
@@ -2434,9 +2287,6 @@ input, button { font-family: inherit; }
   opacity: 0.3;
 }
 
-/* ============================================
-   STATS — Players grid
-   ============================================ */
 .players-grid {
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
@@ -2546,9 +2396,6 @@ input, button { font-family: inherit; }
   }
 }
 
-/* ============================================
-   GACHA CARD — Stats row
-   ============================================ */
 .fig-stats-row {
   display: flex;
   justify-content: center;
@@ -2577,9 +2424,6 @@ input, button { font-family: inherit; }
   text-transform: uppercase;
 }
 
-/* ============================================
-   MODAL — Player detail card
-   ============================================ */
 .modal-player-detail {
   text-align: center;
   padding: 0.5rem 0 1rem;
@@ -2633,9 +2477,6 @@ input, button { font-family: inherit; }
   letter-spacing: 1px;
 }
 
-/* ============================================
-   EQUIPO IDEAL — Slot picker modal
-   ============================================ */
 .slot-picker-header {
   margin-bottom: 1rem;
 }
@@ -2714,9 +2555,6 @@ input, button { font-family: inherit; }
   font-weight: 700;
 }
 
-/* ============================================
-   FORMATION SLOT — con foto
-   ============================================ */
 .slot-photo-wrap {
   width: 36px;
   height: 36px;
@@ -2740,11 +2578,6 @@ input, button { font-family: inherit; }
   line-height: 1.1;
 }
 
-/* =====================================================
-   WCC v8 FIXES
-   ===================================================== */
-
-/* ── Layout 100% ancho sin scroll horizontal ── */
 * { box-sizing: border-box; }
 html, body { overflow-x: hidden; width: 100%; }
 .app-main, .tab-section, .section-header,
@@ -2753,7 +2586,6 @@ html, body { overflow-x: hidden; width: 100%; }
 .stats-table-wrap { overflow-x: auto; }
 .stats-table { min-width: 480px; }
 
-/* ── Modal stat/pos badges ── */
 .modal-player-photo { width:130px;height:150px;margin:0 auto 0.75rem;border-radius:10px;overflow:hidden;background:var(--bg-surface);border:2px solid var(--border-bright); }
 .modal-player-name { font-family:'Bebas Neue',cursive;font-size:1.6rem;color:var(--accent);letter-spacing:2px;margin-bottom:.2rem; }
 .modal-player-team { color:var(--text-secondary);font-size:.85rem;margin-bottom:.6rem; }
@@ -2764,12 +2596,10 @@ html, body { overflow-x: hidden; width: 100%; }
 .modal-player-detail { text-align:center;padding:.5rem 0 1rem; }
 .pos-badge { background:var(--bg-surface);border:1px solid var(--border-bright);border-radius:4px;padding:2px 8px;font-family:'Barlow Condensed',sans-serif;font-size:.75rem;color:var(--accent); }
 
-/* ── Stats table styling ── */
 .stat-w { color:#44ff88; }
 .stat-l { color:#ff4466; }
 .stat-pts { color:var(--accent);font-weight:700; }
 
-/* ── Favoritos grid en Dashboard ── */
 .favs-grid { display:grid;grid-template-columns:repeat(auto-fill,minmax(72px,1fr));gap:.6rem; }
 .fav-card { background:var(--bg-card);border:1px solid var(--border);border-radius:var(--radius-sm);display:flex;flex-direction:column;align-items:center;gap:3px;padding:.5rem .25rem;cursor:pointer;transition:all .2s;overflow:hidden; }
 .fav-card:hover { border-color:var(--accent);transform:translateY(-2px); }
@@ -2778,7 +2608,6 @@ html, body { overflow-x: hidden; width: 100%; }
 .fav-card-name { font-size:.6rem;font-weight:700;color:var(--text-primary);text-align:center;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;width:100%; }
 .fav-card-type { font-size:.52rem;color:var(--text-muted);font-family:'Barlow Condensed',sans-serif;letter-spacing:.5px;text-transform:uppercase; }
 
-/* ── Gacha card: 3:4 ratio + flip animation ── */
 .figurita-card {
   width: 140px;
   min-width: 130px;
@@ -2795,7 +2624,7 @@ html, body { overflow-x: hidden; width: 100%; }
   transform: rotateY(-180deg) scale(0.85);
   transition: transform .55s cubic-bezier(.4,0,.2,1), opacity .25s ease, box-shadow .3s;
 }
-/* Rarity-colored back face shown during flip */
+
 .figurita-card::before {
   content: '🎴';
   position: absolute;
@@ -2885,7 +2714,6 @@ html, body { overflow-x: hidden; width: 100%; }
 .gacha-cards-grid.single-card { justify-content:center; }
 .gacha-cards-grid.single-card .figurita-card { width:180px; }
 
-/* ── Equipo Ideal – slot picker ── */
 .slot-picker-header { margin-bottom:.75rem; }
 .slot-picker-header h3 { font-family:'Bebas Neue',cursive;font-size:1.4rem;letter-spacing:2px; }
 .slot-picker-grid { display:grid;grid-template-columns:repeat(auto-fill,minmax(76px,1fr));gap:.55rem;max-height:58vh;overflow-y:auto;padding:4px 2px; }
@@ -2900,17 +2728,14 @@ html, body { overflow-x: hidden; width: 100%; }
 .slot-photo-img { width:100%;height:100%;object-fit:cover;object-position:top center; }
 .slot-player-name { font-size:.55rem;font-weight:700;color:var(--text-primary);text-align:center;line-height:1.1; }
 
-/* ── Album slot photos ── */
 .album-slot-photo { width:100%;flex:1;display:flex;align-items:center;justify-content:center;overflow:hidden; }
 .album-slot-img { width:100%;height:100%;object-fit:cover;object-position:top center; }
 .album-slot-emoji { font-size:1.8rem; }
 .album-slot-unknown { font-size:1.2rem;opacity:.3; }
 .album-slot-name { font-size:.52rem;font-weight:700;color:var(--text-primary);text-align:center;padding:0 2px;line-height:1.2; }
 
-/* ── Battle: show ideal team button ── */
 #btn-battle-random-team { min-width: 140px; }
 
-/* ── Formation selector ── */
 .formation-selector-wrap {
   display: flex;
   align-items: center;
@@ -2956,10 +2781,6 @@ html, body { overflow-x: hidden; width: 100%; }
   color: var(--accent);
 }
 
-/* ═══════════════════════════════════════════════════
-   SOBRE PANINI — FIFA World Cup 2026 Style
-   ─────────────────────────────────────────────────── */
-
 .gacha-center { display:flex; flex-direction:column; align-items:center; gap:1.5rem; }
 
 .sobre-stage {
@@ -2971,7 +2792,6 @@ html, body { overflow-x: hidden; width: 100%; }
   max-width: 360px;
 }
 
-/* ─── El sobre ─── */
 .sobre-wrapper {
   position: relative;
   display: flex;
@@ -2995,7 +2815,6 @@ html, body { overflow-x: hidden; width: 100%; }
 
 .sobre:hover { transform: translateY(-6px) rotateX(3deg); }
 
-/* Fondo FIFA 2026 — colores oficiales */
 .sobre-body {
   position: absolute; inset: 0;
   background: linear-gradient(
@@ -3012,7 +2831,6 @@ html, body { overflow-x: hidden; width: 100%; }
   padding: 12px 10px;
 }
 
-/* Franja top */
 .sobre-top-flap {
   position: absolute; top: 0; left: 0; right: 0;
   height: 36px;
@@ -3033,7 +2851,6 @@ html, body { overflow-x: hidden; width: 100%; }
   white-space: nowrap;
 }
 
-/* Logo central del sobre */
 .sobre-logo {
   margin-top: 40px;
   text-align: center;
@@ -3086,7 +2903,6 @@ html, body { overflow-x: hidden; width: 100%; }
   margin-top: 4px;
 }
 
-/* Franja inferior */
 .sobre-bottom-strip {
   width: 100%;
   height: 20px;
@@ -3095,7 +2911,6 @@ html, body { overflow-x: hidden; width: 100%; }
   margin-top: auto;
 }
 
-/* Brillo/reflejo holográfico */
 .sobre-shine {
   position: absolute; inset: 0;
   background: linear-gradient(
@@ -3116,7 +2931,6 @@ html, body { overflow-x: hidden; width: 100%; }
   50%      { opacity:1;   background-position:  200% 0; }
 }
 
-/* ─── Animación abrir sobre ─── */
 @keyframes sobreOpen {
   0%   { transform: rotateX(0deg)     scale(1);    opacity:1; }
   40%  { transform: rotateX(-25deg)   scale(1.05); opacity:1; }
@@ -3128,7 +2942,6 @@ html, body { overflow-x: hidden; width: 100%; }
   animation: sobreOpen 0.85s cubic-bezier(.4,0,.2,1) forwards !important;
 }
 
-/* ─── Info y botones ─── */
 .sobre-info {
   width: 100%;
   text-align: center;
@@ -3157,7 +2970,6 @@ html, body { overflow-x: hidden; width: 100%; }
   color: var(--text-secondary);
 }
 
-/* Botones de sobre */
 .gacha-btns {
   display: flex;
   flex-direction: column;
@@ -3219,7 +3031,6 @@ html, body { overflow-x: hidden; width: 100%; }
   margin-top: 2px;
 }
 
-/* ─── Loading de cartas ─── */
 .sobre-loading {
   display: flex;
   flex-direction: column;
@@ -3251,66 +3062,59 @@ html, body { overflow-x: hidden; width: 100%; }
   color: var(--text-secondary);
 }
 
-
-/* ============================================================
-   RESPONSIVE COMPLETO — v30
-   Breakpoints: 480px (móvil), 640px (móvil grande), 768px (tablet)
-============================================================ */
-
-/* ── Ajustes base móvil ── */
 @media (max-width: 640px) {
-  /* Header más compacto */
+  
   .app-header { padding: 0 0.75rem; gap: 0.5rem; }
   .header-logo { font-size: 1.1rem; letter-spacing: 2px; }
-  .header-center { display: none; } /* ocultar subtítulo en móvil */
+  .header-center { display: none; } 
   .header-stat { font-size: 0.72rem; padding: 0.2rem 0.5rem; }
 
-  /* Nav: iconos más pequeños */
+  
   .nav-btn { font-size: 0.55rem; padding-top: 4px; gap: 1px; }
   .nav-btn > *:first-child { font-size: 1.2rem; }
 
-  /* Main: menos padding */
+  
   .app-main { padding: 0.75rem 0.75rem 2rem; }
 
-  /* dashboard-grid: 1col en movil — handled by base rules */
+  
 
-  /* Quick actions del dashboard */
+  
   .quick-actions-grid {
     grid-template-columns: repeat(2, 1fr) !important;
     gap: 0.5rem;
   }
 
-  /* Section headers */
+  
   .section-header { margin-bottom: 0.75rem; }
   .section-header h2 { font-size: 1.1rem; }
 
-  /* Cards de partido: evitar overflow */
+  
   .match-item { font-size: 0.78rem; }
   .match-score { font-size: 0.9rem; padding: 0.15rem 0.4rem; }
 
-  /* Stats table: scroll horizontal */
+  
   .stats-table-wrap { overflow-x: auto; -webkit-overflow-scrolling: touch; }
   .stats-table { min-width: 460px; }
 
-  /* Album grid: más pequeño */
+  
   .album-grid { grid-template-columns: repeat(auto-fill, minmax(72px, 1fr)); gap: 0.4rem; }
 
-  /* Gacha: centrado */
+  
   .gacha-center { padding: 0; }
   .gacha-sphere { width: min(220px, 80vw); height: min(220px, 80vw); }
 
-  /* Battle: columna única */
+  
   .battle-arena { flex-direction: column; gap: 0.75rem; }
   .battle-team-panel { width: 100%; }
   .battle-score-display { font-size: 1.8rem; }
 
-  /* Exchange: ajustar layout */
+  
   .exchange-header { flex-direction: column; align-items: flex-start; gap: 0.5rem; }
 
-  /* Predictions: 1 columna */
+  
   .predictions-list { grid-template-columns: 1fr !important; }
 
-  /* Profile: centrado vertical */
+  
   .profile-card { flex-direction: column; align-items: center; text-align: center; }
   .profile-info { width: 100%; }
   .profile-stats { justify-content: center; flex-wrap: wrap; }
@@ -3318,47 +3122,41 @@ html, body { overflow-x: hidden; width: 100%; }
   .data-actions { flex-direction: column !important; }
   .data-actions .btn { width: 100%; text-align: center; }
 
-  /* Modales: ancho completo en móvil */
+  
   .modal-content { margin: 1rem; border-radius: 12px; max-height: calc(100vh - 2rem); }
 
-  /* Botones de API config */
+  
   #api-config-section .btn { font-size: 0.7rem; padding: 0.3rem 0.6rem; }
 
-  /* Figuritas en panel rápido: 2 por fila */
+  
   .gacha-cards-grid { grid-template-columns: repeat(2, 1fr) !important; }
   .gacha-cards-grid.single-card { grid-template-columns: minmax(0, 180px) !important; }
 
-  /* Tabs internos (batalla, etc) */
+  
   .tab-btns { flex-wrap: wrap; gap: 0.25rem; }
   .tab-btn { font-size: 0.65rem; padding: 0.3rem 0.6rem; }
 }
 
-/* ── Móvil muy pequeño ── */
 @media (max-width: 380px) {
   .app-main { padding: 0.5rem 0.5rem 2rem; }
-  .header-stat:last-child { display: none; } /* ocultar tiradas en pantalla muy pequeña */
+  .header-stat:last-child { display: none; } 
   .nav-btn > *:first-child { font-size: 1.1rem; }
   .album-grid { grid-template-columns: repeat(auto-fill, minmax(60px, 1fr)); }
   .match-item { font-size: 0.72rem; }
   .dash-card { padding: 0.75rem; }
 }
 
-/* ── Tablet (768px - 1023px): dos columnas más amplias ── */
 @media (min-width: 641px) and (max-width: 1023px) {
   .app-main { padding: 1rem 1.5rem 2rem; }
-  /* dashboard-grid handled by base rules */
+  
   .album-grid { grid-template-columns: repeat(auto-fill, minmax(85px, 1fr)); }
   .predictions-list { grid-template-columns: repeat(2, 1fr); }
 }
 
-/* ── Fix: inputs en móvil no zoom en iOS ── */
 @media (max-width: 640px) {
   input, select, textarea { font-size: 16px !important; }
 }
 
-/* ── Mejoras responsive adicionales v16 ── */
-
-/* Nav bottom fija en móvil — más ergonómica */
 @media (max-width: 640px) {
   .app-wrapper {
     display: flex;
@@ -3384,13 +3182,13 @@ html, body { overflow-x: hidden; width: 100%; }
     min-width: 0;
   }
   .nav-btn > *:first-child { font-size: 1.35rem; }
-  /* Indicador activo abajo en vez de arriba */
+  
   .nav-btn.active::after {
     top: auto; bottom: 0;
     border-radius: 4px 4px 0 0;
   }
 
-  /* Header: solo logo y stats, sin espacio desperdiciado */
+  
   .app-header {
     padding: 0 0.75rem;
     height: 52px;
@@ -3400,15 +3198,15 @@ html, body { overflow-x: hidden; width: 100%; }
   .header-stats { gap: 0.35rem; }
   .header-stat { font-size: 0.68rem; padding: 0.18rem 0.45rem; gap: 3px; }
 
-  /* dashboard-grid: 1col movil — handled by base rules */
+  
   .dash-card { padding: 0.85rem; }
 
-  /* Partidos: score más visible */
+  
   .match-teams { font-size: 0.8rem; }
   .match-score { font-size: 1rem; min-width: 48px; }
   .live-badge, .match-badge { font-size: 0.55rem; padding: 1px 5px; }
 
-  /* Album: 4 columnas en móvil normal */
+  
   .album-grid {
     grid-template-columns: repeat(4, 1fr);
     gap: 0.35rem;
@@ -3417,7 +3215,7 @@ html, body { overflow-x: hidden; width: 100%; }
   .figurita-name { font-size: 0.55rem; }
   .figurita-team { font-size: 0.5rem; }
 
-  /* Stats: tabla horizontal con scroll */
+  
   .stats-section { overflow: hidden; }
   .stats-table-wrap {
     overflow-x: auto;
@@ -3427,7 +3225,7 @@ html, body { overflow-x: hidden; width: 100%; }
   .stats-table { min-width: 420px; font-size: 0.75rem; }
   .stats-table th, .stats-table td { padding: 0.4rem 0.5rem; }
 
-  /* Battle: full width */
+  
   .battle-arena {
     flex-direction: column;
     gap: 0.5rem;
@@ -3436,20 +3234,20 @@ html, body { overflow-x: hidden; width: 100%; }
   .battle-vs { font-size: 1.5rem; padding: 0.4rem 0; }
   .battle-formation { font-size: 0.65rem; }
 
-  /* Gacha cards resultado: 2 por fila */
+  
   .gacha-cards-grid {
     grid-template-columns: repeat(2, 1fr) !important;
     gap: 0.5rem;
   }
   .gacha-card-result { padding: 0.6rem; }
 
-  /* Exchange: lista vertical */
+  
   .exchange-grid, .offers-grid {
     grid-template-columns: 1fr !important;
   }
   .exchange-offer-card { padding: 0.75rem; }
 
-  /* Predictions: 1 columna */
+  
   .predictions-grid, .predictions-list {
     grid-template-columns: 1fr !important;
     gap: 0.6rem;
@@ -3457,7 +3255,7 @@ html, body { overflow-x: hidden; width: 100%; }
   .prediction-match { padding: 0.75rem; }
   .prediction-teams { font-size: 0.8rem; }
 
-  /* Profile */
+  
   .profile-header { flex-direction: column; align-items: center; text-align: center; gap: 0.75rem; }
   .profile-card   { flex-direction: column; align-items: center; text-align: center; }
   .profile-avatar { width: 72px !important; height: 72px !important; font-size: 1.6rem !important; }
@@ -3472,7 +3270,7 @@ html, body { overflow-x: hidden; width: 100%; }
   }
   #api-config-section .btn { width: 100%; justify-content: center; }
 
-  /* Modales: casi full screen */
+  
   .modal-overlay { align-items: flex-end; }
   .modal-content {
     margin: 0;
@@ -3481,11 +3279,10 @@ html, body { overflow-x: hidden; width: 100%; }
     overflow-y: auto;
   }
 
-  /* Scroll suave global */
+  
   * { -webkit-overflow-scrolling: touch; }
 }
 
-/* Pantallas muy pequeñas (SE, Galaxy A series) */
 @media (max-width: 360px) {
   .album-grid { grid-template-columns: repeat(3, 1fr); }
   .header-stat { font-size: 0.62rem; padding: 0.15rem 0.35rem; }
@@ -3494,16 +3291,8 @@ html, body { overflow-x: hidden; width: 100%; }
   .nav-btn { font-size: 0.45rem; }
 }
 
-/* ============================================================
-   DRAWER LATERAL — v17
-   Opción B seleccionada: slide-in desde la izquierda
-   en móvil (≤1023px) y tablet (641-1023px)
-   Desktop (≥1024px): .app-nav horizontal, drawer oculto
-   ============================================================ */
-
-/* ── Hamburger button ── */
 .btn-hamburger {
-  display: none; /* oculto en desktop */
+  display: none; 
   flex-direction: column;
   justify-content: center;
   align-items: center;
@@ -3529,7 +3318,6 @@ html, body { overflow-x: hidden; width: 100%; }
 .btn-hamburger.open span:nth-child(2) { opacity: 0; transform: scaleX(0); }
 .btn-hamburger.open span:nth-child(3) { transform: translateY(-7px) rotate(-45deg); }
 
-/* ── Overlay ── */
 .drawer-overlay {
   display: none;
   position: fixed; inset: 0; z-index: 299;
@@ -3544,7 +3332,6 @@ html, body { overflow-x: hidden; width: 100%; }
   opacity: 1;
 }
 
-/* ── Drawer panel ── */
 .app-drawer {
   position: fixed;
   top: 0; left: 0; bottom: 0;
@@ -3565,7 +3352,6 @@ html, body { overflow-x: hidden; width: 100%; }
   box-shadow: 4px 0 32px rgba(0,0,0,0.5);
 }
 
-/* ── Drawer header ── */
 .drawer-header {
   display: flex;
   align-items: center;
@@ -3594,7 +3380,6 @@ html, body { overflow-x: hidden; width: 100%; }
 }
 .drawer-close:hover { background: rgba(255,255,255,0.06); color: var(--text-primary); }
 
-/* ── Drawer user info ── */
 .drawer-user {
   display: flex;
   align-items: center;
@@ -3634,7 +3419,6 @@ html, body { overflow-x: hidden; width: 100%; }
   color: var(--text-secondary);
 }
 
-/* ── Drawer nav items ── */
 .drawer-nav {
   flex: 1;
   padding: 0.5rem 0;
@@ -3674,7 +3458,6 @@ html, body { overflow-x: hidden; width: 100%; }
   text-align: center;
 }
 
-/* ── Drawer footer ── */
 .drawer-footer {
   border-top: 1px solid var(--border);
   padding: 0.75rem 1rem;
@@ -3699,53 +3482,47 @@ html, body { overflow-x: hidden; width: 100%; }
   color: #ff5566;
 }
 
-/* ============================================================
-   RESPONSIVE: Activar drawer en móvil y tablet (≤1023px)
-   ============================================================ */
-
 @media (max-width: 1023px) {
 
-  /* Mostrar hamburger */
+  
   .btn-hamburger { display: flex; }
 
-  /* Ocultar nav horizontal de escritorio */
+  
   .app-nav { display: none !important; }
 
-  /* Header ajustado */
+  
   .app-header {
     padding: 0 0.75rem;
     height: 52px;
     min-height: 52px;
   }
   #screen-app {
-    padding-bottom: 0; /* sin nav bottom */
+    padding-bottom: 0; 
     min-height: 100dvh;
   }
   .app-main {
     padding: 0.875rem 0.875rem 2rem;
   }
 
-  /* Ocultar btn logout del header en móvil (está en el drawer) */
+  
   #btn-logout { display: none; }
 
-  /* Header center: saludo visible */
+  
   .header-center {
     font-size: 0.78rem;
     color: var(--text-secondary);
   }
 }
 
-/* ── Tablet específico (641–1023px) ── */
 @media (min-width: 641px) and (max-width: 1023px) {
   .app-drawer { width: 260px; }
   .app-main { padding: 1rem 1.25rem 2rem; }
-  /* dashboard-grid handled by base rules */
+  
   .album-grid { grid-template-columns: repeat(auto-fill, minmax(88px, 1fr)); }
   .predictions-list { grid-template-columns: repeat(2, 1fr); }
   .header-stat { font-size: 0.8rem; }
 }
 
-/* ── Móvil (≤640px) ── */
 @media (max-width: 640px) {
   .app-drawer { width: 220px; }
 
@@ -3755,54 +3532,54 @@ html, body { overflow-x: hidden; width: 100%; }
     gap: 0.5rem;
   }
   .header-logo { font-size: 1rem; letter-spacing: 1.5px; }
-  .header-center { display: none; } /* solo logo+stats en móvil */
+  .header-center { display: none; } 
   .header-stat { font-size: 0.68rem; padding: 0.18rem 0.45rem; gap: 3px; }
 
   .app-main { padding: 0.75rem 0.75rem 1.5rem; }
 
-  /* dashboard-grid: 1col movil — handled by base rules */
+  
   .dash-card { padding: 0.85rem; }
 
-  /* Quick actions: 2×2 */
+  
   .quick-actions { grid-template-columns: repeat(2, 1fr) !important; }
   .quick-actions-grid { grid-template-columns: repeat(2, 1fr) !important; }
 
-  /* Partidos */
+  
   .match-teams { font-size: 0.8rem; }
   .match-score { font-size: 1rem; min-width: 48px; }
   .live-badge, .match-badge { font-size: 0.55rem; padding: 1px 5px; }
 
-  /* Álbum: 4 columnas */
+  
   .album-grid { grid-template-columns: repeat(4, 1fr); gap: 0.35rem; }
   .figurita-card { border-radius: 6px; }
   .figurita-name { font-size: 0.55rem; }
   .figurita-team { font-size: 0.5rem; }
 
-  /* Stats */
+  
   .stats-table-wrap { overflow-x: auto; -webkit-overflow-scrolling: touch; border-radius: 8px; }
   .stats-table { min-width: 420px; font-size: 0.75rem; }
   .stats-table th, .stats-table td { padding: 0.4rem 0.5rem; }
 
-  /* Batalla */
+  
   .battle-arena { flex-direction: column; gap: 0.5rem; }
   .battle-team-panel { width: 100%; min-width: 0; }
   .battle-vs { font-size: 1.5rem; padding: 0.4rem 0; }
   .battle-formation { font-size: 0.65rem; }
 
-  /* Gacha resultado */
+  
   .gacha-cards-grid { grid-template-columns: repeat(2, 1fr) !important; gap: 0.5rem; }
   .gacha-card-result { padding: 0.6rem; }
 
-  /* Canje */
+  
   .exchange-grid, .offers-grid { grid-template-columns: 1fr !important; }
   .exchange-offer-card { padding: 0.75rem; }
 
-  /* Predicciones */
+  
   .predictions-grid, .predictions-list { grid-template-columns: 1fr !important; gap: 0.6rem; }
   .prediction-match { padding: 0.75rem; }
   .prediction-teams { font-size: 0.8rem; }
 
-  /* Perfil */
+  
   .profile-header { flex-direction: column; align-items: center; text-align: center; gap: 0.75rem; }
   .profile-card { flex-direction: column; align-items: center; text-align: center; }
   .profile-avatar { width: 72px !important; height: 72px !important; font-size: 1.6rem !important; }
@@ -3813,7 +3590,7 @@ html, body { overflow-x: hidden; width: 100%; }
   #api-config-section > div > div:nth-child(3) { flex-direction: column; gap: 0.4rem; }
   #api-config-section .btn { width: 100%; justify-content: center; }
 
-  /* Modales: sheet desde abajo */
+  
   .modal-overlay { align-items: flex-end; }
   .modal-content {
     margin: 0;
@@ -3822,15 +3599,14 @@ html, body { overflow-x: hidden; width: 100%; }
     overflow-y: auto;
   }
 
-  /* Tabs internos */
+  
   .tab-btns { flex-wrap: wrap; gap: 0.25rem; }
   .tab-btn { font-size: 0.65rem; padding: 0.3rem 0.6rem; }
 
-  /* Input zoom fix iOS */
+  
   input, select, textarea { font-size: 16px !important; }
 }
 
-/* ── Móviles muy pequeños (≤360px) ── */
 @media (max-width: 360px) {
   .album-grid { grid-template-columns: repeat(3, 1fr); }
   .header-stat { font-size: 0.62rem; padding: 0.15rem 0.35rem; }
@@ -3838,7 +3614,6 @@ html, body { overflow-x: hidden; width: 100%; }
   .app-drawer { width: 200px; }
 }
 
-/* ── Desktop (≥1024px): drawer oculto, nav horizontal visible ── */
 @media (min-width: 1024px) {
   .btn-hamburger { display: none !important; }
   .app-drawer, .drawer-overlay { display: none !important; }
@@ -3846,11 +3621,6 @@ html, body { overflow-x: hidden; width: 100%; }
   #btn-logout { display: flex !important; }
 }
 
-/* ============================================================
-   v20 — SVG Icons + Dashboard responsive fix
-   ============================================================ */
-
-/* ── Icon sizing en nav y botones ── */
 .nav-btn svg, .drawer-nav-btn svg {
   flex-shrink: 0;
   display: block;
@@ -3864,7 +3634,6 @@ html, body { overflow-x: hidden; width: 100%; }
   flex-shrink: 0;
 }
 
-/* Header stats con SVG */
 .header-stat svg {
   vertical-align: -2px;
   opacity: 0.7;
@@ -3875,7 +3644,6 @@ html, body { overflow-x: hidden; width: 100%; }
 }
 .btn-icon:hover svg { color: var(--text-primary); }
 
-/* Quick-action buttons con SVG */
 .qa-btn svg {
   display: block;
   margin: 0 auto 4px;
@@ -3884,7 +3652,6 @@ html, body { overflow-x: hidden; width: 100%; }
 }
 .qa-btn:hover svg { transform: scale(1.15); }
 
-/* Drawer logo sin emoji */
 .drawer-logo {
   font-family: 'Bebas Neue', cursive;
   font-size: 1.3rem;
@@ -3896,10 +3663,8 @@ html, body { overflow-x: hidden; width: 100%; }
   letter-spacing: 3px;
 }
 
-/* ── Dashboard responsive fix ── */
-/* El dashboard-grid en móvil: 1 columna siempre */
 @media (max-width: 640px) {
-  /* Quick actions: 4 en fila siempre (iconos pequeños) */
+  
   .quick-actions {
     display: grid !important;
     grid-template-columns: repeat(4, 1fr) !important;
@@ -3915,21 +3680,21 @@ html, body { overflow-x: hidden; width: 100%; }
     margin-bottom: 3px !important;
   }
 
-  /* dashboard-grid movil handled by base rules */
+  
   .dash-card {
     width: 100% !important;
     min-width: 0 !important;
     overflow: hidden !important;
   }
 
-  /* Cards compactas en móvil */
+  
   .dash-card h3 {
     font-size: 0.65rem !important;
     letter-spacing: 1px !important;
     margin-bottom: 0.5rem !important;
   }
 
-  /* Match items más compactos */
+  
   .match-item {
     padding: 0.5rem 0.6rem !important;
   }
@@ -3946,14 +3711,14 @@ html, body { overflow-x: hidden; width: 100%; }
     font-size: 0.6rem !important;
   }
 
-  /* Standings compacto */
+  
   .standing-row {
     font-size: 0.72rem !important;
     padding: 0.3rem 0 !important;
   }
   .standing-name { max-width: 100px !important; }
 
-  /* Section header en móvil */
+  
   .section-header {
     flex-wrap: wrap !important;
     gap: 0.4rem !important;
@@ -3971,12 +3736,9 @@ html, body { overflow-x: hidden; width: 100%; }
   .quick-actions {
     grid-template-columns: repeat(4, 1fr) !important;
   }
-  /* dashboard-grid tablet handled by base rules */
+  
 }
 
-/* ═══════════════════════════════════════════════════════════
-   LEGENDARY / GOAT REVEAL — Animación estilo Clash Royale
-   ═══════════════════════════════════════════════════════════ */
 #rarity-reveal-overlay {
   position: fixed;
   inset: 0;
@@ -4011,7 +3773,6 @@ html, body { overflow-x: hidden; width: 100%; }
   100% { opacity:1; transform:scale(1); }
 }
 
-/* Rayos giratorios */
 .rarity-rays {
   position: absolute;
   inset: 0;
@@ -4030,7 +3791,6 @@ html, body { overflow-x: hidden; width: 100%; }
   to   { transform: translate(-50%,-50%) rotate(360deg); }
 }
 
-/* Partículas */
 .rarity-particles {
   position: absolute;
   inset: 0;
@@ -4048,7 +3808,6 @@ html, body { overflow-x: hidden; width: 100%; }
   100% { transform: translateY(-100vh) scale(0.3); opacity:0; }
 }
 
-/* Texto central */
 .rarity-label-wrap {
   position: relative;
   z-index: 2;
@@ -4077,7 +3836,6 @@ html, body { overflow-x: hidden; width: 100%; }
   100% { transform: scale(1)   translateY(0);    opacity:1; }
 }
 
-/* ── Animación patear al arco (battle penalties) ── */
 @keyframes ballKick {
   0%   { transform: translateX(0) translateY(0) scale(1) rotate(0deg); }
   30%  { transform: translateX(20px) translateY(-10px) scale(1.1) rotate(180deg); }
@@ -4095,7 +3853,6 @@ html, body { overflow-x: hidden; width: 100%; }
 }
 .goal-flash { animation: goalFlash 0.8s ease; }
 
-/* ── Conecta Jugador / Adivina el Jugador ── */
 .connect-player-btn, .connect-team-btn {
   width:100%; margin-bottom:0.4rem; font-size:0.78rem; padding:0.55rem 0.7rem;
   text-align:left; border-radius:10px;
@@ -4145,7 +3902,6 @@ html, body { overflow-x: hidden; width: 100%; }
   transition: width .35s ease;
 }
 
-/* ── Adivina por Emoji ── */
 .guess-emoji-circle {
   width: 100%;
   max-width: 260px;
@@ -4177,7 +3933,6 @@ html, body { overflow-x: hidden; width: 100%; }
   animation: guessEmojiPop 0.45s cubic-bezier(.34,1.56,.64,1);
 }
 
-/* Twemoji: iconos de emoji (banderas, etc.) renderizados como imágenes */
 img.emoji {
   height: 1em;
   width: 1em;
@@ -4186,8 +3941,6 @@ img.emoji {
   display: inline-block;
 }
 
-
-/* ── Grupos A–L grid ────────────────────── */
 .groups-grid {
   display: flex;
   flex-direction: column;
@@ -4211,7 +3964,7 @@ img.emoji {
   padding: 6px 8px;
   white-space: nowrap;
 }
-/* Team name column flexible */
+
 .group-table-wrap .stats-table td:nth-child(2) {
   width: 100%;
 }
@@ -4223,9 +3976,6 @@ img.emoji {
   margin-bottom: 0.75rem;
 }
 
-/* ══════════════════════════════════════════
-   PREDICCIONES — header + botón historial
-   ══════════════════════════════════════════ */
 .pred-section-header {
   display: flex !important;
   align-items: center !important;
@@ -4246,33 +3996,33 @@ img.emoji {
   color: var(--text-primary);
   margin: 0;
 }
-/* Reset nativo del botón + estilos propios — alta especificidad */
+
 button#btn-pred-history,
 button.btn-pred-history-toggle {
-  /* reset */
+  
   -webkit-appearance: none;
   appearance: none;
   box-sizing: border-box;
-  /* layout */
+  
   flex-shrink: 0;
   display: inline-flex !important;
   align-items: center;
   gap: 0.3rem;
-  /* tipografía */
+  
   font-family: 'Barlow Condensed', sans-serif !important;
   font-size: 0.72rem !important;
   font-weight: 700 !important;
   letter-spacing: 0.8px;
   text-transform: uppercase;
   line-height: 1;
-  /* colores */
+  
   background: rgba(255, 215, 0, 0.08) !important;
   color: var(--gold) !important;
   border: 1px solid rgba(255, 215, 0, 0.45) !important;
   border-radius: 20px !important;
-  /* espaciado */
+  
   padding: 0.32rem 0.9rem !important;
-  /* resto */
+  
   cursor: pointer;
   white-space: nowrap;
   transition: background 0.2s, color 0.2s, border-color 0.2s, box-shadow 0.2s;
@@ -4293,7 +4043,6 @@ button.btn-pred-history-toggle.active {
   box-shadow: 0 2px 16px rgba(255, 215, 0, 0.4);
 }
 
-/* Minuto en vivo */
 .pred-live-minute {
   font-size: 0.7rem;
   font-family: 'Barlow Condensed', sans-serif;
@@ -4303,7 +4052,6 @@ button.btn-pred-history-toggle.active {
   animation: blink 1.5s infinite;
 }
 
-/* PWA install button en perfil */
 .btn-install-pwa-profile {
   -webkit-appearance: none;
   appearance: none;
@@ -4328,13 +4076,11 @@ button.btn-pred-history-toggle.active {
   transform: translateY(-1px);
   box-shadow: 0 5px 20px rgba(0, 212, 255, 0.5);
 }
-/* ============================================
-   DISCORD BANNER (notificación superior)
-   ============================================ */
+
 .discord-banner {
   position: fixed;
   top: 0; left: 0; right: 0;
-  z-index: 9998; /* justo debajo del banner PWA (9999) */
+  z-index: 9998; 
   background: linear-gradient(135deg, #23272a, #2c2f33);
   border-bottom: 1px solid #5865F2;
   display: flex;
@@ -4381,9 +4127,6 @@ button.btn-pred-history-toggle.active {
   text-decoration: none;
 }
 
-/* ============================================
-   DISCORD CARD en sección Perfil
-   ============================================ */
 .profile-discord-section h3 {
   display: flex;
   align-items: center;
@@ -4459,13 +4202,11 @@ button.btn-pred-history-toggle.active {
   text-decoration: none;
 }
 
-/* Standings tabs */
 .standings-tab-btn {
   transition: background 0.15s, color 0.15s;
 }
 .standings-tab-btn:hover { opacity: 0.85; }
 
-/* Mobile */
 @media (max-width: 480px) {
   .pred-header-title { font-size: 1.3rem; }
   button#btn-pred-history,

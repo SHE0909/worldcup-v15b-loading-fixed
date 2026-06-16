@@ -1,15 +1,3 @@
-/**
- * exchange.js — Sistema de Intercambio de Duplicados por Sobres  v7
- *
- * Reglas:
- *   2 COMMON  duplicadas → 1 sobre RARE    (RNG)
- *   2 RARE    duplicadas → 1 sobre EPIC    (RNG)
- *   2 EPIC    duplicadas → 1 sobre LEGENDARY (RNG)
- *   3 de cualquiera     → 1 sobre rareza+1 con mejor odds
- *
- * Los sobres abren con animación gacha y dan 1 figurita de esa rareza.
- */
-
 const EXCHANGE_RULES = [
   { id:'c2r',  from:'common',    fromQty:2, to:'rare',      label:'2 Comunes → 1 Sobre Raro',      emoji:'🎁', desc:'RNG dentro de las raras' },
   { id:'r2e',  from:'rare',      fromQty:2, to:'epic',      label:'2 Raras → 1 Sobre Épico',        emoji:'💜', desc:'RNG dentro de las épicas' },
@@ -121,7 +109,7 @@ const Exchange = {
       </div>
     `;
 
-    // Canjear monedas por tirada
+    
     const coinsBtn = el.querySelector('#erc-coins-btn');
     if (coinsBtn) {
       coinsBtn.addEventListener('click', async () => {
@@ -129,7 +117,7 @@ const Exchange = {
       });
     }
 
-    // Eventos de canje
+    
     el.querySelectorAll('.erc-btn').forEach(btn => {
       btn.addEventListener('click', async () => {
         const ruleId = btn.dataset.rule;
@@ -178,7 +166,7 @@ const Exchange = {
       return;
     }
 
-    // Consumir duplicados
+    
     let toConsume = rule.fromQty;
     for (const fig of owned) {
       if (toConsume <= 0) break;
@@ -189,12 +177,12 @@ const Exchange = {
       }
     }
 
-    // Obtener figurita de la rareza target
+    
     const pool    = Gacha.getPool().filter(f => f.rareza === rule.to);
     const picked  = pool[Math.floor(Math.random() * pool.length)];
     if (!picked) { Toast.warn('Error interno'); return; }
 
-    // Agregar al álbum o duplicado
+    
     const existing = owned.find(f => f.id === picked.id);
     const isNew = !existing;
     if (existing) {
@@ -203,7 +191,7 @@ const Exchange = {
       owned.push({ ...picked, duplicados: 0, obtenida: new Date().toISOString() });
     }
 
-    // Log de intercambio
+    
     if (!user.exchangeLog) user.exchangeLog = [];
     user.exchangeLog.push({
       emoji: rule.emoji,
@@ -219,13 +207,13 @@ const Exchange = {
     await DB.logActivity(user.email, 'exchange', `${rule.label} → ${picked.name}`);
     if (typeof App !== 'undefined') await App.refreshHeader();
 
-    // Mostrar resultado con animación gacha
+    
     await this._showExchangeResult(picked, isNew, rule);
     await this.render();
   },
 
   async _showExchangeResult(fig, isNew, rule) {
-    // Intentar cargar foto
+    
     let photoUrl = null;
     try { photoUrl = await API.getPhotoById(fig.id); } catch(_) {}
 

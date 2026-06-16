@@ -1,23 +1,16 @@
-/**
- * gacha.js — v7
- * Fotos vía CDN jsDelivr por ID de figurita (API.getPhotoById / API.getPhotoSync).
- * sdbName conservado en el pool por compatibilidad, pero ya no se usa para buscar fotos.
- * Pool actualizado al repositorio oficial WCC UES: 63 figuritas · 5 raridades.
- */
-
 const FIGURITAS_POOL = [
-  /* ── GOAT (3 jugadores) ── */
+  
   { id:'fig_g001', name:'Cristiano Ronaldo',    sdbName:'Cristiano Ronaldo',      team:'Portugal',       flag:'🇵🇹', rareza:'goat',      emoji:["🇵🇹","🐐","⚽"], pos:'DEL', rating:100 },
   { id:'fig_g002', name:'Lionel Messi',          sdbName:'Lionel Messi',           team:'Argentina',      flag:'🇦🇷', rareza:'goat',      emoji:["🇦🇷","🐐","🏆"], pos:'DEL', rating:99  },
   { id:'fig_g003', name:'Neymar Jr.',            sdbName:'Neymar Jr',              team:'Brasil',         flag:'🇧🇷', rareza:'goat',      emoji:["🇧🇷","🎩","⚽"], pos:'DEL', rating:98  },
 
-  /* ── LEGENDARIA (4 jugadores) ── */
+  
   { id:'fig_l001', name:'Kylian Mbappé',         sdbName:'Kylian Mbappe',          team:'Francia',        flag:'🇫🇷', rareza:'legendary', emoji:["🇫🇷","🚀","⚽"], pos:'DEL', rating:97  },
   { id:'fig_l002', name:'Vinicius Jr.',           sdbName:'Vinicius Junior',        team:'Brasil',         flag:'🇧🇷', rareza:'legendary', emoji:["🇧🇷","⚡","🤍"], pos:'DEL', rating:96  },
   { id:'fig_l003', name:'Jude Bellingham',        sdbName:'Jude Bellingham',        team:'Inglaterra',     flag:'🏴󠁧󠁢󠁥󠁮󠁧󠁿', rareza:'legendary', emoji:["🏴","⭐","🤍"], pos:'MED', rating:95  },
   { id:'fig_l004', name:'Harry Kane',             sdbName:'Harry Kane',             team:'Inglaterra',     flag:'🏴󠁧󠁢󠁥󠁮󠁧󠁿', rareza:'legendary', emoji:["🏴","🎯","⚽"], pos:'DEL', rating:94  },
 
-  /* ── ÉPICA (14 jugadores) ── */
+  
   { id:'fig_e001', name:'Lamine Yamal',           sdbName:'Lamine Yamal',           team:'España',         flag:'🇪🇸', rareza:'epic',      emoji:["🇪🇸","🌟","⚽"], pos:'DEL', rating:91  },
   { id:'fig_e002', name:'Michael Olise',          sdbName:'Michael Olise',          team:'Francia',        flag:'🇫🇷', rareza:'epic',      emoji:["🇫🇷","⚡","🎩"], pos:'DEL', rating:91  },
   { id:'fig_e003', name:'Pedri',                  sdbName:'Pedri Gonzalez',         team:'España',         flag:'🇪🇸', rareza:'epic',      emoji:["🇪🇸","🧠","⚽"], pos:'MED', rating:89  },
@@ -33,7 +26,7 @@ const FIGURITAS_POOL = [
   { id:'fig_e013', name:'Ousmane Dembélé',        sdbName:'Ousmane Dembele',        team:'Francia',        flag:'🇫🇷', rareza:'epic',      emoji:["🇫🇷","⚡","🎩"], pos:'DEL', rating:87  },
   { id:'fig_e014', name:'Bruno Fernandes',        sdbName:'Bruno Fernandes',        team:'Portugal',       flag:'🇵🇹', rareza:'epic',      emoji:["🇵🇹","🎯","⚽"], pos:'MED', rating:87  },
 
-  /* ── RARA (18 jugadores) ── */
+  
   { id:'fig_r001', name:'Thibaut Courtois',      sdbName:'Thibaut Courtois',       team:'Bélgica',        flag:'🇧🇪', rareza:'rare',      emoji:["🇧🇪","🧤","🧱"], pos:'POR', rating:86  },
   { id:'fig_r002', name:'Ferran Torres',          sdbName:'Ferran Torres',          team:'España',         flag:'🇪🇸', rareza:'rare',      emoji:["🇪🇸","⚡","⚽"], pos:'DEL', rating:86  },
   { id:'fig_r003', name:'William Saliba',         sdbName:'William Saliba',         team:'Francia',        flag:'🇫🇷', rareza:'rare',      emoji:["🇫🇷","🛡️","⚽"], pos:'DEF', rating:86  },
@@ -53,7 +46,7 @@ const FIGURITAS_POOL = [
   { id:'fig_r017', name:'Declan Rice',            sdbName:'Declan Rice',            team:'Inglaterra',     flag:'🏴󠁧󠁢󠁥󠁮󠁧󠁿', rareza:'rare',      emoji:["🏴","🛡️","⚽"], pos:'MED', rating:83  },
   { id:'fig_r018', name:'Vitinha',                sdbName:'Vitinha',                team:'Portugal',       flag:'🇵🇹', rareza:'rare',      emoji:["🇵🇹","🧠","⚽"], pos:'MED', rating:85  },
 
-  /* ── COMÚN (24 jugadores) ── */
+  
   { id:'fig_c001', name:'Luis Díaz',              sdbName:'Luis Diaz',              team:'Colombia',       flag:'🇨🇴', rareza:'common',    emoji:["🇨🇴","⚡","⚽"], pos:'DEL', rating:83  },
   { id:'fig_c002', name:'Julián Álvarez',         sdbName:'Julian Alvarez',         team:'Argentina',      flag:'🇦🇷', rareza:'common',    emoji:["🇦🇷","⚽","🔥"], pos:'DEL', rating:83  },
   { id:'fig_c003', name:'Moisés Caicedo',         sdbName:'Moises Caicedo',         team:'Ecuador',        flag:'🇪🇨', rareza:'common',    emoji:["🇪🇨","🛡️","⚽"], pos:'MED', rating:81  },
@@ -80,7 +73,7 @@ const FIGURITAS_POOL = [
   { id:'fig_c024', name:'Nathan Ordaz',           sdbName:'Nathan Ordaz',           team:'El Salvador',    flag:'🇸🇻', rareza:'common',    emoji:["🇸🇻","⚽","⭐"], pos:'DEL', rating:72  },
 ];
 
-const TOTAL_FIGURITAS = FIGURITAS_POOL.length; // 63
+const TOTAL_FIGURITAS = FIGURITAS_POOL.length; 
 
 const RARITY_PROBS = [
   { rareza:'goat',      min:99.7, max:100   },
@@ -109,12 +102,12 @@ const Gacha = {
     return pool[Math.floor(Math.random() * pool.length)];
   },
 
-  /* Foto por CDN: construye la URL directamente desde el ID de la figurita */
+  
   async getPlayerPhoto(fig) {
     return await API.getPhotoById(fig.id);
   },
 
-  /* ── Pull principal ── */
+  
   async pull(n = 1) {
     const user = await Auth.currentUser();
     if (!user) return { error: 'No hay sesión activa' };

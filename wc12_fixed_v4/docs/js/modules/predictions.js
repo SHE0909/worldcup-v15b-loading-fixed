@@ -1,13 +1,3 @@
-/**
- * predictions.js — Sistema de Predicciones  v3
- * Mejoras v6:
- *   - Escudos reales de selecciones (flagcdn)
- *   - Amistosos pre-mundial incluidos
- *   - Badge "Amistoso" vs "Mundial" 
- *   - Sede del partido
- *   - Diseño mejorado
- */
-
 const Predictions = {
 
   async render(showHistory = false) {
@@ -23,7 +13,7 @@ const Predictions = {
       return;
     }
 
-    // Separar finalizados de activos
+    
     const finishedMatches = allMatches.filter(m => {
       const state = API.getMatchState(m);
       return state === 'finished';
@@ -33,7 +23,7 @@ const Predictions = {
       return state !== 'finished';
     });
 
-    // Actualizar contador del botón historial
+    
     if (histBtn) {
       const textSpan = histBtn.querySelector('.btn-pred-history-text');
       if (textSpan) {
@@ -45,7 +35,7 @@ const Predictions = {
     }
 
     const matches = showHistory
-      ? finishedMatches.slice().reverse()   // más reciente primero
+      ? finishedMatches.slice().reverse()   
       : activeMatches;
 
     if (!matches.length) {
@@ -59,10 +49,10 @@ const Predictions = {
       const existing   = preds.find(p => p.matchId === m.id);
       const isLocked   = !!existing;
       const isFriendly = m.type === 'friendly';
-      const state      = API.getMatchState(m);       // 'upcoming'|'starting_soon'|'live'|'finished'|'closed'
+      const state      = API.getMatchState(m);       
       const isClosed   = isLocked || state === 'closed' || state === 'live' || state === 'finished';
 
-      // Etiqueta de estado
+      
       let stateHtml = '';
       if (state === 'live') {
         const minuteLabel = m.minute ? `· ⏱️ ${m.minute}'` : '';
@@ -73,7 +63,7 @@ const Predictions = {
         stateHtml = `<span class="pred-state-badge pred-state-closed">🔒 Predicción cerrada</span>`;
       } else if (state === 'upcoming' && !isLocked) {
         const timeLeft = API.getTimeUntilMatch(m);
-        // Avisar cuando cierra pronto (dentro de las próximas 4h pero aún abierto)
+        
         const matchTs = new Date(`${m.date}T${m.time}:00${API._venueOffset ? API._venueOffset(m.venue) : '-06:00'}`).getTime();
         const diffH   = (matchTs - Date.now()) / 3600000;
         if (diffH <= 5) {
@@ -81,7 +71,7 @@ const Predictions = {
         }
       }
 
-      // Escudos reales
+      
       const homeCrest = API.getCrest(m.home);
       const awayCrest = API.getCrest(m.away);
 
@@ -147,19 +137,19 @@ const Predictions = {
       `;
     }).join('');
 
-    // Botones de predicción
+    
     list.querySelectorAll('.pred-btn').forEach(btn => {
       btn.addEventListener('click', () => {
         const card = btn.closest('.prediction-card');
         card.querySelectorAll('.pred-btn').forEach(b => b.classList.remove('selected'));
         btn.classList.add('selected');
-        // Mostrar hint de empate si se selecciona "Empate"
+        
         const hint = card.querySelector('.draw-score-hint');
         if (hint) hint.style.display = btn.dataset.pick === 'draw' ? 'block' : 'none';
       });
     });
 
-    // Botón confirmar
+    
     list.querySelectorAll('.btn-confirm-pred').forEach(btn => {
       btn.addEventListener('click', () => {
         const card     = btn.closest('.prediction-card');
@@ -171,12 +161,12 @@ const Predictions = {
       });
     });
 
-    // Botón Ver Alineación
+    
     list.querySelectorAll('.btn-lineup').forEach(btn => {
       btn.addEventListener('click', () => this._showLineup(btn.dataset.match, matches));
     });
 
-    // ── Botón Predecir Mundial — al INICIO de la sección ──
+    
     const existingBtn = document.getElementById('btn-predict-wc-wrap');
     if (!existingBtn) {
       const wcBtn = document.createElement('div');
@@ -194,12 +184,12 @@ const Predictions = {
           Predecir Mundial 2026
           <span style="font-size:0.72rem;font-weight:500;opacity:0.75">· Hasta 50+ tiradas</span>
         </button>`;
-      // Insertar antes de la lista, no al final
+      
       list.parentElement.insertBefore(wcBtn, list);
       document.getElementById('btn-predict-wc').addEventListener('click', () => WorldCupPredictor.open());
     }
 
-    // Botón historial de partidos (bind solo una vez, el botón vive en el HTML estático)
+    
     const histBtn2 = document.getElementById('btn-pred-history');
     if (histBtn2 && !histBtn2._wccBound) {
       histBtn2._wccBound = true;
@@ -216,7 +206,7 @@ const Predictions = {
         }
       });
     }
-    // Restaurar estado visual activo si seguimos en modo historial
+    
     if (histBtn2 && histBtn2.dataset.mode === 'history') {
       histBtn2.classList.add('active');
     }
@@ -277,7 +267,7 @@ const Predictions = {
     const m = matches.find(x => x.id === matchId);
     if (!m) return;
 
-    // Intentar obtener alineación de api-football si el id es af_*
+    
     let lineupHtml = '';
     if (matchId.startsWith('af_')) {
       try {
@@ -322,7 +312,6 @@ const Predictions = {
     `);
   },
 
-
   _renderLocked(pred) {
     const resultIcon = pred.result === 'win' ? '✅' : pred.result === 'loss' ? '❌' : '⏳';
     const resultText = pred.result === 'win' ? 'Acertaste' : pred.result === 'loss' ? 'Fallaste' : 'Pendiente';
@@ -363,7 +352,7 @@ const Predictions = {
       return;
     }
 
-    // Validar que empate tenga marcador igualado
+    
     if (pick === 'draw' && exact) {
       const [g1, g2] = exact.split('-').map(Number);
       if (g1 !== g2) {
@@ -372,9 +361,9 @@ const Predictions = {
       }
     }
 
-    // Validar que el marcador exacto sea consistente con la victoria elegida
-    // (ej: si predices "victoria local", el marcador no puede ser un empate
-    // ni dar la victoria al visitante — se evalúa solo por diferencia de goles)
+    
+    
+    
     if (pick === 'home' && exact) {
       const [g1, g2] = exact.split('-').map(Number);
       if (g1 <= g2) {
@@ -399,7 +388,7 @@ const Predictions = {
       return;
     }
 
-    // Obtener datos del partido para guardar nombre de equipos en el historial
+    
     let matchHome = '', matchAway = '', matchHomeFlag = '', matchAwayFlag = '';
     try {
       const allMatches = await API.getPredictableMatches();
@@ -432,12 +421,7 @@ const Predictions = {
     setTimeout(() => this.render(), 800);
   },
 
-  /**
-   * evaluatePredictions(finishedMatches)
-   * Llama desde dashboard al actualizar stats.
-   * También acepta partidos recién terminados del live feed para
-   * actualizar predicciones en tiempo real sin esperar a "Actualizar stats".
-   */
+  
   async evaluatePredictions(finishedMatches) {
     const user = await Auth.currentUser();
     if (!user || !Array.isArray(finishedMatches) || !finishedMatches.length) return 0;
@@ -452,20 +436,20 @@ const Predictions = {
       const match = finishedMatches.find(m => String(m.id) === String(pred.matchId));
       if (!match) continue;
 
-      // Aceptar tanto finalResult (campo legado) como marcador directo del live feed
+      
       let finalResult = match.finalResult;
       if (!finalResult && match.scoreHome !== undefined && match.scoreAway !== undefined
           && match.status === 'finished') {
         const sh = Number(match.scoreHome), sa = Number(match.scoreAway);
         finalResult = sh > sa ? 'home' : sa > sh ? 'away' : 'draw';
-        // Guardar marcador final — siempre con guión normal para consistencia
+        
         pred.finalScore = `${sh}-${sa}`;
         pred.finalHome  = match.home  || '';
         pred.finalAway  = match.away  || '';
       }
       if (!finalResult) continue;
 
-      // Guardar nombre de equipos si aún no está (retrocompatible con predicciones antiguas)
+      
       if (!pred.matchHome && match.home) pred.matchHome = match.home;
       if (!pred.matchAway && match.away) pred.matchAway = match.away;
       if (!pred.matchHomeFlag && match.homeFlag) pred.matchHomeFlag = match.homeFlag;
@@ -481,7 +465,7 @@ const Predictions = {
         pred.result = 'loss';
       }
 
-      // Normalizar guión largo/corto para comparar marcador exacto correctamente
+      
       const normalizeScore = s => (s || '').replace(/[–—]/g, '-').trim();
       const exactScore = normalizeScore(match.exactScore || pred.finalScore);
       const predExact  = normalizeScore(pred.exact || '');
@@ -513,7 +497,7 @@ const Predictions = {
       await DB.logActivity(user.email, 'pred_reward', `+${tirasGanadas} tiradas por predicciones`);
       Toast.success(`¡Predicciones acertadas! +${tirasGanadas} tiradas`);
     } else {
-      // Guardar igualmente para registrar marcadores finales aunque no haya premio
+      
       const hadPending = (user.predicciones || []).some(p => p.result === 'pending'
         && finishedMatches.some(m => String(m.id) === String(p.matchId)));
       if (hadPending) {
@@ -523,7 +507,7 @@ const Predictions = {
     }
 
     if (typeof App !== 'undefined') await App.refreshHeader();
-    // Fix #2: si el perfil está visible, actualizar sus stats también
+    
     if (typeof App !== 'undefined' && App._currentTab === 'profile') {
       await Profile.render();
     }
@@ -532,15 +516,11 @@ const Predictions = {
     return tirasGanadas;
   },
 
-  /**
-   * _showResultModals — muestra un modal por cada predicción recién resuelta,
-   * indicando si se ganó/perdió, si hubo marcador exacto, y cuántas tiradas
-   * se ganaron. Si hay varias, se encolan y se muestran una tras otra.
-   */
+  
   _showResultModals(results) {
     if (!results.length) return;
 
-    // Filtrar modales ya mostrados (guardados en localStorage por matchId+pick)
+    
     const SHOWN_KEY = 'wcc_pred_modals_shown';
     let shownSet;
     try { shownSet = new Set(JSON.parse(localStorage.getItem(SHOWN_KEY) || '[]')); }
@@ -553,7 +533,7 @@ const Predictions = {
 
     if (!pending.length) return;
 
-    // Marcar todos como vistos antes de mostrar
+    
     pending.forEach(r => {
       shownSet.add(`${r.matchHome}-${r.matchAway}-${r.pick}`);
     });
@@ -602,22 +582,18 @@ const Predictions = {
 
     document.getElementById('pred-result-next')?.addEventListener('click', () => {
       Modal.close();
-      if (rest.length) this._showResultModals(rest); // rest already filtered above
+      if (rest.length) this._showResultModals(rest); 
     });
   },
 
-  /**
-   * checkLiveFinished — llama desde el timer de live cada vez que renderUpcoming
-   * detecta partidos que acaban de cambiar a 'finished'. Evalúa predicciones
-   * automáticamente sin intervención del usuario.
-   */
+  
   async checkLiveFinished(allMatches) {
     if (!Array.isArray(allMatches) || !allMatches.length) return;
     const finished = allMatches.filter(m => m.status === 'finished'
       && m.scoreHome !== undefined && m.scoreAway !== undefined);
     if (!finished.length) return;
     await this.evaluatePredictions(finished);
-    // Refrescar panel si está visible
+    
     const el = document.getElementById('predictions-list');
     if (el && document.getElementById('tab-predictions')?.classList.contains('active')) {
       await this.render();

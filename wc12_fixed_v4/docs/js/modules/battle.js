@@ -1,40 +1,19 @@
-/**
- * battle.js — Sistema de Batallas de Alineaciones  v8
- *
- * Flujo:
- * 1. El usuario tiene su equipo ideal guardado (o se genera uno random de sus figuritas)
- * 2. El rival es una alineación CPU generada del pool global
- * 3. Se resuelve con minijuegos:
- *    - Penales (3 turnos, el que más mete gana)
- *    - Tiro libre (timing)
- *    - Jugador vs Jugador (comparar ratings + azar)
- * 4. Recompensas: tiradas + monedas
- *
- * v8: Límite de 3 intentos por categoría por día.
- *     Cada intento se consume siempre, gane o pierda.
- */
-
-/* ─── Límite diario de intentos por categoría ──────────────────────────────
-   Cada categoría (classic, penalties, quiz) tiene máx. 3 intentos por día.
-   El intento se consume al INICIAR el juego, no al terminar.
-   Almacenado en localStorage: { date, counts: { classic:0, penalties:0, quiz:0 } }
-─────────────────────────────────────────────────────────────────────────── */
 const BattleAttempts = {
   MAX_DAILY: 2,
   LS_KEY_PREFIX: 'wcc_battle_attempts',
-  _email: '',   // se setea en Battle.render() con el email del usuario logueado
+  _email: '',   
 
   _todayStr() {
     const d = new Date();
     return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
   },
 
-  /** Clave única por usuario para evitar que varias cuentas compartan intentos */
+  
   _lsKey() {
     return this._email ? `${this.LS_KEY_PREFIX}_${this._email}` : this.LS_KEY_PREFIX;
   },
 
-  /** Llamar con el email del usuario al inicio de cada sesión / render */
+  
   setUser(email) {
     this._email = email || '';
   },
@@ -44,7 +23,7 @@ const BattleAttempts = {
       const raw = localStorage.getItem(this._lsKey());
       if (!raw) return null;
       const parsed = JSON.parse(raw);
-      if (parsed.date !== this._todayStr()) return null; // nuevo día
+      if (parsed.date !== this._todayStr()) return null; 
       return parsed;
     } catch(_) { return null; }
   },
@@ -53,14 +32,14 @@ const BattleAttempts = {
     try { localStorage.setItem(this._lsKey(), JSON.stringify(data)); } catch(_) {}
   },
 
-  /** Devuelve cuántos intentos quedan para la categoría hoy. */
+  
   remaining(category) {
     const data = this._load();
     if (!data) return this.MAX_DAILY;
     return Math.max(0, this.MAX_DAILY - (data.counts[category] || 0));
   },
 
-  /** Consume un intento. Devuelve false si ya no hay intentos disponibles. */
+  
   consume(category) {
     let data = this._load() || { date: this._todayStr(), counts: {} };
     const used = data.counts[category] || 0;
@@ -70,7 +49,7 @@ const BattleAttempts = {
     return true;
   },
 
-  /** Resumen legible de intentos restantes para la UI. */
+  
   summaryHTML() {
     return ['classic','penalties','quiz','guess','connect'].map(cat => {
       const rem = this.remaining(cat);
@@ -113,7 +92,6 @@ const CPU_TEAM_NAMES = [
   'Los Cóndores', 'Fénix SC', 'Estrella Blanca'
 ];
 
-/* Generar alineación random de CPU del pool de figuritas */
 function generateCpuTeam(formation = '4-3-3') {
   const pool = Gacha.getPool();
   const shuffle = arr => [...arr].sort(() => Math.random() - 0.5);
@@ -141,7 +119,6 @@ function generateCpuTeam(formation = '4-3-3') {
   return { name, formation, players };
 }
 
-/* Generar alineación random del usuario (de sus figuritas) */
 function generateUserRandomTeam(owned, formation = '4-3-3') {
   if (!owned || owned.length < 5) return null;
 
@@ -167,7 +144,6 @@ function generateUserRandomTeam(owned, formation = '4-3-3') {
   return { name: 'Mi Equipo', formation, players };
 }
 
-/* Calcular poder total de un equipo */
 function teamPower(players) {
   return players.reduce((sum, p) => sum + (p.rating || 75), 0);
 }
@@ -177,7 +153,7 @@ const Battle = {
 
   async render() {
     const user  = await Auth.currentUser();
-    // Vincular intentos al usuario logueado para que cada cuenta tenga su propio contador
+    
     BattleAttempts.setUser(user?.email || '');
     const owned = user?.figuritas || [];
     const el    = document.getElementById('tab-battle');
@@ -260,7 +236,7 @@ const Battle = {
       </div>
     `;
 
-    // Leer equipo ideal guardado; si no tiene suficientes, generar random
+    
     const savedIdeal = user?.equipo_ideal || {};
     const savedFormation = user?.formacion || '4-3-3';
     const idealPlayers = Album.buildIdealTeamPlayers
@@ -279,7 +255,7 @@ const Battle = {
     };
     this._renderTeamPanels();
 
-    // Eventos — verificar límite de intentos antes de iniciar
+    
     document.getElementById('bmode-classic').addEventListener('click', () => {
       if (!BattleAttempts.consume('classic')) {
         Toast.warn('Ya usaste los 2 intentos de Batalla Clásica hoy. Vuelve mañana.');
@@ -317,12 +293,12 @@ const Battle = {
     });
     document.getElementById('btn-battle-random-team').addEventListener('click', () => {
       if (this._state.usingIdeal) {
-        // Switch to random
+        
         const rnd = generateUserRandomTeam(this._state.owned);
         if (rnd) { this._state.userTeam = rnd; this._state.usingIdeal = false; }
         Toast.show('🎲 Alineación aleatoria');
       } else {
-        // Try to restore ideal
+        
         const savedIdeal = this._state.user?.equipo_ideal || {};
         const ip = Album.buildIdealTeamPlayers
           ? Album.buildIdealTeamPlayers(this._state.owned, savedIdeal) : [];
@@ -337,7 +313,7 @@ const Battle = {
         }
       }
       this._renderTeamPanels();
-      // Update button label
+      
       const btn = document.getElementById('btn-battle-random-team');
       if (btn) btn.textContent = this._state.usingIdeal ? '🎲 Modo aleatorio' : '📋 Mi Equipo Ideal';
     });
@@ -401,9 +377,7 @@ const Battle = {
     `;
   },
 
-  /* ══════════════════════════════════════════
-     BATALLA CLÁSICA — Comparación de ratings
-  ══════════════════════════════════════════ */
+  
   async startClassicBattle() {
     const { userTeam, cpuTeam } = this._state;
     const userPwr = teamPower(userTeam.players) + Math.random() * 80;
@@ -468,15 +442,11 @@ const Battle = {
     `);
   },
 
-  /* ══════════════════════════════════════════
-     TANDA DE PENALES — Minijuego interactivo
-     Ronda A: usuario dispara, CPU ataja
-     Ronda B: CPU dispara, usuario elige dónde atajar
-  ══════════════════════════════════════════ */
+  
   async startPenaltyBattle() {
     let userGoals = 0, cpuGoals = 0;
     let round = 0;
-    const totalRounds = 3; // 3 rondas: cada ronda = 1 disparo usuario + 1 disparo CPU
+    const totalRounds = 3; 
 
     const DIRS = ['↖️ Izq. arriba','⬆️ Centro','↗️ Der. arriba','↙️ Izq. abajo','⬇️ Raso centro','↘️ Der. abajo'];
     const DIRS_SHORT = ['Izq. arr.','Centro','Der. arr.','Izq. abajo','Raso','Der. abajo'];
@@ -515,9 +485,9 @@ const Battle = {
       }, 50);
     };
 
-    // Fase B: Usuario ataja el disparo de la CPU
+    
     const doCpuShoot = (onDone) => {
-      const cpuShotDir = Math.floor(Math.random() * 6); // 0-5, igual que el tirador
+      const cpuShotDir = Math.floor(Math.random() * 6); 
       const cpuDirLabels = ['↖️ Izq. arriba', '⬆️ Centro', '↗️ Der. arriba', '↙️ Izq. abajo', '⬇️ Raso centro', '↘️ Der. abajo'];
       Modal.open(`
         <div style="text-align:center;padding:0.5rem 0">
@@ -540,7 +510,7 @@ const Battle = {
         document.querySelectorAll('.penalty-save-btn').forEach(btn => {
           btn.addEventListener('click', () => {
             const userSaveDir = parseInt(btn.dataset.dir);
-            const cpuScored = (userSaveDir !== cpuShotDir); // ataja si acierta dirección
+            const cpuScored = (userSaveDir !== cpuShotDir); 
             if (cpuScored) cpuGoals++;
             Modal.close();
             setTimeout(() => onDone(cpuScored), 200);
@@ -556,7 +526,7 @@ const Battle = {
       }
       round++;
 
-      // Fase A: Usuario dispara
+      
       Modal.open(`
         <div style="text-align:center;padding:0.5rem 0">
           <div style="font-family:'Bebas Neue',cursive;font-size:1.2rem;color:var(--text-muted);margin-bottom:0.5rem">
@@ -589,7 +559,7 @@ const Battle = {
             if (userScored) userGoals++;
             Modal.close();
 
-            // Después del disparo del usuario, la CPU dispara
+            
             setTimeout(() => {
               doCpuShoot((cpuScored) => {
                 showResult(userScored, cpuScored, doRound);
@@ -628,9 +598,7 @@ const Battle = {
     }, 200);
   },
 
-  /* ══════════════════════════════════════════
-     QUIZ MUNDIALISTA
-  ══════════════════════════════════════════ */
+  
   _quizQuestions: [
     { q:'¿En qué año se jugó el primer Mundial de Fútbol?',        opts:['1920','1926','1930','1934'],              ans:2 },
     { q:'¿Qué país tiene más Mundiales ganados (5)?',              opts:['Alemania','Italia','Argentina','Brasil'],  ans:3 },
@@ -652,13 +620,13 @@ const Battle = {
     { q:'¿De qué país es Kylian Mbappé?',                          opts:['Bélgica','Senegal','Costa de Marfil','Francia'], ans:3 },
     { q:'¿En qué posición juega Rodri?',                           opts:['Extremo','Delantero','Defensa','Mediocampista defensivo'], ans:3 },
     { q:'¿Qué equipo ganó la Champions 2024?',                     opts:['Bayern','PSG','Arsenal','Real Madrid'],   ans:3 },
-    // Bloque 2 – Mundial 2026
+    
     { q:'¿Cuántas sedes tiene el Mundial 2026?',                   opts:['12','14','16','11'],                      ans:1 },
     { q:'¿Cuál es la sede canadiense del Mundial 2026?',           opts:['Ottawa','Montreal','Toronto','Vancouver'], ans:2 },
     { q:'¿Cuántos partidos tendrá el Mundial 2026?',               opts:['64','80','96','104'],                     ans:2 },
     { q:'¿Qué formato de grupos usa el Mundial 2026?',             opts:['8 grupos de 6','12 grupos de 4','8 grupos de 4','16 grupos de 3'], ans:1 },
     { q:'¿Cuál es el estadio de la final del Mundial 2026?',       opts:['SoFi Stadium','Rose Bowl','MetLife Stadium','AT&T Stadium'], ans:2 },
-    // Bloque 3 – Historia del fútbol
+    
     { q:'¿Qué país organizó el Mundial 2022?',                     opts:['Emiratos Árabes','Arabia Saudita','Kuwait','Catar'], ans:3 },
     { q:'¿Quién marcó el "Gol del Siglo" en 1986?',                opts:['Platini','Zico','Maradona','Butcher'],    ans:2 },
     { q:'¿Cuántas veces ha sido anfitrión Brasil del Mundial?',    opts:['1','2','3','4'],                          ans:1 },
@@ -667,20 +635,20 @@ const Battle = {
     { q:'¿Cuál fue el primer Mundial celebrado en Asia?',          opts:['Japón/Corea 2002','China 2030','Catar 2022','Australia 2023'], ans:0 },
     { q:'¿Cuántos penaltis erró Baggio en la final del 94?',       opts:['0','1','2','3'],                          ans:1 },
     { q:'¿Qué jugador ganó el Balón de Oro 2023?',                 opts:['Benzema','Messi','Mbappé','Haaland'],     ans:1 },
-    // Bloque 4 – Selecciones y estadísticas
+    
     { q:'¿Qué selección tiene el récord de goles en un solo Mundial (27)?', opts:['Brasil','Hungría','Francia','Alemania'], ans:1 },
     { q:'¿Cuántos goles marcó Mbappé en el Mundial 2022?',         opts:['6','7','8','9'],                          ans:2 },
     { q:'¿Qué selección llegó a la final del Mundial 2022?',       opts:['Brasil','Portugal','Francia','Marruecos'], ans:2 },
     { q:'¿Cuál es la selección con más participaciones mundialistas?', opts:['Brasil','Alemania','Italia','Argentina'], ans:0 },
     { q:'¿Qué portero ganó el Guante de Oro en Qatar 2022?',       opts:['Courtois','Alisson','Lloris','E. Martínez'], ans:3 },
     { q:'¿Qué selección fue eliminada en grupos en Qatar 2022 como gran sorpresa?', opts:['Alemania','España','Bélgica','Uruguay'], ans:0 },
-    // Bloque 5 – Clubs y Champions
+    
     { q:'¿Cuántas Champions League tiene el Real Madrid?',         opts:['13','14','15','16'],                      ans:2 },
     { q:'¿Qué club ganó la Premier 2023-24?',                      opts:['Arsenal','Liverpool','Man City','Chelsea'], ans:2 },
     { q:'¿En qué estadio se jugó la final de la Champions 2024?',  opts:['Wembley','Bernabéu','Allianz Arena','Estadio Olímpico de Londres'], ans:0 },
     { q:'¿Quién fue el máximo goleador de La Liga 2023-24?',       opts:['Vinícius','Bellingham','Lewandowski','Artem Dovbyk'], ans:3 },
     { q:'¿Qué equipo ganó la Libertadores 2023?',                  opts:['Fluminense','Boca Juniors','River Plate','Atlético Mineiro'], ans:0 },
-    // Bloque 6 – Curiosidades
+    
     { q:'¿Cuántos árbitros participan en un partido oficial FIFA actualmente (con VAR)?', opts:['4','5','6','7'], ans:2 },
     { q:'¿Qué medida tiene el campo de fútbol según FIFA (largo máx.)?', opts:['100m','110m','120m','130m'],        ans:2 },
     { q:'¿Qué jugador tiene más seguidores en Instagram (fútbol)?', opts:['Mbappé','Ronaldo','Messi','Neymar'],     ans:1 },
@@ -732,7 +700,7 @@ const Battle = {
             const correct = chosen === q.ans;
             if (correct) score++;
 
-            // Marcar respuestas
+            
             document.querySelectorAll('.quiz-opt-btn').forEach(b => {
               const isCorrect = parseInt(b.dataset.orig) === q.ans;
               b.style.background = isCorrect ? 'rgba(68,255,136,0.2)' : (b === btn && !correct ? 'rgba(255,68,102,0.2)' : '');
@@ -740,7 +708,7 @@ const Battle = {
               b.disabled = true;
             });
 
-            // Animación flotante de puntos si respuesta correcta
+            
             if (correct) {
               const rect = btn.getBoundingClientRect();
               const el = document.createElement('div');
@@ -764,7 +732,7 @@ const Battle = {
   },
 
   async _endQuizBattle(score, total) {
-    const won   = score >= Math.ceil(total * 0.6); // 60%+ = victoria
+    const won   = score >= Math.ceil(total * 0.6); 
     const drawn = score === Math.floor(total / 2);
     const tiradas = score >= total ? 3 : score >= Math.ceil(total*0.6) ? 2 : score > 0 ? 1 : 0;
     const monedas = score * 5;
@@ -797,8 +765,7 @@ const Battle = {
     }, 200);
   },
 
-
-  /* ══ ADIVINA EL JUGADOR ══════════════════════════════════════════ */
+  
   async startGuessPlayer() {
     const allFigs = Gacha.getPool();
     if (!allFigs.length) { Toast.error('No hay jugadores disponibles'); return; }
@@ -879,7 +846,7 @@ const Battle = {
     }, 200);
   },
 
-  /* ══ CONECTA JUGADOR ══════════════════════════════════════════════ */
+  
   async startConnectPlayer() {
     const allFigs = Gacha.getPool();
     if (!allFigs.length) { Toast.error('No hay jugadores disponibles'); return; }
@@ -931,7 +898,7 @@ const Battle = {
         </div>
       `);
 
-      // Reaplicar estado "seleccionado" (vía clase, ya que data-selected no añade estilos por sí solo)
+      
       document.querySelectorAll('.connect-player-btn[data-selected="1"]').forEach(b => b.classList.add('connect-selected'));
 
       setTimeout(() => {
@@ -997,7 +964,7 @@ const Battle = {
     }, 200);
   },
 
-  /* Aplicar resultado al usuario */
+  
   async _applyBattleResult(won, drawn, tiradas = 0, monedas = 0) {
     const user = await Auth.currentUser();
     if (!user) return;

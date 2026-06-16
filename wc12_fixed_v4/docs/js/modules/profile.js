@@ -1,4 +1,3 @@
-
 const Profile = {
 
   async render() {
@@ -13,7 +12,7 @@ const Profile = {
       : '-';
     setEl('profile-date', 'Registrado: ' + fechaStr);
 
-    // Avatar: foto guardada o iniciales
+    
     const avatarEl = document.getElementById('profile-avatar');
     if (avatarEl) {
       if (user.photoURL) {
@@ -24,7 +23,7 @@ const Profile = {
       }
     }
 
-    // Stats
+    
     const figuritas   = user.figuritas || [];
     const unicas      = figuritas.length;
     const total       = Gacha.getTotalFiguritas();
@@ -68,19 +67,19 @@ const Profile = {
   },
 
   _bindEditEvents() {
-    // Editar nombre
+    
     const btnName = document.getElementById('btn-edit-name');
     if (btnName && !btnName._bound) {
       btnName._bound = true;
       btnName.addEventListener('click', () => this._editField('name', 'Nuevo nombre', 'text'));
     }
-    // Editar correo
+    
     const btnEmail = document.getElementById('btn-edit-email');
     if (btnEmail && !btnEmail._bound) {
       btnEmail._bound = true;
       btnEmail.addEventListener('click', () => this._editField('email', 'Nuevo correo', 'email'));
     }
-    // Editar avatar (botón sobre la foto)
+    
     const btnAvatar = document.getElementById('btn-edit-avatar');
     const inputFile = document.getElementById('input-avatar-file');
     if (btnAvatar && inputFile && !btnAvatar._bound) {
@@ -118,7 +117,7 @@ const Profile = {
     if (!file.type.startsWith('image/')) { Toast.error('El archivo debe ser una imagen'); return; }
     if (file.size > 2 * 1024 * 1024) { Toast.error('La imagen no debe superar 2 MB'); return; }
 
-    // Comprimir/redimensionar a 200×200 antes de guardar en base64
+    
     const dataURL = await new Promise((resolve, reject) => {
       const img = new Image();
       const url = URL.createObjectURL(file);
@@ -128,7 +127,7 @@ const Profile = {
         const canvas = document.createElement('canvas');
         canvas.width = canvas.height = SIZE;
         const ctx = canvas.getContext('2d');
-        // Crop centrado
+        
         const s = Math.min(img.width, img.height);
         const sx = (img.width  - s) / 2;
         const sy = (img.height - s) / 2;
@@ -176,7 +175,7 @@ const Profile = {
         : '<span class="text-muted" style="font-size:0.8rem">Sin jugadores favoritos</span>';
     }
 
-    // Eventos eliminar
+    
     const allBtns = [
       ...(favTeams?.querySelectorAll('button') || []),
       ...(favPlayers?.querySelectorAll('button') || [])
@@ -198,7 +197,7 @@ const Profile = {
       return;
     }
 
-    // Calcular totales
+    
     const wins       = preds.filter(p => p.result === 'win').length;
     const losses     = preds.filter(p => p.result === 'loss').length;
     const totalGanado = preds.reduce((acc, p) => {
@@ -224,11 +223,11 @@ const Profile = {
         : '';
       const exactBadge = p.exactCorrect
         ? `<span style="font-size:0.6rem;color:#4fc3f7;margin-left:4px">EXACTO</span>` : '';
-      // Mostrar marcador final si está disponible
+      
       const scoreHtml = p.finalScore
         ? `<span class="bet-score" style="font-size:0.65rem;color:var(--text-muted)">${p.finalHome || ''} ${p.finalScore} ${p.finalAway || ''}</span>`
         : '';
-      // Nombre del partido: usar home/away guardados, si no el matchId como fallback
+      
       const matchLabel = (p.matchHome && p.matchAway)
         ? `${p.matchHomeFlag || ''} ${p.matchHome} vs ${p.matchAway} ${p.matchAwayFlag || ''}`
         : p.matchId;
@@ -251,7 +250,7 @@ const Profile = {
     return { home:'Local', away:'Visitante', draw:'Empate' }[p] || p;
   },
 
-  /* ── Favoritos ── */
+  
   async addFavorite(item, tipo) {
     const user = await Auth.currentUser();
     if (!user) return;
@@ -263,10 +262,10 @@ const Profile = {
     favs.push({ ...item, tipo });
     user.favoritos = favs;
     await Auth.updateUser(user);
-    // BUG FIX: logActivity era opcional, no debe bloquear el flujo
+    
     try { await DB.logActivity(user.email, 'add_favorite', `${tipo}: ${item.name}`); } catch(_) {}
     Toast.success(`⭐ ${item.name} agregado a favoritos`);
-    // BUG FIX: actualizar lista de favoritos en perfil si está visible
+    
     this.renderFavorites(user);
   },
 
@@ -279,13 +278,13 @@ const Profile = {
     this.renderFavorites(user);
   },
 
-  // BUG FIX: isFavorite ahora acepta tipo opcional para evitar falsos positivos
+  
   async isFavorite(id, tipo = null) {
     const user = await Auth.currentUser();
     return (user?.favoritos || []).some(f => f.id === id && (tipo === null || f.tipo === tipo));
   },
 
-  /* ── Exportar JSON ── */
+  
   async exportData() {
     const user = await Auth.currentUser();
     if (!user) return;
@@ -327,7 +326,7 @@ const Profile = {
         try { return JSON.parse(localStorage.getItem('wcc_wc_prediction') || 'null'); } catch(_) { return null; }
       })(),
       battleAttempts: (() => {
-        // Usar clave específica del usuario si está disponible
+        
         const key = user.email ? `wcc_battle_attempts_${user.email}` : 'wcc_battle_attempts';
         try { return JSON.parse(localStorage.getItem(key) || 'null'); } catch(_) { return null; }
       })(),
@@ -354,7 +353,7 @@ const Profile = {
     await DB.logActivity(user.email, 'export', 'JSON export');
   },
 
-  /* ── Importar JSON ── */
+  
   async importData(file) {
     if (!file) return;
     if (file.type !== 'application/json' && !file.name.endsWith('.json')) {
@@ -366,13 +365,13 @@ const Profile = {
       const text = await file.text();
       const data = JSON.parse(text);
 
-      // Validación de estructura
+      
       if (!data.usuario || !data.email || !Array.isArray(data.figuritas)) {
         Toast.error('Estructura del archivo inválida');
         return;
       }
 
-      // Verificar versión
+      
       if (data.version && parseFloat(data.version) < 1.0) {
         Toast.error('Versión de archivo no compatible');
         return;
@@ -392,7 +391,7 @@ const Profile = {
       );
       if (!confirmed) return;
 
-      // Reconstruir figuritas con datos del pool
+      
       const pool   = Gacha.getPool();
       const merged = data.figuritas.map(f => {
         const base = pool.find(p => p.id === f.id);
@@ -402,7 +401,7 @@ const Profile = {
       }).filter(Boolean);
 
       user.figuritas        = merged;
-      // Restaurar tiradas exactas; freeSpinsClaimed siempre true para no re-entregar las iniciales
+      
       user.tiradas          = typeof data.tiradas === 'number' ? data.tiradas : (user.tiradas ?? 0);
       user.freeSpinsClaimed = true;
       user.aciertos         = Number(data.aciertos)  || user.aciertos;
@@ -416,25 +415,25 @@ const Profile = {
       user.equipo_ideal     = data.equipo_ideal || user.equipo_ideal;
       if (data.wcPrediction) {
         user.wcPrediction = data.wcPrediction;
-        // Backup en localStorage para acceso síncrono
+        
         try { localStorage.setItem('wcc_wc_prediction', JSON.stringify(data.wcPrediction)); } catch(_) {}
       }
-      // Restaurar nombre y foto de perfil si están en el export
+      
       if (data.usuario)  user.name     = data.usuario;
       if (data.photoURL) user.photoURL = data.photoURL;
-      // Restaurar marcas de tiradas diarias para no resetear el límite al importar en otro navegador
+      
       if (data.lastDailyPull) user.lastDailyPull = data.lastDailyPull;
       if (data.lastDailySpin) user.lastDailySpin = data.lastDailySpin;
-      // Restaurar intentos diarios de batalla con clave específica del usuario
+      
       if (data.battleAttempts) {
         try {
           const key = user.email ? `wcc_battle_attempts_${user.email}` : 'wcc_battle_attempts';
           localStorage.setItem(key, JSON.stringify(data.battleAttempts));
-          // Actualizar el email en BattleAttempts si está disponible
+          
           if (typeof BattleAttempts !== 'undefined') BattleAttempts.setUser(user.email);
         } catch(_) {}
       }
-      // Restaurar estadísticas de minijuegos
+      
       if (data.minigameStats) {
         try {
           Object.entries(data.minigameStats).forEach(([k, v]) => {

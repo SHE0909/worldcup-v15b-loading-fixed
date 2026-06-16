@@ -1,11 +1,5 @@
-/* =============================================
-   WORLD CUP COLLECTOR — UES
-   Auth Stylesheet — Login centrado correctamente
-   ============================================= */
-
 *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 
-/* Evita que "Alto Contraste" de Windows sobreescriba los colores del app */
 @media (forced-colors: active) {
   *, *::before, *::after { forced-color-adjust: none; }
 }
@@ -56,9 +50,6 @@ input, button { font-family: inherit; }
   --shadow-glow: 0 0 20px var(--accent-glow);
 }
 
-/* ============================================
-   AUTH LAYOUT — CENTRADO CORRECTO
-   ============================================ */
 body {
   display: flex;
   align-items: center;
@@ -67,7 +58,6 @@ body {
   position: relative;
 }
 
-/* Fondo animado */
 .auth-bg {
   position: fixed;
   inset: 0;
@@ -106,7 +96,6 @@ body {
   opacity: 0.2;
 }
 
-/* Contenedor principal centrado */
 .auth-container {
   position: relative;
   z-index: 1;
@@ -210,7 +199,6 @@ body {
   color: var(--text-secondary);
 }
 
-/* ---- BUTTONS ---- */
 .btn {
   display: inline-flex;
   align-items: center;
@@ -261,7 +249,6 @@ body {
 }
 .btn-icon:hover { color: var(--accent); }
 
-/* Splash loader */
 .splash-loader {
   position: fixed; inset: 0; z-index: 9999;
   background: #080c14;
@@ -292,7 +279,6 @@ body {
 .btn-loading:disabled { opacity: 0.7; cursor: not-allowed; }
 .btn-spinner { margin-left: 0.4rem; }
 
-/* Toast */
 .toast {
   position: fixed;
   bottom: 2rem;
@@ -314,7 +300,6 @@ body {
 .toast.success { border-color: var(--accent); color: var(--accent); }
 .toast.error { border-color: #ff5566; color: #ff5566; }
 
-/* ── Transfer form responsive ── */
 @media (max-width: 480px) {
   .auth-container { padding: 1.25rem 1rem 2rem; }
   .auth-form h2 { font-size: 1.3rem; }

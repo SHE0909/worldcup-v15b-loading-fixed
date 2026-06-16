@@ -275,10 +275,13 @@ body {
   .auth-orb, .auth-bg::before, .auth-grid::before, .auth-grid::after,
   .logo-title, .logo-icon, .btn-primary, .header-logo,
   .splash-ball, .loading-ball, .splash-text, .loading-text,
-  .progress-fill, .pity-fill, .nav-btn.active::before, .screen.active,
+  .progress-fill, .pity-fill, .nav-btn.active::before,
   .auth-form.active::before, .auth-form.active::after {
     animation: none !important;
     opacity: 0 !important;
+  }
+  .screen.active {
+    animation: none !important;
   }
 }
 

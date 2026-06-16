@@ -1,24 +1,3 @@
-/**
- * wc_predictor.js — Predictor de Mundial 2026
- *
- * Sistema de predicción completa del torneo:
- *   • Fase de Grupos  → 10 tiradas si aciertas qué equipos pasan de cada grupo
- *   • Ronda de 32     → 10 tiradas por fase acertada
- *   • Octavos         → 10 tiradas
- *   • Cuartos         → 10 tiradas
- *   • Semifinales     → 10 tiradas
- *   • Final           → 10 tiradas
- *   • Campeón exacto  → 50 tiradas adicionales
- *
- * Las recompensas se calculan automáticamente cuando la API confirma
- * que la fase terminó (status de fixtures FT/AET/PEN).
- *
- * Almacenamiento: user.wcPrediction (en Firestore vía Auth.updateUser)
- */
-
-/* ── Grupos del Mundial 2026 (48 equipos, 12 grupos A–L) ────────────── */
-/* NOTA: estos grupos coinciden con MOCK.teams en api.js y el fixture real del sorteo.
-   Se cargan también dinámicamente desde MOCK.teams o la API al abrir el predictor. */
 const WC2026_GROUPS = {
   A: ['México',         'Sudáfrica',    'Corea del Sur', 'Rep. Checa'],
   B: ['Canadá',         'Bosnia-Herz.', 'Qatar',         'Suiza'],
@@ -44,16 +23,16 @@ const WC_PHASES = [
   { id:'champion', label:'Campeón',         reward:50 },
 ];
 
-const WC_LS_KEY = 'wcc_wc_prediction';   // localStorage backup
+const WC_LS_KEY = 'wcc_wc_prediction';   
 
 const WorldCupPredictor = {
 
-  /* ── Abrir el panel de predicción ───────────────────────────────── */
+  
   async open() {
     const user = await Auth.currentUser();
     if (!user) { Toast.warn('Inicia sesión para predecir'); return; }
 
-    // Cargar grupos dinámicamente desde MOCK.teams (o API) para tener datos correctos
+    
     await this._loadGroupsFromTeams();
 
     const pred = user.wcPrediction || {};
@@ -67,10 +46,10 @@ const WorldCupPredictor = {
     overlay.innerHTML = this._buildUI(pred);
     document.body.appendChild(overlay);
 
-    // Botón cerrar
+    
     overlay.querySelector('#wcp-close').addEventListener('click', () => overlay.remove());
 
-    // Navegación de fases
+    
     overlay.querySelectorAll('.wcp-phase-tab').forEach(tab => {
       tab.addEventListener('click', () => {
         overlay.querySelectorAll('.wcp-phase-tab').forEach(t => t.classList.remove('active'));
@@ -81,23 +60,23 @@ const WorldCupPredictor = {
       });
     });
 
-    // Botón guardar
+    
     overlay.querySelector('#wcp-save').addEventListener('click', () => this._save(overlay));
 
-    // Populate group pickers
+    
     this._initGroupPickers(overlay, pred);
     this._initKnockoutPickers(overlay, pred);
   },
 
-  /* ── Cargar grupos desde MOCK.teams (fuente de verdad) ────────────── */
+  
   async _loadGroupsFromTeams() {
     try {
-      // Intentar obtener equipos reales de la API
+      
       const teams = typeof API !== 'undefined' ? await API.getTeams() : null;
       const source = (teams?.length) ? teams : (typeof MOCK !== 'undefined' ? MOCK.teams : null);
       if (!source?.length) return;
 
-      // Reconstruir grupos desde la fuente de datos
+      
       const byGroup = {};
       source.forEach(t => {
         if (!t.group) return;
@@ -105,7 +84,7 @@ const WorldCupPredictor = {
         byGroup[t.group].push(t.name);
       });
 
-      // Solo sobreescribir si tenemos grupos válidos (A-L con 4 equipos)
+      
       const keys = Object.keys(byGroup);
       if (keys.length >= 8) {
         keys.forEach(g => {
@@ -115,7 +94,7 @@ const WorldCupPredictor = {
     } catch(_) {}
   },
 
-  /* ── Construir HTML del overlay ─────────────────────────────────── */
+  
   _buildUI(pred) {
     const statusInfo = this._calcStatus(pred);
     return `
@@ -279,11 +258,11 @@ const WorldCupPredictor = {
       </div>`;
   },
 
-  /* ── Inicializar picks de grupos ────────────────────────────────── */
+  
   _initGroupPickers(overlay, pred) {
     const groupPred = pred.groups || {};
 
-    // Restaurar picks guardados
+    
     Object.keys(groupPred).forEach(g => {
       const picks = groupPred[g] || [];
       picks.forEach(team => {
@@ -327,17 +306,17 @@ const WorldCupPredictor = {
     }
   },
 
-  /* ── Equipos disponibles para una fase, según los picks de la fase anterior ── */
+  
   _getAvailableTeams(overlay, phaseId) {
     if (phaseId === 'round32') {
-      // Todos los equipos elegidos como clasificados de grupo (hasta 24)
+      
       const teams = new Set();
       Object.keys(WC2026_GROUPS).forEach(g => {
         overlay.querySelectorAll(`.wcp-team-btn.selected[data-group="${g}"]`).forEach(b => teams.add(b.dataset.team));
       });
       return [...teams];
     }
-    // r16, qf, sf, final → ganadores elegidos en la fase anterior
+    
     const prevMap = { r16:'round32', qf:'r16', sf:'qf', final:'sf', champion_from_final:'final' };
     const prevPhase = prevMap[phaseId];
     if (!prevPhase) return this._getAllTeams();
@@ -351,7 +330,7 @@ const WorldCupPredictor = {
     return [...teams];
   },
 
-  /* ── Refrescar opciones de campeón con los finalistas elegidos ──── */
+  
   _refreshChampionOptions(overlay) {
     const finalists = this._getAvailableTeams(overlay, 'champion_from_final');
     const grid = overlay.querySelector('#wcp-champion-grid');
@@ -380,17 +359,17 @@ const WorldCupPredictor = {
     });
   },
 
-  /* ── Inicializar picks de eliminatorias ─────────────────────────── */
+  
   _initKnockoutPickers(overlay, pred) {
-    // Para cada fase de eliminatoria, los equipos disponibles vienen
-    // de la predicción de la fase anterior
+    
+    
     const phases = ['round32','r16','qf','sf','final'];
     phases.forEach(phaseId => {
       const phasePred = pred[phaseId] || {};
       const container = overlay.querySelector(`#wcp-knockout-${phaseId}`);
       if (!container) return;
 
-      // Poblar con equipos guardados
+      
       Object.entries(phasePred).forEach(([pairKey, data]) => {
         const pair = parseInt(pairKey);
         if (data.home) {
@@ -407,7 +386,7 @@ const WorldCupPredictor = {
         }
       });
 
-      // Click en botones home/away → abrir selector de equipo
+      
       container.querySelectorAll('.wcp-ko-pick').forEach(btn => {
         btn.addEventListener('click', () => {
           const pair = btn.dataset.pair;
@@ -417,7 +396,7 @@ const WorldCupPredictor = {
       });
     });
 
-    // Champion picker
+    
     const champPred = pred.champion;
     this._refreshChampionOptions(overlay);
     if (champPred) {
@@ -432,7 +411,7 @@ const WorldCupPredictor = {
     btn.style.color = 'var(--text-secondary)';
   },
 
-  /* ── Selector de equipo para rondas de eliminatoria ─────────────── */
+  
   _openTeamPicker(overlay, phaseId, pair, side, pred) {
     const available = this._getAvailableTeams(overlay, phaseId);
     if (available.length === 0) {
@@ -485,14 +464,14 @@ const WorldCupPredictor = {
     modal.addEventListener('click', e => { if(e.target===modal) modal.remove(); });
   },
 
-  /* ── Guardar predicción ─────────────────────────────────────────── */
+  
   async _save(overlay) {
     const user = await Auth.currentUser();
     if (!user) return;
 
     const pred = {};
 
-    // Grupos
+    
     pred.groups = {};
     Object.keys(WC2026_GROUPS).forEach(g => {
       const picks = [...overlay.querySelectorAll(`.wcp-team-btn.selected[data-group="${g}"]`)]
@@ -500,7 +479,7 @@ const WorldCupPredictor = {
       if (picks.length > 0) pred.groups[g] = picks;
     });
 
-    // Fases eliminatorias
+    
     ['round32','r16','qf','sf','final'].forEach(phaseId => {
       pred[phaseId] = {};
       const container = overlay.querySelector(`#wcp-knockout-${phaseId}`);
@@ -514,11 +493,11 @@ const WorldCupPredictor = {
       });
     });
 
-    // Campeón
+    
     const champBtn = overlay.querySelector('.wcp-champion-btn[style*="rgba(200,160,0"]');
     pred.champion = champBtn?.dataset.team || null;
 
-    // Timestamps de cuando fue hecha la predicción
+    
     pred.savedAt   = new Date().toISOString();
     pred.rewarded  = user.wcPrediction?.rewarded || {};
 
@@ -531,21 +510,15 @@ const WorldCupPredictor = {
     overlay.remove();
   },
 
-  /* ── Evaluar recompensas (llamar cuando termine cada fase) ──────── */
+  
   async evaluatePhase(phaseId, actualResults) {
-    /*
-      actualResults: objeto con los equipos reales que pasaron
-      Formato por fase:
-        groups:   { A: ['Brasil','Francia'], B: [...], ... }
-        r16..final: ['Brasil','Francia', ...]   (lista de clasificados)
-        champion: 'Brasil'
-    */
+    
     const user = await Auth.currentUser();
     if (!user || !user.wcPrediction) return 0;
 
     const pred    = user.wcPrediction;
     const rewarded = pred.rewarded || {};
-    if (rewarded[phaseId]) return 0;   // ya se otorgó el premio de esta fase
+    if (rewarded[phaseId]) return 0;   
 
     const phase = WC_PHASES.find(p => p.id === phaseId);
     if (!phase) return 0;
@@ -553,7 +526,7 @@ const WorldCupPredictor = {
     let correct = false;
 
     if (phaseId === 'groups') {
-      // Verificar cada grupo: ¿los 2 clasificados predichos coinciden con los reales?
+      
       let groupsCorrect = 0;
       const totalGroups = Object.keys(actualResults).length;
       Object.entries(actualResults).forEach(([g, realTeams]) => {
@@ -561,11 +534,11 @@ const WorldCupPredictor = {
         const hit = predTeams.filter(t => realTeams.includes(t)).length;
         if (hit === 2) groupsCorrect++;
       });
-      correct = groupsCorrect >= Math.ceil(totalGroups * 0.5); // al menos 50% de grupos
+      correct = groupsCorrect >= Math.ceil(totalGroups * 0.5); 
     } else if (phaseId === 'champion') {
       correct = pred.champion && actualResults === pred.champion;
     } else {
-      // Para rondas de eliminatoria: comparar ganadores predichos con reales
+      
       const predWinners = Object.values(pred[phaseId] || {})
         .map(r => r.winner).filter(Boolean);
       const hitCount = predWinners.filter(t => (actualResults || []).includes(t)).length;
@@ -587,7 +560,7 @@ const WorldCupPredictor = {
     return 0;
   },
 
-  /* ── Helpers ────────────────────────────────────────────────────── */
+  
   _getFlag(teamName) {
     const FLAGS = {
       'México':'🇲🇽','Mexico':'🇲🇽','Brasil':'🇧🇷','Brazil':'🇧🇷','Argentina':'🇦🇷',

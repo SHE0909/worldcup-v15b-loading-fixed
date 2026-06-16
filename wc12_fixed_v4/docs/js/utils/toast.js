@@ -1,6 +1,3 @@
-/**
- * toast.js — Notificaciones tipo toast
- */
 const Toast = {
   _timer: null,
   show(message, type = 'info', duration = 3000) {
@@ -18,9 +15,6 @@ const Toast = {
   warn(msg, dur)    { this.show(msg, 'warn',     dur); }
 };
 
-/**
- * modal.js — Modal genérico
- */
 const Modal = {
   open(html) {
     const overlay = document.getElementById('modal-overlay');
@@ -29,7 +23,7 @@ const Modal = {
     content.innerHTML = html;
     overlay.style.display = 'flex';
     document.getElementById('modal-close').addEventListener('click', () => Modal.close(), { once: true });
-    // Evitar acumular listeners de click en el overlay cada vez que se abre el modal
+    
     if (!overlay._wccClickBound) {
       overlay.addEventListener('click', (e) => {
         if (e.target === overlay) Modal.close();

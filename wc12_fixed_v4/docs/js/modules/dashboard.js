@@ -1,13 +1,7 @@
-/**
- * dashboard.js — Panel principal  v2
- * Mejoras: venue en upcoming, evaluación predicciones al actualizar,
- *          partidos terminados visibles, mejor formato de fechas
- */
-
 const Dashboard = {
 
   async render() {
-    // Cargar upcoming PRIMERO para que getLiveMatches pueda detectar si hay partido activo
+    
     await this.renderUpcoming();
     await Promise.all([
       this.renderLive(),
@@ -15,17 +9,17 @@ const Dashboard = {
       this.renderFavorites()
     ]);
 
-    // Actualizar próximos partidos cada 30 minutos (pausa si pestaña oculta)
+    
     if (!this._upcomingRefreshTimer) {
       this._upcomingRefreshTimer = API.registerTimer(() => this.renderUpcoming(), 5 * 60 * 1000);
     }
-    // Actualizar posiciones cada 6 horas (pausa si pestaña oculta)
+    
     if (!this._standingsRefreshTimer) {
       this._standingsRefreshTimer = API.registerTimer(() => this.renderStandings(), 6 * 60 * 60 * 1000);
     }
   },
 
-  /* ── En Vivo — v14 ── */
+  
   async renderLive() {
     const el = document.getElementById('live-matches');
     if (!el) return;
@@ -35,34 +29,34 @@ const Dashboard = {
       el.dataset.initialized = '1';
     }
 
-    // Consultar ambas fuentes en paralelo
+    
     const [liveFromApi, upcomingAll] = await Promise.all([
       API.getLiveMatches(),
       API.getUpcomingMatches()
     ]);
 
-    // Partidos en vivo reales de la API
+    
     const liveSet = new Set((liveFromApi||[]).map(m => m.id));
     const liveOnly = [...(liveFromApi||[]).filter(m => m.status === 'live')];
 
-    // Agregar partidos del upcoming que el sistema detectó como live por hora
-    // pero que la API de live no reportó (ej: MOCK o TheSportsDB sin cobertura)
-    // Sanitizar: solo agregar si realmente están dentro del tiempo estimado (<115 min)
+    
+    
+    
     for (const m of (upcomingAll||[])) {
       if (liveSet.has(m.id)) continue;
-      // BUG FIX: además de status==='live' explícito, detectar partidos cuyo
-      // horario ya pasó pero la API/mock todavía los marca como 'scheduled'
-      // (misma heurística que usa Predicciones vía API.getMatchState)
+      
+      
+      
       const isLiveByStatus = m.status === 'live';
       const isLiveByTime   = m.status === 'scheduled' && typeof API.getMatchState === 'function'
         && API.getMatchState(m) === 'live';
 
       if (isLiveByStatus || isLiveByTime) {
-        // Verificar que no haya pasado más de 115 min desde el inicio
+        
         if (m.date && m.time) {
           const start   = new Date(`${m.date}T${m.time}:00${typeof API !== 'undefined' && API._venueOffset ? API._venueOffset(m.venue) : '-06:00'}`);
           const diffMin = (Date.now() - start.getTime()) / 60000;
-          if (diffMin > 115) continue; // ya terminó, no mostrar como live
+          if (diffMin > 115) continue; 
         }
         liveOnly.push(isLiveByTime ? { ...m, status: 'live' } : m);
       }
@@ -100,16 +94,16 @@ const Dashboard = {
       </div>`;
     }).join('');
 
-    // Auto-refresh cada 2 minutos siempre activo para mantener el estado sincronizado
-    // (antes solo se creaba cuando había partidos vivos, dejando el caché stale al terminar)
+    
+    
     if (!this._liveRefreshTimer) {
       this._liveRefreshTimer = API.registerTimer(async () => {
-        // Limpiar caché de ambos paneles para que los marcadores estén sincronizados
+        
         delete API._memCache['live'];
         delete API._memCache['upcoming'];
         this.renderLive();
         this.renderUpcoming();
-        // Evaluar predicciones automáticamente cuando un partido termina
+        
         try {
           const allMatches = await API.getUpcomingMatches();
           if (typeof Predictions !== 'undefined') {
@@ -119,16 +113,7 @@ const Dashboard = {
       }, 2 * 60 * 1000);
     }
   },
-  /* ── Próximos y resultados del día — v15 ─────────────────────────
-     LÓGICA:
-     • Panel IZQUIERDO (renderLive): solo partidos status==='live'
-     • Panel DERECHO (renderUpcoming):
-         - "HOY": todos los partidos de hoy (finished, live, scheduled)
-           incluyendo los que ya terminaron con su marcador
-         - "PRÓXIMOS": partidos de días futuros (sin marcar ya terminados)
-     • Los partidos de ayer o anteriores NO se muestran (ya pasó el día)
-     • Un partido con scoreHome/Away fijo → siempre 'finished' sin importar la hora
-     ────────────────────────────────────────────────────────────────── */
+  
   async renderUpcoming() {
     const el = document.getElementById('upcoming-matches');
     if (!el) return;
@@ -138,7 +123,7 @@ const Dashboard = {
       API.getLiveMatches()
     ]);
 
-    // Actualizar estado con datos de live en tiempo real
+    
     const liveById   = new Map((liveMatches||[]).map(m => [m.id, m]));
     const liveByTeam = new Map();
     (liveMatches||[]).forEach(m => {
@@ -153,17 +138,17 @@ const Dashboard = {
       if (liveMatch) {
         return { ...m, status:'live', scoreHome:liveMatch.scoreHome, scoreAway:liveMatch.scoreAway, minute:liveMatch.minute };
       }
-      // Sanitizar: si el caché dice 'live' pero ya pasaron más de 115 min → forzar finished
-      // Esto evita que partidos terminados sigan apareciendo como "en vivo" por caché stale
+      
+      
       if (m.status === 'live' && m.date && m.time) {
         const _off  = typeof API !== 'undefined' && API._venueOffset ? API._venueOffset(m.venue) : '-06:00';
         const start   = new Date(`${m.date}T${m.time}:00${_off}`);
         const diffMin = (Date.now() - start.getTime()) / 60000;
         if (diffMin > 115) return { ...m, status: 'finished' };
       }
-      // BUG FIX: si el partido sigue 'scheduled' pero ya pasó su hora de inicio
-      // (mismo cálculo que usa Predicciones via API.getMatchState), tratarlo
-      // como 'live' para que Home y Predicciones queden sincronizados.
+      
+      
+      
       if (m.status === 'scheduled' && typeof API.getMatchState === 'function') {
         const state = API.getMatchState(m);
         if (state === 'live')     return { ...m, status: 'live' };
@@ -177,16 +162,16 @@ const Dashboard = {
       return;
     }
 
-    // Fecha "hoy" en zona local del usuario
+    
     const now      = new Date();
     const todayStr = `${now.getFullYear()}-${String(now.getMonth()+1).padStart(2,'0')}-${String(now.getDate()).padStart(2,'0')}`;
     const yestDate = new Date(now); yestDate.setDate(yestDate.getDate()-1);
     const yestStr  = `${yestDate.getFullYear()}-${String(yestDate.getMonth()+1).padStart(2,'0')}-${String(yestDate.getDate()).padStart(2,'0')}`;
-    // Partidos con date UTC del día siguiente pero hora UTC que en local corresponde a hoy
-    // (por ej. 2026-06-08T00:00Z = 2026-06-07 18:00 hora El Salvador UTC-6)
+    
+    
     const isTodayUTC = (m) => {
       if (m.date === todayStr) return true;
-      // Verificar si la hora UTC del partido cae en el día local de hoy
+      
       if (m.time && (m.date === todayStr || m.date > todayStr)) {
         const _off = typeof API !== 'undefined' && API._venueOffset ? API._venueOffset(m.venue) : '-06:00';
         const matchUTC = new Date(`${m.date}T${m.time}:00${_off}`);
@@ -219,7 +204,7 @@ const Dashboard = {
         statusBadge = `<span style="font-size:0.5rem;padding:1px 4px;border-radius:6px;background:rgba(74,168,255,0.2);color:#4aa8ff;font-weight:700;margin-left:2px">HOY · ${m.time||''}</span>`;
       }
 
-      // Marcador final o en vivo
+      
       let scoreHtml = '';
       if (isFinished && m.scoreHome != null && m.scoreAway != null) {
         scoreHtml = `<span style="font-size:0.88rem;font-weight:800;color:#ddd;letter-spacing:1px;padding:0 4px;min-width:54px;text-align:center">${m.scoreHome} — ${m.scoreAway}</span>`;
@@ -251,19 +236,19 @@ const Dashboard = {
       </div>`;
     };
 
-    // Partidos de HOY: finished (con score) + live + scheduled
-    // isTodayUTC maneja partidos UTC cuya hora local cae "hoy" (ej. 00:00 UTC = 18:00 local UTC-6)
+    
+    
     const todayFinished  = all.filter(m => isTodayUTC(m) && m.status === 'finished');
     const todayLive      = all.filter(m => isTodayUTC(m) && m.status === 'live');
     const todayScheduled = all.filter(m => isTodayUTC(m) && m.status === 'scheduled');
-    // Partidos de AYER con resultado (para que no desaparezcan hasta medianoche)
+    
     const yesterdayDone  = all.filter(m => m.date === yestStr && m.status === 'finished');
-    // Partidos futuros (días > hoy, excluir finalizados y los de hoy)
+    
     const futureMatches  = all.filter(m => !isTodayUTC(m) && m.date >= todayStr && m.status !== 'finished' && m.date !== yestStr);
 
     let html = '';
 
-    // ── AYER con resultados (si hay y no hay otros "hoy") ──
+    
     if (yesterdayDone.length > 0) {
       const months = ['Ene','Feb','Mar','Abr','May','Jun','Jul','Ago','Sep','Oct','Nov','Dic'];
       const [,ym,yd] = yestStr.split('-');
@@ -274,7 +259,7 @@ const Dashboard = {
       html += yesterdayDone.map(renderMatch).join('');
     }
 
-    // ── HOY: live → programados → finalizados ──
+    
     const todayAll = [...todayLive, ...todayScheduled, ...todayFinished];
     if (todayAll.length > 0) {
       const months = ['Ene','Feb','Mar','Abr','May','Jun','Jul','Ago','Sep','Oct','Nov','Dic'];
@@ -288,9 +273,9 @@ const Dashboard = {
       html += '<p style="font-size:0.72rem;color:var(--text-muted);padding:4px 0">No hay partidos hoy</p>';
     }
 
-    // PRÓXIMOS (días futuros, máx 6)
+    
     if (futureMatches.length > 0) {
-      // Agrupar por fecha
+      
       const byDate = {};
       futureMatches.forEach(m => { (byDate[m.date] = byDate[m.date]||[]).push(m); });
 
@@ -310,13 +295,13 @@ const Dashboard = {
     const d = new Date();
     d.setDate(d.getDate() + 1);
     return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
-  },  /* ── Tabla de posiciones ── */
+  },  
   async renderStandings() {
     const el = document.getElementById('standings-preview');
     if (!el) return;
     const table = await API.getStandings();
 
-    // Tabla global: top 5 equipos con más puntos, desempate por victorias y GF
+    
     const globalTop = table
       .slice()
       .sort((a, b) =>
@@ -381,7 +366,7 @@ const Dashboard = {
       </div>
     `;
 
-    // Tab switching
+    
     el.querySelectorAll('.standings-tab-btn').forEach(btn => {
       btn.addEventListener('click', () => {
         const key = btn.dataset.stab;
@@ -400,7 +385,7 @@ const Dashboard = {
     });
   },
 
-  /* ── Favoritos con foto y click para stats ── */
+  
   async renderFavorites() {
     const el   = document.getElementById('favorites-preview');
     if (!el) return;
@@ -412,7 +397,7 @@ const Dashboard = {
       return;
     }
 
-    // Render inicial con emojis
+    
     el.innerHTML = `<div class="favs-grid">${favs.slice(0, 8).map(f => `
       <div class="fav-card" data-id="${f.id}" data-tipo="${f.tipo}" data-name="${f.name}" title="${f.name}">
         <div class="fav-card-photo" id="fav-photo-${f.id}">
@@ -423,19 +408,19 @@ const Dashboard = {
       </div>`).join('')}
     </div>`;
 
-    // Click → mostrar modal de stats
+    
     el.querySelectorAll('.fav-card').forEach(card => {
       card.addEventListener('click', () => this._showFavStats(
         card.dataset.id, card.dataset.tipo, card.dataset.name
       ));
     });
 
-    // Cargar fotos async (solo jugadores por ahora)
+    
     const pool = (typeof Gacha !== 'undefined') ? Gacha.getPool() : [];
     favs.slice(0, 8).forEach(async f => {
       if (f.tipo !== 'player') return;
       try {
-        // Buscar en el pool de figuritas para usar getPhotoById (caché unificado por id)
+        
         const poolFig = pool.find(p => p.id === f.id || p.name.toLowerCase() === f.name.toLowerCase());
         const url = poolFig
           ? await API.getPhotoById(poolFig.id, poolFig.sdbName || poolFig.name)
@@ -454,7 +439,7 @@ const Dashboard = {
     if (tipo === 'player') {
       const pool   = (typeof Gacha !== 'undefined') ? Gacha.getPool() : [];
       const poolFig = pool.find(p => p.id === id || p.name.toLowerCase() === name.toLowerCase());
-      // Usar SIEMPRE poolFig como fuente de stats (misma fuente que el Álbum)
+      
       const photo  = poolFig
         ? await API.getPhotoById(poolFig.id, poolFig.sdbName || poolFig.name).catch(()=>null)
         : await API.getPlayerPhotosCached(name).catch(()=>null);
@@ -480,7 +465,7 @@ const Dashboard = {
           </div>
         </div>`);
     } else {
-      /* ── Modal de EQUIPO — v12: con historial de partidos ── */
+      
       Modal.open(`
         <div class="modal-player-detail">
           <div style="font-size:3rem;margin-bottom:0.25rem">${name.split(' ')[0]}</div>
@@ -488,7 +473,7 @@ const Dashboard = {
           <p style="font-size:0.65rem;color:var(--text-muted);margin-bottom:1rem">Cargando partidos...</p>
         </div>`);
 
-      /* Cargar datos en paralelo */
+      
       const [teams, teamData] = await Promise.all([
         API.getTeams(''),
         API.getTeamMatches(name)
