@@ -814,15 +814,38 @@ const API = {
 
     const tn = norm(teamName);
 
+    const filterFromMapped = (mapped) => ({
+      played:   mapped.filter(m => m.status === 'finished' && (norm(m.home||'').includes(tn) || norm(m.away||'').includes(tn))),
+      upcoming: mapped.filter(m => m.status !== 'finished'  && (norm(m.home||'').includes(tn) || norm(m.away||'').includes(tn))),
+    });
+
+    // Intentar con la API real
     const data = await this._wc26('/get/games');
     if (data) {
       const games  = Array.isArray(data) ? data : (data.games || data.matches || data.data || []);
-      const mapped = games.map(m => _applyKnownSchedule(_mapWC26Match(m)));
-      const played   = mapped.filter(m => m.status === 'finished' && (norm(m.home).includes(tn) || norm(m.away).includes(tn)));
-      const upcoming = mapped.filter(m => m.status !== 'finished' && (norm(m.home).includes(tn) || norm(m.away).includes(tn)));
-      const result = { played, upcoming };
-      return this._memSet(cacheKey, result);
+      if (games.length > 0) {
+        const mapped = games.map(m => _applyKnownSchedule(_mapWC26Match(m)));
+        return this._memSet(cacheKey, filterFromMapped(mapped));
+      }
     }
+
+    // Fallback: usar los partidos del MOCK hardcodeado (_ALL_MATCHES via getUpcomingMatches cache o MOCK directo)
+    const mockAll = [
+      ...(MOCK.finishedMatches || []),
+      ...(MOCK.upcomingMatches || []),
+    ];
+    if (mockAll.length > 0) {
+      return this._memSet(cacheKey, filterFromMapped(mockAll));
+    }
+
+    // Último recurso: buscar en la lista _ALL_MATCHES directamente
+    try {
+      const allMatches = (typeof _ALL_MATCHES !== 'undefined') ? _ALL_MATCHES : [];
+      if (allMatches.length > 0) {
+        const mapped = allMatches.map(m => _applyKnownSchedule(m));
+        return this._memSet(cacheKey, filterFromMapped(mapped));
+      }
+    } catch(_) {}
 
     return this._memSet(cacheKey, { played: [], upcoming: [] });
   },

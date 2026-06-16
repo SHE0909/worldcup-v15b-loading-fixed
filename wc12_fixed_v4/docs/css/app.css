@@ -21,6 +21,7 @@ input, button { font-family: inherit; }
 
 /* ---- CSS VARIABLES ---- */
 :root {
+  color-scheme: dark;
   --bg-base:        #080c14;
   --bg-surface:     #0e1520;
   --bg-card:        #131d2e;
