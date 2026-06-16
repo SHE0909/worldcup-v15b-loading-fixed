@@ -64,6 +64,7 @@
         <button class="drawer-nav-btn" data-tab="battle"><span class="dni"><svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg></span><span>Minijuegos</span></button>
         <button class="drawer-nav-btn" data-tab="exchange"><span class="dni"><svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M7 16V4m0 0L3 8m4-4l4 4"/><path d="M17 8v12m0 0l4-4m-4 4l-4-4"/></svg></span><span>Canjear</span></button>
         <button class="drawer-nav-btn" data-tab="predictions"><span class="dni"><svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg></span><span>Predicciones</span></button>
+        <button class="drawer-nav-btn drawer-nav-live" data-tab="live"><span class="dni"><svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><polygon points="10 8 16 12 10 16 10 8" fill="currentColor" stroke="none"/></svg></span><span>FWC EN VIVO</span><span class="live-dot-badge"></span></button>
         <button class="drawer-nav-btn" data-tab="profile"><span class="dni"><svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 21v-2a4 4 0 00-4-4H8a4 4 0 00-4 4v2"/><circle cx="12" cy="7" r="4"/></svg></span><span>Perfil</span></button>
       </div>
       <div class="drawer-footer">
@@ -96,6 +97,7 @@
       <button class="nav-btn" data-tab="battle"><svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg><span>Minijuegos</span></button>
       <button class="nav-btn" data-tab="exchange"><svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M7 16V4m0 0L3 8m4-4l4 4"/><path d="M17 8v12m0 0l4-4m-4 4l-4-4"/></svg><span>Canjear</span></button>
       <button class="nav-btn" data-tab="predictions"><svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg><span>Predicciones</span></button>
+      <button class="nav-btn nav-live" data-tab="live"><svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><polygon points="10 8 16 12 10 16 10 8" fill="currentColor" stroke="none"/></svg><span>En Vivo</span><span class="live-dot"></span></button>
       <button class="nav-btn" data-tab="profile"><svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 21v-2a4 4 0 00-4-4H8a4 4 0 00-4 4v2"/><circle cx="12" cy="7" r="4"/></svg><span>Perfil</span></button>
     </nav>
 
@@ -262,6 +264,58 @@
           </button>
         </div>
         <div id="predictions-list" class="predictions-list"></div>
+      </section>
+
+
+      <section id="tab-live" class="tab-section">
+        <div class="section-header">
+          <h2>
+            <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-3px;margin-right:6px"><circle cx="12" cy="12" r="10"/><polygon points="10 8 16 12 10 16 10 8" fill="currentColor" stroke="none"/></svg>
+            FWC
+            <span class="live-badge-header">EN VIVO</span>
+          </h2>
+        </div>
+
+        <div class="live-quality-notice">
+          <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink:0"><path d="M20.84 4.61a5.5 5.5 0 00-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 00-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 000-7.78z"/></svg>
+          <span>¿Quieres una transmisión más estable y en <strong>Full HD 1080P</strong>? Únete a nuestro servidor de Discord <strong>WCC UES · Copa del Mundo 2026</strong>.</span>
+        </div>
+
+        <div class="live-body">
+          <div class="live-player-wrap">
+            <iframe
+              src="https://embed.saohgdasregions.fun/embed2/directvsports.html"
+              width="100%"
+              height="100%"
+              scrolling="no"
+              frameborder="0"
+              allowfullscreen="true"
+              allow="autoplay; fullscreen"
+            ></iframe>
+          </div>
+
+          <div class="live-discord-section">
+          <div class="discord-profile-card">
+            <div class="discord-profile-top">
+              <div class="discord-profile-avatar" aria-hidden="true">
+                <svg viewBox="0 0 24 24" width="28" height="28" fill="white">
+                  <path d="M20.317 4.37a19.791 19.791 0 00-4.885-1.515.074.074 0 00-.079.037c-.21.375-.444.864-.608 1.25a18.27 18.27 0 00-5.487 0 12.64 12.64 0 00-.617-1.25.077.077 0 00-.079-.037A19.736 19.736 0 003.677 4.37a.07.07 0 00-.032.027C.533 9.046-.32 13.58.099 18.057a.082.082 0 00.031.057 19.9 19.9 0 005.993 3.03.078.078 0 00.084-.028c.462-.63.874-1.295 1.226-1.994a.076.076 0 00-.041-.106 13.107 13.107 0 01-1.872-.892.077.077 0 01-.008-.128 10.2 10.2 0 00.372-.292.074.074 0 01.077-.01c3.928 1.793 8.18 1.793 12.062 0a.074.074 0 01.078.01c.12.098.246.198.373.292a.077.077 0 01-.006.127 12.299 12.299 0 01-1.873.892.077.077 0 00-.041.107c.36.698.772 1.362 1.225 1.993a.076.076 0 00.084.028 19.839 19.839 0 006.002-3.03.077.077 0 00.032-.054c.5-5.177-.838-9.674-3.549-13.66a.061.061 0 00-.031-.03z"/>
+                </svg>
+              </div>
+              <div class="discord-profile-info">
+                <p class="discord-profile-name">WCC UES · Copa del Mundo 2026</p>
+                <p class="discord-profile-desc">Transmisión en Full HD 1080P y sigue los partidos con la comunidad 🏆</p>
+              </div>
+            </div>
+            <a class="btn-discord-join" href="https://discord.gg/qGh7hYqshf" target="_blank" rel="noopener">
+              <svg viewBox="0 0 24 24" width="15" height="15" fill="currentColor" aria-hidden="true">
+                <path d="M20.317 4.37a19.791 19.791 0 00-4.885-1.515.074.074 0 00-.079.037c-.21.375-.444.864-.608 1.25a18.27 18.27 0 00-5.487 0 12.64 12.64 0 00-.617-1.25.077.077 0 00-.079-.037A19.736 19.736 0 003.677 4.37a.07.07 0 00-.032.027C.533 9.046-.32 13.58.099 18.057a.082.082 0 00.031.057 19.9 19.9 0 005.993 3.03.078.078 0 00.084-.028c.462-.63.874-1.295 1.226-1.994a.076.076 0 00-.041-.106 13.107 13.107 0 01-1.872-.892.077.077 0 01-.008-.128 10.2 10.2 0 00.372-.292.074.074 0 01.077-.01c3.928 1.793 8.18 1.793 12.062 0a.074.074 0 01.078.01c.12.098.246.198.373.292a.077.077 0 01-.006.127 12.299 12.299 0 01-1.873.892.077.077 0 00-.041.107c.36.698.772 1.362 1.225 1.993a.076.076 0 00.084.028 19.839 19.839 0 006.002-3.03.077.077 0 00.032-.054c.5-5.177-.838-9.674-3.549-13.66a.061.061 0 00-.031-.03z"/>
+              </svg>
+              Unirse al servidor
+            </a>
+          </div>
+        </div>
+        </div><!-- /live-body -->
       </section>
 
       <section id="tab-profile" class="tab-section">

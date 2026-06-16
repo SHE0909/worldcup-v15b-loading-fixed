@@ -159,6 +159,7 @@ const App = {
       case 'battle':      await Battle.render(); break;
       case 'exchange':    await Exchange.render(); break;
       case 'profile':     await Profile.render(); break;
+      case 'live': /* iframe auto-plays, nothing to render */ break;
     }
   },
 
