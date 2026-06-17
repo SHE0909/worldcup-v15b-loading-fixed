@@ -21,264 +21,71 @@
   <link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Barlow:wght@300;400;600;700&family=Barlow+Condensed:wght@400;700&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="css/worldcup2026-theme.css"/>
   <link rel="stylesheet" href="css/app.css"/>
+
+  <script src="https://cdn.jsdelivr.net/npm/@twemoji/api@latest/dist/twemoji.min.js" crossorigin="anonymous"></script>
+
+  <!-- ══ LIVE PLAYER — Responsive override ══ -->
   <style>
-    /* ── FWC EN VIVO — Pantalla de acceso bajo demanda ── */
-    .live-launch-screen {
-      position: relative;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      min-height: 320px;
-      border-radius: 14px;
-      overflow: hidden;
-      background: linear-gradient(135deg, #0a1628 0%, #0d1f3c 50%, #0a1628 100%);
-      border: 1px solid rgba(255,255,255,0.07);
-      margin-bottom: 1.25rem;
-    }
-    .live-launch-bg-glow {
-      position: absolute;
-      inset: 0;
-      background: radial-gradient(ellipse at 50% 40%, rgba(220,38,38,0.18) 0%, transparent 70%);
-      pointer-events: none;
-    }
-    .live-launch-content {
-      position: relative;
+    /* ── Contenedor general de la sección live ── */
+    #tab-live .live-body {
       display: flex;
       flex-direction: column;
       align-items: center;
-      gap: 0.9rem;
-      padding: 2.5rem 1.5rem;
-      text-align: center;
-      max-width: 380px;
-    }
-    .live-launch-icon {
-      color: #ef4444;
-      filter: drop-shadow(0 0 18px rgba(239,68,68,0.55));
-      animation: live-pulse-icon 2.2s ease-in-out infinite;
-    }
-    @keyframes live-pulse-icon {
-      0%, 100% { filter: drop-shadow(0 0 14px rgba(239,68,68,0.5)); transform: scale(1); }
-      50%       { filter: drop-shadow(0 0 26px rgba(239,68,68,0.85)); transform: scale(1.07); }
-    }
-    .live-launch-title {
-      font-size: 1.35rem;
-      font-weight: 700;
-      color: #f1f5f9;
-      letter-spacing: 0.02em;
-      margin: 0;
-    }
-    .live-launch-desc {
-      font-size: 0.85rem;
-      color: rgba(241,245,249,0.6);
-      line-height: 1.5;
-      margin: 0;
-    }
-    .btn-live-enter {
-      display: inline-flex;
-      align-items: center;
-      gap: 0.55rem;
-      padding: 0.8rem 1.8rem;
-      background: linear-gradient(135deg, #dc2626, #b91c1c);
-      color: #fff;
-      border: none;
-      border-radius: 50px;
-      font-size: 1rem;
-      font-weight: 700;
-      letter-spacing: 0.03em;
-      cursor: pointer;
-      box-shadow: 0 4px 22px rgba(220,38,38,0.45);
-      transition: transform 0.15s ease, box-shadow 0.15s ease, background 0.15s ease;
-      -webkit-tap-highlight-color: transparent;
-    }
-    .btn-live-enter:hover {
-      background: linear-gradient(135deg, #ef4444, #dc2626);
-      box-shadow: 0 6px 28px rgba(220,38,38,0.6);
-      transform: translateY(-2px);
-    }
-    .btn-live-enter:active { transform: scale(0.97); }
-    .live-launch-hint {
-      font-size: 0.72rem;
-      color: rgba(241,245,249,0.38);
-      display: flex;
-      align-items: center;
-      gap: 5px;
-      margin: 0;
+      width: 100%;
+      padding: 0 0 1.5rem;
+      box-sizing: border-box;
+      overflow-x: hidden;
+      gap: 1.25rem;
     }
 
-    /* ── Overlay fullscreen del stream ── */
-    .live-fs-overlay {
-      position: fixed;
-      inset: 0;
-      z-index: 9999;
+    /* ── Wrapper del reproductor: centrado, 16/9, responsive ── */
+    #tab-live .live-player-wrap {
+      position: relative;
+      width: 100%;
+      max-width: 960px;
+      margin: 0 auto;
+      aspect-ratio: 16 / 9;
+      overflow: hidden;
+      border-radius: 10px;
       background: #000;
-      display: flex;
-      align-items: center;
-      justify-content: center;
+      box-shadow: 0 8px 32px rgba(0,0,0,0.55);
+      flex-shrink: 0;
     }
-    .live-fs-iframe-wrap {
+
+    /* ── iframe ocupa todo el wrapper ── */
+    #tab-live .live-player-wrap iframe {
       position: absolute;
       inset: 0;
-      opacity: 0;
-      transition: opacity 0.45s ease;
-    }
-    .live-fs-iframe-wrap.loaded { opacity: 1; }
-    .live-fs-iframe-wrap iframe {
       width: 100%;
       height: 100%;
       border: none;
       display: block;
     }
 
-    /* ── Controles flotantes (cerrar + fullscreen) ── */
-    .live-fs-controls {
-      position: absolute;
-      top: 14px;
-      right: 14px;
-      z-index: 10001;
-      display: flex;
-      gap: 8px;
-      opacity: 0;
-      transform: translateY(-6px);
-      transition: opacity 0.3s ease, transform 0.3s ease;
-      pointer-events: none;
-    }
-    /* Mostrar controles al hacer hover en overlay o en touch al tocar */
-    .live-fs-overlay:hover .live-fs-controls,
-    .live-fs-overlay.controls-visible .live-fs-controls {
-      opacity: 1;
-      transform: translateY(0);
-      pointer-events: auto;
-    }
-    /* En móvil siempre visibles (no hay hover) */
-    @media (hover: none) {
-      .live-fs-controls {
-        opacity: 1;
-        transform: translateY(0);
-        pointer-events: auto;
+    /* ── Tablet ── */
+    @media (max-width: 768px) {
+      #tab-live .live-body {
+        padding: 0 0 1rem;
+        gap: 1rem;
+      }
+      #tab-live .live-player-wrap {
+        border-radius: 6px;
       }
     }
-    .live-fs-close,
-    .live-fs-fullscreen-btn {
-      background: rgba(0,0,0,0.6);
-      border: 1px solid rgba(255,255,255,0.15);
-      backdrop-filter: blur(8px);
-      -webkit-backdrop-filter: blur(8px);
-      color: #fff;
-      width: 40px;
-      height: 40px;
-      border-radius: 50%;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      cursor: pointer;
-      transition: background 0.18s ease, transform 0.15s ease, border-color 0.18s ease;
-      -webkit-tap-highlight-color: transparent;
-    }
-    .live-fs-close:hover    { background: rgba(220,38,38,0.8); border-color: rgba(220,38,38,0.5); }
-    .live-fs-fullscreen-btn:hover { background: rgba(255,255,255,0.18); border-color: rgba(255,255,255,0.35); }
-    .live-fs-close:active,
-    .live-fs-fullscreen-btn:active { transform: scale(0.92); }
 
-    /* ── Loader de carga ── */
-    .live-loader {
-      position: absolute;
-      inset: 0;
-      z-index: 10000;
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-      justify-content: center;
-      gap: 1rem;
-      background: radial-gradient(ellipse at center, #0d1f3c 0%, #060b14 100%);
-      transition: opacity 0.5s ease;
-    }
-    .live-loader.hidden {
-      opacity: 0;
-      pointer-events: none;
-    }
-
-    /* Anillos concéntricos animados */
-    .live-loader-rings {
-      position: relative;
-      width: 90px;
-      height: 90px;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-    }
-    .llr {
-      position: absolute;
-      border-radius: 50%;
-      border: 2px solid transparent;
-      animation: llr-spin linear infinite;
-    }
-    .llr-1 {
-      width: 90px; height: 90px;
-      border-top-color: #ef4444;
-      border-right-color: rgba(239,68,68,0.3);
-      animation-duration: 1.1s;
-    }
-    .llr-2 {
-      width: 66px; height: 66px;
-      border-top-color: #f97316;
-      border-left-color: rgba(249,115,22,0.3);
-      animation-duration: 1.6s;
-      animation-direction: reverse;
-    }
-    .llr-3 {
-      width: 44px; height: 44px;
-      border-top-color: #fbbf24;
-      border-right-color: rgba(251,191,36,0.3);
-      animation-duration: 2s;
-    }
-    @keyframes llr-spin {
-      to { transform: rotate(360deg); }
-    }
-
-    /* Punto central pulsante */
-    .live-loader-dot {
-      width: 12px;
-      height: 12px;
-      border-radius: 50%;
-      background: #ef4444;
-      box-shadow: 0 0 0 0 rgba(239,68,68,0.7);
-      animation: llr-dot-pulse 1.4s ease-out infinite;
-    }
-    @keyframes llr-dot-pulse {
-      0%   { box-shadow: 0 0 0 0 rgba(239,68,68,0.7); }
-      70%  { box-shadow: 0 0 0 10px rgba(239,68,68,0); }
-      100% { box-shadow: 0 0 0 0 rgba(239,68,68,0); }
-    }
-
-    /* Texto del loader */
-    .live-loader-label {
-      font-size: 1rem;
-      font-weight: 600;
-      color: #f1f5f9;
-      letter-spacing: 0.04em;
-      margin: 0;
-    }
-    .live-loader-sub {
-      font-size: 0.72rem;
-      color: rgba(241,245,249,0.38);
-      margin: 0;
-      letter-spacing: 0.02em;
-    }
-
-    /* Puntos animados "Conectando señal..." */
-    .live-loader-dots::after {
-      content: '';
-      animation: loader-dots 1.6s steps(4, end) infinite;
-    }
-    @keyframes loader-dots {
-      0%   { content: ''; }
-      25%  { content: '.'; }
-      50%  { content: '..'; }
-      75%  { content: '...'; }
-      100% { content: ''; }
+    /* ── Móvil pequeño ── */
+    @media (max-width: 480px) {
+      #tab-live .live-body {
+        padding: 0 0 0.75rem;
+        gap: 0.75rem;
+      }
+      #tab-live .live-player-wrap {
+        border-radius: 4px;
+        box-shadow: 0 4px 16px rgba(0,0,0,0.5);
+      }
     }
   </style>
-  <script src="https://cdn.jsdelivr.net/npm/@twemoji/api@latest/dist/twemoji.min.js" crossorigin="anonymous"></script>
+  <!-- ══ /LIVE PLAYER ══ -->
 </head>
 <body>
 
@@ -303,7 +110,6 @@
 
     <nav id="app-drawer" class="app-drawer" role="navigation" aria-label="Menú principal">
       <div class="drawer-header">
-        <img src="./icons/icon-192.png" class="drawer-logo" style="width:38px;height:38px;border-radius:50%;object-fit:cover;" alt="WCC"/>
         <button class="drawer-close" id="btn-drawer-close" aria-label="Cerrar menú"><svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg></button>
       </div>
       <div class="drawer-user" id="drawer-user">
@@ -539,66 +345,14 @@
 
         <div class="live-body">
 
-          
-          <div class="live-launch-screen" id="live-launch-screen">
-            <div class="live-launch-bg-glow"></div>
-            <div class="live-launch-content">
-              <div class="live-launch-icon" aria-hidden="true">
-                <svg viewBox="0 0 24 24" width="56" height="56" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
-                  <circle cx="12" cy="12" r="10"/>
-                  <polygon points="10 8 16 12 10 16 10 8" fill="currentColor" stroke="none"/>
-                </svg>
-              </div>
-              <h3 class="live-launch-title">Transmisión en Vivo</h3>
-              <p class="live-launch-desc">La señal se abre directamente en pantalla completa para una experiencia sin distracciones.</p>
-              <button class="btn-live-enter" id="btn-live-enter" aria-label="Ver transmisión en pantalla completa">
-                <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
-                  <circle cx="12" cy="12" r="10"/>
-                  <polygon points="10 8 16 12 10 16 10 8" fill="currentColor" stroke="none"/>
-                </svg>
-                Ver transmisión en vivo
-              </button>
-              <p class="live-launch-hint">
-                <svg viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M8 3H5a2 2 0 00-2 2v3m18 0V5a2 2 0 00-2-2h-3m0 18h3a2 2 0 002-2v-3M3 16v3a2 2 0 002 2h3"/></svg>
-                Se abrirá en pantalla completa · Presiona ESC o cierra para volver
-              </p>
-            </div>
-          </div>
-
-          
-          <div class="live-fs-overlay" id="live-fs-overlay" style="display:none;" role="dialog" aria-label="Transmisión en vivo en pantalla completa">
-
-            
-            <div class="live-loader" id="live-loader" aria-live="polite" aria-label="Cargando transmisión">
-              <div class="live-loader-rings">
-                <span class="llr llr-1"></span>
-                <span class="llr llr-2"></span>
-                <span class="llr llr-3"></span>
-                <div class="live-loader-dot"></div>
-              </div>
-              <p class="live-loader-label">Conectando señal<span class="live-loader-dots"></span></p>
-              <p class="live-loader-sub">Iniciando JW Player · por favor espera</p>
-            </div>
-
-            
-            <div class="live-fs-controls" id="live-fs-controls">
-              <button class="live-fs-close" id="live-fs-close" aria-label="Cerrar transmisión" title="Cerrar">
-                <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
-              </button>
-              <button class="live-fs-fullscreen-btn" id="live-fs-fullscreen-btn" aria-label="Pantalla completa" title="Pantalla completa">
-                
-                <svg id="icon-expand" viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
-                  <path d="M8 3H5a2 2 0 00-2 2v3m18 0V5a2 2 0 00-2-2h-3m0 18h3a2 2 0 002-2v-3M3 16v3a2 2 0 002 2h3"/>
-                </svg>
-                <svg id="icon-compress" viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" style="display:none">
-                  <path d="M8 3v3a2 2 0 01-2 2H3m18 0h-3a2 2 0 01-2-2V3m0 18v-3a2 2 0 012-2h3M3 16h3a2 2 0 012 2v3"/>
-                </svg>
-              </button>
-            </div>
-
-            <div class="live-fs-iframe-wrap" id="live-fs-iframe-wrap">
-              
-            </div>
+          <div class="live-player-wrap">
+            <iframe
+              src="https://sudamericaplay2.com/canal_8112/cza_dsports.html"
+              allow="fullscreen; autoplay"
+              allowfullscreen
+              scrolling="no"
+              title="FWC EN VIVO — DirecTV Sports">
+            </iframe>
           </div>
 
           <div class="live-discord-section">
@@ -757,18 +511,28 @@
     const btnClose= document.getElementById('btn-drawer-close');
     const btnLogoutDrawer = document.getElementById('btn-drawer-logout');
 
+    // Track drawer state explicitly to avoid CSS/JS desync bugs
+    let _drawerOpen = false;
+
     function openDrawer() {
+      _drawerOpen = true;
       drawer.classList.add('open');
       overlay.classList.add('visible');
+      overlay.style.pointerEvents = 'auto';
       btnOpen?.setAttribute('aria-expanded', 'true');
       document.body.style.overflow = 'hidden';
     }
     function closeDrawer() {
+      _drawerOpen = false;
       drawer.classList.remove('open');
       overlay.classList.remove('visible');
+      overlay.style.pointerEvents = 'none';
       btnOpen?.setAttribute('aria-expanded', 'false');
       document.body.style.overflow = '';
     }
+
+    // Always start closed and ensure body overflow is clean
+    closeDrawer();
 
     btnOpen?.addEventListener('click', openDrawer);
     btnClose?.addEventListener('click', closeDrawer);
@@ -789,17 +553,33 @@
       document.getElementById('btn-logout')?.click();
     });
 
-    let touchStartX = 0;
-    drawer?.addEventListener('touchstart', e => { touchStartX = e.touches[0].clientX; }, { passive: true });
+    // Swipe to open/close — use separate variables to avoid shared-state bug
+    let swipeStartX = -1;
+    let swipeTracking = false;
+
+    // Swipe LEFT inside drawer → close
+    drawer?.addEventListener('touchstart', e => {
+      swipeStartX = e.touches[0].clientX;
+      swipeTracking = true;
+    }, { passive: true });
     drawer?.addEventListener('touchend', e => {
-      if (touchStartX - e.changedTouches[0].clientX > 60) closeDrawer();
+      if (swipeTracking && swipeStartX > 0 && swipeStartX - e.changedTouches[0].clientX > 60) closeDrawer();
+      swipeTracking = false;
+      swipeStartX = -1;
     }, { passive: true });
 
+    // Swipe RIGHT from left edge → open (only when drawer is closed)
+    let edgeSwipeStartX = -1;
     document.addEventListener('touchstart', e => {
-      if (e.touches[0].clientX < 20) touchStartX = e.touches[0].clientX;
+      if (!_drawerOpen && e.touches[0].clientX < 20) {
+        edgeSwipeStartX = e.touches[0].clientX;
+      } else {
+        edgeSwipeStartX = -1;
+      }
     }, { passive: true });
     document.addEventListener('touchend', e => {
-      if (touchStartX < 20 && e.changedTouches[0].clientX - touchStartX > 60) openDrawer();
+      if (edgeSwipeStartX >= 0 && e.changedTouches[0].clientX - edgeSwipeStartX > 60) openDrawer();
+      edgeSwipeStartX = -1;
     }, { passive: true });
 
     const origNavigateTo = App?.navigateTo?.bind(App);
@@ -880,162 +660,7 @@
       console.info('[PWA] SW desactivado en file:// — abre desde un servidor HTTP para PWA completo.');
     }
 
-    // ── FWC EN VIVO — Lógica de stream bajo demanda ──────────────────────────
-    (function () {
-      const STREAM_URL   = 'https://embed.saohgdasregions.fun/embed2/directvsports.html';
-      const overlay      = document.getElementById('live-fs-overlay');
-      const wrap         = document.getElementById('live-fs-iframe-wrap');
-      const loader       = document.getElementById('live-loader');
-      const btnClose     = document.getElementById('live-fs-close');
-      const btnEnter     = document.getElementById('btn-live-enter');
-      const btnFullscreen= document.getElementById('live-fs-fullscreen-btn');
-      const iconExpand   = document.getElementById('icon-expand');
-      const iconCompress = document.getElementById('icon-compress');
-
-      // Tiempo de seguridad: si el iframe no dispara 'load' en 12 s, ocultar loader igualmente
-      let loaderSafetyTimer = null;
-
-      /** Muestra u oculta el loader */
-      function showLoader(visible) {
-        if (!loader) return;
-        if (visible) {
-          loader.classList.remove('hidden');
-        } else {
-          loader.classList.add('hidden');
-          // Revelar el iframe con fade-in
-          wrap.classList.add('loaded');
-        }
-      }
-
-      /** Actualiza el ícono del botón fullscreen según el estado actual */
-      function syncFsIcon() {
-        const inFs = !!(document.fullscreenElement || document.webkitFullscreenElement
-                     || document.mozFullScreenElement || document.msFullscreenElement);
-        if (iconExpand)   iconExpand.style.display   = inFs ? 'none'  : 'block';
-        if (iconCompress) iconCompress.style.display = inFs ? 'block' : 'none';
-        if (btnFullscreen) btnFullscreen.title = inFs ? 'Salir de pantalla completa' : 'Pantalla completa';
-        if (btnFullscreen) btnFullscreen.setAttribute('aria-label', btnFullscreen.title);
-      }
-
-      /** Solicita o cancela fullscreen */
-      function toggleFullscreen() {
-        const inFs = !!(document.fullscreenElement || document.webkitFullscreenElement
-                     || document.mozFullScreenElement || document.msFullscreenElement);
-        if (inFs) {
-          const exitFs = document.exitFullscreen || document.webkitExitFullscreen
-                      || document.mozCancelFullScreen || document.msExitFullscreen;
-          exitFs?.call(document).catch(() => {});
-        } else {
-          const rfs = overlay.requestFullscreen || overlay.webkitRequestFullscreen
-                   || overlay.mozRequestFullScreen || overlay.msRequestFullscreen;
-          rfs?.call(overlay).catch(() => {});
-        }
-      }
-
-      /** Crea e inyecta el iframe; muestra loader y solicita pantalla completa */
-      function openStream() {
-        if (!overlay || !wrap) return;
-
-        // Resetear estado visual
-        wrap.classList.remove('loaded');
-        showLoader(true);
-        clearTimeout(loaderSafetyTimer);
-
-        // Crear iframe dinámicamente
-        const iframe = document.createElement('iframe');
-        iframe.src             = STREAM_URL;
-        iframe.scrolling       = 'no';
-        iframe.frameBorder     = '0';
-        iframe.allowFullscreen = true;
-        iframe.setAttribute('allow', 'autoplay; fullscreen');
-        iframe.style.cssText   = 'width:100%;height:100%;border:none;display:block;';
-
-        // Ocultar loader cuando el iframe termina de cargar
-        iframe.addEventListener('load', () => {
-          clearTimeout(loaderSafetyTimer);
-          // JW Player necesita ~800 ms extra para inicializar el player tras el load del documento
-          setTimeout(() => showLoader(false), 800);
-        });
-
-        wrap.appendChild(iframe);
-        overlay.style.display = 'flex';
-        document.body.style.overflow = 'hidden';
-
-        // Timer de seguridad por si el evento load no dispara (cross-origin)
-        loaderSafetyTimer = setTimeout(() => showLoader(false), 12000);
-
-        // Solicitar pantalla completa nativa
-        const rfs = overlay.requestFullscreen || overlay.webkitRequestFullscreen
-                 || overlay.mozRequestFullScreen || overlay.msRequestFullscreen;
-        if (rfs) rfs.call(overlay).catch(() => {});
-
-        syncFsIcon();
-      }
-
-      /** Destruye el iframe y cierra el overlay */
-      function closeStream() {
-        clearTimeout(loaderSafetyTimer);
-
-        const exitFs = document.exitFullscreen || document.webkitExitFullscreen
-                    || document.mozCancelFullScreen || document.msExitFullscreen;
-        if (exitFs && (document.fullscreenElement || document.webkitFullscreenElement)) {
-          exitFs.call(document).catch(() => {});
-        }
-
-        // Destruir iframe: detiene reproducción y libera todos los recursos
-        wrap.innerHTML = '';
-        wrap.classList.remove('loaded');
-        showLoader(true); // resetear para la próxima apertura
-        overlay.style.display = 'none';
-        document.body.style.overflow = '';
-      }
-
-      // ── Event listeners ──────────────────────────────────────────────────────
-
-      btnEnter?.addEventListener('click', openStream);
-      btnClose?.addEventListener('click', closeStream);
-      btnFullscreen?.addEventListener('click', toggleFullscreen);
-
-      // Sincronizar ícono expand/compress al cambiar estado fullscreen
-      ['fullscreenchange','webkitfullscreenchange','mozfullscreenchange','MSFullscreenChange']
-        .forEach(ev => document.addEventListener(ev, () => {
-          syncFsIcon();
-          // Si salió de fullscreen y el overlay sigue abierto, NO cerrar stream:
-          // el usuario puede seguir viendo en modo ventana (overlay fixed cubre la pantalla)
-        }));
-
-      // Cerrar con tecla ESC cuando NO hay fullscreen nativo activo
-      document.addEventListener('keydown', (e) => {
-        if (e.key === 'Escape' && overlay?.style.display !== 'none'
-            && !document.fullscreenElement && !document.webkitFullscreenElement) {
-          closeStream();
-        }
-      });
-
-      // Auto-ocultar controles en desktop tras 3 s de inactividad del mouse
-      let hideControlsTimer = null;
-      overlay?.addEventListener('mousemove', () => {
-        overlay.classList.add('controls-visible');
-        clearTimeout(hideControlsTimer);
-        hideControlsTimer = setTimeout(() => overlay.classList.remove('controls-visible'), 3000);
-      });
-      // En touch: toggle visibilidad al tocar la pantalla
-      overlay?.addEventListener('touchstart', (e) => {
-        // No interferir con los botones de control
-        if (e.target.closest('.live-fs-controls')) return;
-        overlay.classList.toggle('controls-visible');
-      }, { passive: true });
-
-      // Cerrar si el usuario navega a otra pestaña de la app
-      document.querySelectorAll('[data-tab]').forEach(btn => {
-        btn.addEventListener('click', () => {
-          if (overlay?.style.display !== 'none') closeStream();
-        });
-      });
-
-      syncFsIcon();
-    })();
-    // ─────────────────────────────────────────────────────────────────────────
+    // ── FWC EN VIVO — reproductor iframe directo (sin lógica dinámica) ──
 
     let deferredPrompt;
     window._pwaPrompt = null;

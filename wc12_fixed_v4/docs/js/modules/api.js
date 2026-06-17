@@ -77,31 +77,31 @@ const _ALL_MATCHES = [
   { id:'wc26_19', home:'Argentina',        away:'Argelia',         homeFlag:'🇦🇷', awayFlag:'🇩🇿', date:'2026-06-16', time:'19:00', competition:'Grupo J — J1', type:'worldcup', venue:'Arrowhead Stadium, Kansas City', status:'scheduled' },
   { id:'wc26_20', home:'Austria',          away:'Jordania',        homeFlag:'🇦🇹', awayFlag:'🇯🇴', date:'2026-06-16', time:'22:00', competition:'Grupo J — J1', type:'worldcup', venue:'Levi\'s Stadium, San Francisco',status:'scheduled' },
   
-  { id:'wc26_21', home:'Portugal',         away:'RD Congo',        homeFlag:'🇵🇹', awayFlag:'🇨🇩', date:'2026-06-17', time:'12:00', competition:'Grupo K — J1', type:'worldcup', venue:'NRG Stadium, Houston',           status:'scheduled' },
-  { id:'wc26_22', home:'Inglaterra',       away:'Croacia',         homeFlag:'🏴󠁧󠁢󠁥󠁮󠁧󠁿', awayFlag:'🇭🇷', date:'2026-06-17', time:'15:00', competition:'Grupo L — J1', type:'worldcup', venue:'AT&T Stadium, Dallas',           status:'scheduled' },
-  { id:'wc26_23', home:'Ghana',            away:'Panamá',          homeFlag:'🇬🇭', awayFlag:'🇵🇦', date:'2026-06-17', time:'13:00', competition:'Grupo L — J1', type:'worldcup', venue:'BMO Field, Toronto',            status:'scheduled' },
+  { id:'wc26_21', home:'Portugal',         away:'RD Congo',        homeFlag:'🇵🇹', awayFlag:'🇨🇩', date:'2026-06-17', time:'11:00', competition:'Grupo K — J1', type:'worldcup', venue:'NRG Stadium, Houston',           status:'scheduled' },
+  { id:'wc26_22', home:'Inglaterra',       away:'Croacia',         homeFlag:'🏴󠁧󠁢󠁥󠁮󠁧󠁿', awayFlag:'🇭🇷', date:'2026-06-17', time:'14:00', competition:'Grupo L — J1', type:'worldcup', venue:'AT&T Stadium, Dallas',           status:'scheduled' },
+  { id:'wc26_23', home:'Ghana',            away:'Panamá',          homeFlag:'🇬🇭', awayFlag:'🇵🇦', date:'2026-06-17', time:'17:00', competition:'Grupo L — J1', type:'worldcup', venue:'BMO Field, Toronto',            status:'scheduled' },
   { id:'wc26_24', home:'Uzbekistán',       away:'Colombia',        homeFlag:'🇺🇿', awayFlag:'🇨🇴', date:'2026-06-17', time:'20:00', competition:'Grupo K — J1', type:'worldcup', venue:'Estadio Azteca, CDMX',          status:'scheduled' },
 
   
   
   { id:'wc26_25', home:'Rep. Checa',       away:'Sudáfrica',       homeFlag:'🇨🇿', awayFlag:'🇿🇦', date:'2026-06-18', time:'10:00', competition:'Grupo A — J2', type:'worldcup', venue:'Mercedes-Benz Stadium, Atlanta', status:'scheduled' },
   { id:'wc26_26', home:'Suiza',            away:'Bosnia y Herz.',  homeFlag:'🇨🇭', awayFlag:'🇧🇦', date:'2026-06-18', time:'13:00', competition:'Grupo B — J2', type:'worldcup', venue:'SoFi Stadium, Los Ángeles',    status:'scheduled' },
-  { id:'wc26_27', home:'Escocia',          away:'Marruecos',       homeFlag:'🏴󠁧󠁢󠁳󠁣󠁴󠁿', awayFlag:'🇲🇦', date:'2026-06-18', time:'16:00', competition:'Grupo C — J2', type:'worldcup', venue:'Gillette Stadium, Boston',      status:'scheduled' },
+  { id:'wc26_27', home:'Escocia',          away:'Marruecos',       homeFlag:'🏴󠁧󠁢󠁳󠁣󠁴󠁿', awayFlag:'🇲🇦', date:'2026-06-19', time:'16:00', competition:'Grupo C — J2', type:'worldcup', venue:'Gillette Stadium, Boston',      status:'scheduled' },
   { id:'wc26_28', home:'México',           away:'Corea del Sur',   homeFlag:'🇲🇽', awayFlag:'🇰🇷', date:'2026-06-18', time:'19:00', competition:'Grupo A — J2', type:'worldcup', venue:'Estadio Akron, Guadalajara',    status:'scheduled' },
   
   { id:'wc26_29', home:'Estados Unidos',   away:'Australia',       homeFlag:'🇺🇸', awayFlag:'🇦🇺', date:'2026-06-19', time:'13:00', competition:'Grupo D — J2', type:'worldcup', venue:'Lumen Field, Seattle',           status:'scheduled' },
   { id:'wc26_30', home:'Brasil',           away:'Haití',           homeFlag:'🇧🇷', awayFlag:'🇭🇹', date:'2026-06-19', time:'19:00', competition:'Grupo C — J2', type:'worldcup', venue:'Lincoln Financial, Filadelfia', status:'scheduled' },
   { id:'wc26_31', home:'Turquía',          away:'Paraguay',        homeFlag:'🇹🇷', awayFlag:'🇵🇾', date:'2026-06-19', time:'22:00', competition:'Grupo D — J2', type:'worldcup', venue:'Levi\'s Stadium, San Francisco',status:'scheduled' },
   
-  { id:'wc26_32', home:'Curazao',          away:'Costa de Marfil', homeFlag:'🇨🇼', awayFlag:'🇨🇮', date:'2026-06-20', time:'11:00', competition:'Grupo E — J2', type:'worldcup', venue:'NRG Stadium, Houston',           status:'scheduled' },
-  { id:'wc26_33', home:'Japón',            away:'Túnez',           homeFlag:'🇯🇵', awayFlag:'🇹🇳', date:'2026-06-20', time:'14:00', competition:'Grupo F — J2', type:'worldcup', venue:'BC Place, Vancouver',            status:'scheduled' },
-  { id:'wc26_34', home:'Alemania',         away:'Ecuador',         homeFlag:'🇩🇪', awayFlag:'🇪🇨', date:'2026-06-20', time:'17:00', competition:'Grupo E — J2', type:'worldcup', venue:'AT&T Stadium, Dallas',           status:'scheduled' },
-  { id:'wc26_35', home:'Suecia',           away:'Países Bajos',    homeFlag:'🇸🇪', awayFlag:'🇳🇱', date:'2026-06-20', time:'20:00', competition:'Grupo F — J2', type:'worldcup', venue:'Estadio BBVA, Monterrey',        status:'scheduled' },
+  { id:'wc26_32', home:'Ecuador',          away:'Curazao',         homeFlag:'🇪🇨', awayFlag:'🇨🇼', date:'2026-06-20', time:'18:00', competition:'Grupo E — J2', type:'worldcup', venue:'Arrowhead Stadium, Kansas City',  status:'scheduled' },
+  { id:'wc26_33', home:'Túnez',            away:'Japón',           homeFlag:'🇹🇳', awayFlag:'🇯🇵', date:'2026-06-20', time:'22:00', competition:'Grupo F — J2', type:'worldcup', venue:'Estadio Akron, Guadalajara',     status:'scheduled' },
+  { id:'wc26_34', home:'Alemania',         away:'Costa de Marfil', homeFlag:'🇩🇪', awayFlag:'🇨🇮', date:'2026-06-20', time:'14:00', competition:'Grupo E — J2', type:'worldcup', venue:'BMO Field, Toronto',             status:'scheduled' },
+  { id:'wc26_35', home:'Países Bajos',     away:'Suecia',          homeFlag:'🇳🇱', awayFlag:'🇸🇪', date:'2026-06-20', time:'11:00', competition:'Grupo F — J2', type:'worldcup', venue:'NRG Stadium, Houston',           status:'scheduled' },
   
   { id:'wc26_36', home:'España',           away:'Arabia Saudita',     homeFlag:'🇪🇸', awayFlag:'🇸🇦', date:'2026-06-21', time:'10:00', competition:'Grupo H — J2', type:'worldcup', venue:'Mercedes-Benz Stadium, Atlanta', status:'scheduled' },
-  { id:'wc26_37', home:'Nueva Zelanda',    away:'Egipto',          homeFlag:'🇳🇿', awayFlag:'🇪🇬', date:'2026-06-21', time:'13:00', competition:'Grupo G — J2', type:'worldcup', venue:'BC Place, Vancouver',            status:'scheduled' },
+  { id:'wc26_37', home:'Nueva Zelanda',    away:'Egipto',          homeFlag:'🇳🇿', awayFlag:'🇪🇬', date:'2026-06-21', time:'19:00', competition:'Grupo G — J2', type:'worldcup', venue:'BC Place, Vancouver',            status:'scheduled' },
   { id:'wc26_38', home:'Uruguay',          away:'Cabo Verde',      homeFlag:'🇺🇾', awayFlag:'🇨🇻', date:'2026-06-21', time:'16:00', competition:'Grupo H — J2', type:'worldcup', venue:'Hard Rock Stadium, Miami',       status:'scheduled' },
-  { id:'wc26_39', home:'Irán',             away:'Bélgica',         homeFlag:'🇮🇷', awayFlag:'🇧🇪', date:'2026-06-21', time:'19:00', competition:'Grupo G — J2', type:'worldcup', venue:'Lumen Field, Seattle',           status:'scheduled' },
+  { id:'wc26_39', home:'Irán',             away:'Bélgica',         homeFlag:'🇮🇷', awayFlag:'🇧🇪', date:'2026-06-21', time:'13:00', competition:'Grupo G — J2', type:'worldcup', venue:'Lumen Field, Seattle',           status:'scheduled' },
   
   { id:'wc26_40', home:'Argentina',        away:'Austria',         homeFlag:'🇦🇷', awayFlag:'🇦🇹', date:'2026-06-22', time:'11:00', competition:'Grupo J — J2', type:'worldcup', venue:'AT&T Stadium, Dallas',           status:'scheduled' },
   { id:'wc26_41', home:'Francia',          away:'Irak',            homeFlag:'🇫🇷', awayFlag:'🇮🇶', date:'2026-06-22', time:'15:00', competition:'Grupo I — J2', type:'worldcup', venue:'Lincoln Financial, Filadelfia', status:'scheduled' },
@@ -125,23 +125,23 @@ const _ALL_MATCHES = [
   { id:'wc26_54', home:'Turquía',          away:'Estados Unidos',  homeFlag:'🇹🇷', awayFlag:'🇺🇸', date:'2026-06-25', time:'20:00', competition:'Grupo D — J3', type:'worldcup', venue:'SoFi Stadium, Los Ángeles',    status:'scheduled' },
   { id:'wc26_55', home:'Paraguay',         away:'Australia',       homeFlag:'🇵🇾', awayFlag:'🇦🇺', date:'2026-06-25', time:'20:00', competition:'Grupo D — J3', type:'worldcup', venue:'Levi\'s Stadium, San Francisco',status:'scheduled' },
   
-  { id:'wc26_56', home:'Ecuador',          away:'Alemania',        homeFlag:'🇪🇨', awayFlag:'🇩🇪', date:'2026-06-26', time:'11:00', competition:'Grupo E — J3', type:'worldcup', venue:'AT&T Stadium, Dallas',           status:'scheduled' },
-  { id:'wc26_57', home:'Costa de Marfil',  away:'Curazao',         homeFlag:'🇨🇮', awayFlag:'🇨🇼', date:'2026-06-26', time:'11:00', competition:'Grupo E — J3', type:'worldcup', venue:'Lincoln Financial, Filadelfia', status:'scheduled' },
-  { id:'wc26_58', home:'Países Bajos',     away:'Suecia',          homeFlag:'🇳🇱', awayFlag:'🇸🇪', date:'2026-06-26', time:'14:00', competition:'Grupo F — J3', type:'worldcup', venue:'Estadio BBVA, Monterrey',        status:'scheduled' },
-  { id:'wc26_59', home:'Túnez',            away:'Japón',           homeFlag:'🇹🇳', awayFlag:'🇯🇵', date:'2026-06-26', time:'14:00', competition:'Grupo F — J3', type:'worldcup', venue:'NRG Stadium, Houston',           status:'scheduled' },
+  { id:'wc26_56', home:'Ecuador',          away:'Alemania',        homeFlag:'🇪🇨', awayFlag:'🇩🇪', date:'2026-06-25', time:'14:00', competition:'Grupo E — J3', type:'worldcup', venue:'AT&T Stadium, Dallas',           status:'scheduled' },
+  { id:'wc26_57', home:'Costa de Marfil',  away:'Curazao',         homeFlag:'🇨🇮', awayFlag:'🇨🇼', date:'2026-06-25', time:'14:00', competition:'Grupo E — J3', type:'worldcup', venue:'Lincoln Financial, Filadelfia', status:'scheduled' },
+  { id:'wc26_58', home:'Países Bajos',     away:'Suecia',          homeFlag:'🇳🇱', awayFlag:'🇸🇪', date:'2026-06-25', time:'17:00', competition:'Grupo F — J3', type:'worldcup', venue:'Estadio BBVA, Monterrey',        status:'scheduled' },
+  { id:'wc26_59', home:'Túnez',            away:'Japón',           homeFlag:'🇹🇳', awayFlag:'🇯🇵', date:'2026-06-25', time:'17:00', competition:'Grupo F — J3', type:'worldcup', venue:'NRG Stadium, Houston',           status:'scheduled' },
   { id:'wc26_60', home:'Bélgica',          away:'Nueva Zelanda',   homeFlag:'🇧🇪', awayFlag:'🇳🇿', date:'2026-06-26', time:'21:00', competition:'Grupo G — J3', type:'worldcup', venue:'BC Place, Vancouver',            status:'scheduled' },
   { id:'wc26_61', home:'Egipto',           away:'Irán',            homeFlag:'🇪🇬', awayFlag:'🇮🇷', date:'2026-06-26', time:'21:00', competition:'Grupo G — J3', type:'worldcup', venue:'Lumen Field, Seattle',           status:'scheduled' },
   { id:'wc26_62', home:'Cabo Verde',       away:'Arabia Saudita',     homeFlag:'🇨🇻', awayFlag:'🇸🇦', date:'2026-06-26', time:'18:00', competition:'Grupo H — J3', type:'worldcup', venue:'NRG Stadium, Houston',           status:'scheduled' },
   { id:'wc26_63', home:'Uruguay',          away:'España',          homeFlag:'🇺🇾', awayFlag:'🇪🇸', date:'2026-06-26', time:'18:00', competition:'Grupo H — J3', type:'worldcup', venue:'Estadio Akron, Guadalajara',    status:'scheduled' },
   
-  { id:'wc26_64', home:'Noruega',          away:'Francia',         homeFlag:'🇳🇴', awayFlag:'🇫🇷', date:'2026-06-27', time:'13:00', competition:'Grupo I — J3', type:'worldcup', venue:'Gillette Stadium, Boston',      status:'scheduled' },
-  { id:'wc26_65', home:'Senegal',          away:'Irak',            homeFlag:'🇸🇳', awayFlag:'🇮🇶', date:'2026-06-27', time:'13:00', competition:'Grupo I — J3', type:'worldcup', venue:'BMO Field, Toronto',            status:'scheduled' },
-  { id:'wc26_66', home:'Argelia',          away:'Austria',         homeFlag:'🇩🇿', awayFlag:'🇦🇹', date:'2026-06-27', time:'21:00', competition:'Grupo J — J3', type:'worldcup', venue:'Hard Rock Stadium, Miami',       status:'scheduled' },
-  { id:'wc26_67', home:'Jordania',         away:'Argentina',       homeFlag:'🇯🇴', awayFlag:'🇦🇷', date:'2026-06-27', time:'21:00', competition:'Grupo J — J3', type:'worldcup', venue:'Levi\'s Stadium, San Francisco',status:'scheduled' },
-  { id:'wc26_68', home:'Portugal',         away:'Colombia',        homeFlag:'🇵🇹', awayFlag:'🇨🇴', date:'2026-06-27', time:'16:30', competition:'Grupo K — J3', type:'worldcup', venue:'AT&T Stadium, Dallas',           status:'scheduled' },
-  { id:'wc26_69', home:'RD Congo',         away:'Uzbekistán',      homeFlag:'🇨🇩', awayFlag:'🇺🇿', date:'2026-06-27', time:'16:30', competition:'Grupo K — J3', type:'worldcup', venue:'Mercedes-Benz Stadium, Atlanta', status:'scheduled' },
-  { id:'wc26_70', home:'Panamá',           away:'Inglaterra',      homeFlag:'🇵🇦', awayFlag:'🏴󠁧󠁢󠁥󠁮󠁧󠁿', date:'2026-06-27', time:'16:00', competition:'Grupo L — J3', type:'worldcup', venue:'Arrowhead Stadium, Kansas City', status:'scheduled' },
-  { id:'wc26_71', home:'Croacia',          away:'Ghana',           homeFlag:'🇭🇷', awayFlag:'🇬🇭', date:'2026-06-27', time:'16:00', competition:'Grupo L — J3', type:'worldcup', venue:'Estadio BBVA, Monterrey',        status:'scheduled' },
+  { id:'wc26_64', home:'Noruega',          away:'Francia',         homeFlag:'🇳🇴', awayFlag:'🇫🇷', date:'2026-06-26', time:'13:00', competition:'Grupo I — J3', type:'worldcup', venue:'Gillette Stadium, Boston',      status:'scheduled' },
+  { id:'wc26_65', home:'Senegal',          away:'Irak',            homeFlag:'🇸🇳', awayFlag:'🇮🇶', date:'2026-06-26', time:'13:00', competition:'Grupo I — J3', type:'worldcup', venue:'BMO Field, Toronto',            status:'scheduled' },
+  { id:'wc26_66', home:'Argelia',          away:'Austria',         homeFlag:'🇩🇿', awayFlag:'🇦🇹', date:'2026-06-27', time:'20:00', competition:'Grupo J — J3', type:'worldcup', venue:'Hard Rock Stadium, Miami',       status:'scheduled' },
+  { id:'wc26_67', home:'Jordania',         away:'Argentina',       homeFlag:'🇯🇴', awayFlag:'🇦🇷', date:'2026-06-27', time:'20:00', competition:'Grupo J — J3', type:'worldcup', venue:'Levi\'s Stadium, San Francisco',status:'scheduled' },
+  { id:'wc26_68', home:'Portugal',         away:'Colombia',        homeFlag:'🇵🇹', awayFlag:'🇨🇴', date:'2026-06-27', time:'17:30', competition:'Grupo K — J3', type:'worldcup', venue:'Hard Rock Stadium, Miami',       status:'scheduled' },
+  { id:'wc26_69', home:'RD Congo',         away:'Uzbekistán',      homeFlag:'🇨🇩', awayFlag:'🇺🇿', date:'2026-06-27', time:'17:30', competition:'Grupo K — J3', type:'worldcup', venue:'Mercedes-Benz Stadium, Atlanta', status:'scheduled' },
+  { id:'wc26_70', home:'Panamá',           away:'Inglaterra',      homeFlag:'🇵🇦', awayFlag:'🏴󠁧󠁢󠁥󠁮󠁧󠁿', date:'2026-06-27', time:'15:00', competition:'Grupo L — J3', type:'worldcup', venue:'MetLife Stadium, Nueva York',   status:'scheduled' },
+  { id:'wc26_71', home:'Croacia',          away:'Ghana',           homeFlag:'🇭🇷', awayFlag:'🇬🇭', date:'2026-06-27', time:'15:00', competition:'Grupo L — J3', type:'worldcup', venue:'Lincoln Financial, Filadelfia', status:'scheduled' },
 ];
 
 const MOCK = {
@@ -787,25 +787,8 @@ const API = {
 
   
   _venueOffset(venue) {
-    if (!venue) return '-06:00';
-    const v = venue.toLowerCase();
-    
-    if (v.includes('sofi') || v.includes('los ángeles') || v.includes('los angeles') ||
-        v.includes('levi') || v.includes('san francisco') ||
-        v.includes('bc place') || v.includes('vancouver') ||
-        v.includes('lumen') || v.includes('seattle')) return '-07:00';
-    
-    if (v.includes('at&t') || v.includes('dallas') ||
-        v.includes('nrg') || v.includes('houston') ||
-        v.includes('arrowhead') || v.includes('kansas')) return '-05:00';
-    
-    if (v.includes('metlife') || v.includes('nueva york') || v.includes('new york') ||
-        v.includes('gillette') || v.includes('boston') ||
-        v.includes('lincoln') || v.includes('filadelfia') ||
-        v.includes('mercedes') || v.includes('atlanta') ||
-        v.includes('hard rock') || v.includes('miami') ||
-        v.includes('bmo') || v.includes('toronto')) return '-04:00';
-    
+    // All times in _ALL_MATCHES are stored as El Salvador local time (UTC-6).
+    // Return '-06:00' for mock/fallback data so match state calculations are correct.
     return '-06:00';
   },
 
