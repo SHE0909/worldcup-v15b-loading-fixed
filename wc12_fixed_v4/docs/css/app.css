@@ -3319,17 +3319,18 @@ html, body { overflow-x: hidden; width: 100%; }
 .btn-hamburger.open span:nth-child(3) { transform: translateY(-7px) rotate(-45deg); }
 
 .drawer-overlay {
-  display: none;
+  display: block;
   position: fixed; inset: 0; z-index: 299;
   background: rgba(8,12,20,0.7);
   backdrop-filter: blur(3px);
   -webkit-backdrop-filter: blur(3px);
   opacity: 0;
+  pointer-events: none;
   transition: opacity 0.3s;
 }
 .drawer-overlay.visible {
-  display: block;
   opacity: 1;
+  pointer-events: auto;
 }
 
 .app-drawer {

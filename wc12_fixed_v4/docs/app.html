@@ -110,7 +110,6 @@
 
     <nav id="app-drawer" class="app-drawer" role="navigation" aria-label="Menú principal">
       <div class="drawer-header">
-        <img src="./icons/icon-192.png" class="drawer-logo" style="width:38px;height:38px;border-radius:50%;object-fit:cover;" alt="WCC"/>
         <button class="drawer-close" id="btn-drawer-close" aria-label="Cerrar menú"><svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg></button>
       </div>
       <div class="drawer-user" id="drawer-user">
@@ -512,18 +511,28 @@
     const btnClose= document.getElementById('btn-drawer-close');
     const btnLogoutDrawer = document.getElementById('btn-drawer-logout');
 
+    // Track drawer state explicitly to avoid CSS/JS desync bugs
+    let _drawerOpen = false;
+
     function openDrawer() {
+      _drawerOpen = true;
       drawer.classList.add('open');
       overlay.classList.add('visible');
+      overlay.style.pointerEvents = 'auto';
       btnOpen?.setAttribute('aria-expanded', 'true');
       document.body.style.overflow = 'hidden';
     }
     function closeDrawer() {
+      _drawerOpen = false;
       drawer.classList.remove('open');
       overlay.classList.remove('visible');
+      overlay.style.pointerEvents = 'none';
       btnOpen?.setAttribute('aria-expanded', 'false');
       document.body.style.overflow = '';
     }
+
+    // Always start closed and ensure body overflow is clean
+    closeDrawer();
 
     btnOpen?.addEventListener('click', openDrawer);
     btnClose?.addEventListener('click', closeDrawer);
@@ -544,17 +553,33 @@
       document.getElementById('btn-logout')?.click();
     });
 
-    let touchStartX = 0;
-    drawer?.addEventListener('touchstart', e => { touchStartX = e.touches[0].clientX; }, { passive: true });
+    // Swipe to open/close — use separate variables to avoid shared-state bug
+    let swipeStartX = -1;
+    let swipeTracking = false;
+
+    // Swipe LEFT inside drawer → close
+    drawer?.addEventListener('touchstart', e => {
+      swipeStartX = e.touches[0].clientX;
+      swipeTracking = true;
+    }, { passive: true });
     drawer?.addEventListener('touchend', e => {
-      if (touchStartX - e.changedTouches[0].clientX > 60) closeDrawer();
+      if (swipeTracking && swipeStartX > 0 && swipeStartX - e.changedTouches[0].clientX > 60) closeDrawer();
+      swipeTracking = false;
+      swipeStartX = -1;
     }, { passive: true });
 
+    // Swipe RIGHT from left edge → open (only when drawer is closed)
+    let edgeSwipeStartX = -1;
     document.addEventListener('touchstart', e => {
-      if (e.touches[0].clientX < 20) touchStartX = e.touches[0].clientX;
+      if (!_drawerOpen && e.touches[0].clientX < 20) {
+        edgeSwipeStartX = e.touches[0].clientX;
+      } else {
+        edgeSwipeStartX = -1;
+      }
     }, { passive: true });
     document.addEventListener('touchend', e => {
-      if (touchStartX < 20 && e.changedTouches[0].clientX - touchStartX > 60) openDrawer();
+      if (edgeSwipeStartX >= 0 && e.changedTouches[0].clientX - edgeSwipeStartX > 60) openDrawer();
+      edgeSwipeStartX = -1;
     }, { passive: true });
 
     const origNavigateTo = App?.navigateTo?.bind(App);
