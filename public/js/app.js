@@ -55,7 +55,7 @@ const App = {
     }
 
     if (!user) {
-      window.location.replace('/login');
+      window.location.replace('/worldcup-v15b-loading-fixed/login');
       return;
     }
 
@@ -224,7 +224,7 @@ const App = {
       await Auth.logout();
       API.clearPhotoCache();            
       await DB.clear('stats_cache');   
-      window.location.replace('/login');
+      window.location.replace('/worldcup-v15b-loading-fixed/login');
     });
 
     document.getElementById('btn-gacha-1')?.addEventListener('click',  () => this.doPull(1));

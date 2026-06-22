@@ -1,3 +1,4 @@
+const BASE = '/worldcup-v15b-loading-fixed/';
 const splash = document.getElementById('splash');
 
 async function init() {
@@ -12,7 +13,7 @@ async function init() {
     const user = await Auth.recoverSession();
     clearTimeout(safetyTimer);
     if (user) {
-      window.location.replace('/app');
+      window.location.replace(BASE + 'app');
       return;
     }
   } catch(err) {
@@ -98,9 +99,9 @@ async function doLogin() {
       welcomeVideo.muted = true;
       welcomeVideo.play().catch(() => {});
     });
-    setTimeout(() => window.location.replace('/app'), 3200);
+    setTimeout(() => window.location.replace(BASE + 'app'), 3200);
   } else {
-    setTimeout(() => window.location.replace('/app'), 600);
+    setTimeout(() => window.location.replace(BASE + 'app'), 600);
   }
 }
 
@@ -182,7 +183,7 @@ function showTutorial() {
 
 function closeTutorialAndEnter() {
   document.getElementById('tutorial-overlay').classList.remove('show');
-  window.location.replace('/app');
+  window.location.replace(BASE + 'app');
 }
 
 document.getElementById('tutorial-next').addEventListener('click', () => {
@@ -303,7 +304,7 @@ async function doTransfer() {
 
     await DB.setSession(email);
     Toast.success('✅ Cuenta restaurada — ¡Bienvenido de vuelta, ' + data.usuario.split(' ')[0] + '!');
-    setTimeout(() => window.location.replace('/app'), 800);
+    setTimeout(() => window.location.replace(BASE + 'app'), 800);
   } catch(err) {
     document.getElementById('transfer-file-err').textContent = 'Error al leer el archivo: ' + err.message;
   } finally {

@@ -4,8 +4,8 @@ import BaseLayout from "../layouts/BaseLayout.astro";
 <BaseLayout title="World Cup Collector — UES">
   <script is:inline>
     if ('serviceWorker' in navigator && location.protocol !== 'file:') {
-      navigator.serviceWorker.register('/sw.js').catch(() => {});
+      navigator.serviceWorker.register('/worldcup-v15b-loading-fixed/sw.js').catch(() => {});
     }
-    window.location.replace('/login');
+    window.location.replace('/worldcup-v15b-loading-fixed/login');
   </script>
 </BaseLayout>
