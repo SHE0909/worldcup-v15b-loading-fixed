@@ -1,0 +1,24 @@
+---
+// src/components/app/AppScripts.astro
+// Responsabilidad: declarar, en orden de dependencia, las etiquetas
+// <script> que cargan utilidades (db, auth, toast, modal) y módulos de
+// dominio (api, gacha, album, predicciones, perfil, stats, dashboard,
+// battle, exchange) más el orquestador app.js. Mantener esta lista en un
+// componente facilita ver y razonar sobre el orden de carga sin que quede
+// enterrado entre cientos de líneas de markup.
+---
+<script src="/worldcup-v15b-loading-fixed/js/utils/db.js" is:inline></script>
+<script src="/worldcup-v15b-loading-fixed/js/utils/auth.js" is:inline></script>
+<script src="/worldcup-v15b-loading-fixed/js/utils/toast.js" is:inline></script>
+<script src="/worldcup-v15b-loading-fixed/js/utils/modal.js" is:inline></script>
+<script src="/worldcup-v15b-loading-fixed/js/modules/api.js" is:inline></script>
+<script src="/worldcup-v15b-loading-fixed/js/modules/gacha.js" is:inline></script>
+<script src="/worldcup-v15b-loading-fixed/js/modules/album.js" is:inline></script>
+<script src="/worldcup-v15b-loading-fixed/js/modules/wc_predictor.js" is:inline></script>
+<script src="/worldcup-v15b-loading-fixed/js/modules/predictions.js" is:inline></script>
+<script src="/worldcup-v15b-loading-fixed/js/modules/profile.js" is:inline></script>
+<script src="/worldcup-v15b-loading-fixed/js/modules/stats.js" is:inline></script>
+<script src="/worldcup-v15b-loading-fixed/js/modules/dashboard.js" is:inline></script>
+<script src="/worldcup-v15b-loading-fixed/js/modules/battle.js" is:inline></script>
+<script src="/worldcup-v15b-loading-fixed/js/modules/exchange.js" is:inline></script>
+<script src="/worldcup-v15b-loading-fixed/js/app.js" is:inline></script>

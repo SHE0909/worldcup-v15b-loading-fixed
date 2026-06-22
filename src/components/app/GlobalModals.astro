@@ -1,0 +1,17 @@
+---
+// src/components/app/GlobalModals.astro
+// Responsabilidad: contenedores globales de Toast y Modal usados por
+// public/js/utils/toast.js y public/js/utils/modal.js desde cualquier
+// pestaña. NOTA DE LIMPIEZA: en app.astro original este bloque estaba
+// duplicado (líneas 517-524 y 527-534 idénticas); al extraerlo a un único
+// componente se elimina la duplicación sin afectar la funcionalidad,
+// ya que los IDs deben ser únicos en el documento.
+---
+<div id="toast" class="toast"></div>
+
+<div id="modal-overlay" class="modal-overlay" style="display:none;">
+  <div class="modal-box" id="modal-box">
+    <button class="modal-close" id="modal-close">✕</button>
+    <div id="modal-content"></div>
+  </div>
+</div>

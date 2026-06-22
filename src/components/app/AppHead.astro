@@ -1,0 +1,118 @@
+---
+// src/components/app/AppHead.astro
+// Responsabilidad: encapsular todo el <head> de la pantalla principal de la app
+// (metadatos, manifest, fuentes, hojas de estilo y CSS crítico inline propio
+// de las pestañas "live" y del drawer). Se extrae 1:1 desde app.astro.
+---
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover"/>
+<meta name="color-scheme" content="dark"/>
+<meta name="theme-color" content="#080c14"/>
+<meta name="mobile-web-app-capable" content="yes"/>
+<meta name="apple-mobile-web-app-capable" content="yes"/>
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent"/>
+<meta name="apple-mobile-web-app-title" content="WCC UES"/>
+<meta name="description" content="Colecciona figuritas del Mundial 2026, predice partidos y gana recompensas"/>
+<title>Fifa World Cup Coleccion — UES</title>
+
+<link rel="manifest" href="/worldcup-v15b-loading-fixed/manifest.json"/>
+<link rel="icon" type="image/png" sizes="192x192" href="/worldcup-v15b-loading-fixed/icons/icon-192.png"/>
+<link rel="apple-touch-icon" href="/worldcup-v15b-loading-fixed/icons/icon-192.png"/>
+
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Barlow:wght@300;400;600;700&family=Barlow+Condensed:wght@400;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="/worldcup-v15b-loading-fixed/css/worldcup2026-theme.css"/>
+<link rel="stylesheet" href="/worldcup-v15b-loading-fixed/css/app.css"/>
+
+<script src="https://cdn.jsdelivr.net/npm/@twemoji/api@latest/dist/twemoji.min.js" crossorigin="anonymous" is:inline></script>
+
+<style>
+
+  #tab-live .live-body {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    width: 100%;
+    padding: 0 0 1.5rem;
+    box-sizing: border-box;
+    overflow-x: hidden;
+    gap: 1.25rem;
+  }
+  #tab-live .live-player-wrap {
+    position: relative;
+    width: 100%;
+    max-width: 960px;
+    margin: 0 auto;
+    aspect-ratio: 16 / 9;
+    overflow: hidden;
+    border-radius: 10px;
+    background: #000;
+    box-shadow: 0 8px 32px rgba(0,0,0,0.55);
+    flex-shrink: 0;
+  }
+  #tab-live .live-player-wrap iframe {
+    position: absolute;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+    border: none;
+    display: block;
+  }
+  @media (max-width: 768px) {
+    #tab-live .live-body { padding: 0 0 1rem; gap: 1rem; }
+    #tab-live .live-player-wrap { border-radius: 6px; }
+  }
+  @media (max-width: 480px) {
+    #tab-live .live-body { padding: 0 0 0.75rem; gap: 0.75rem; }
+    #tab-live .live-player-wrap { border-radius: 4px; box-shadow: 0 4px 16px rgba(0,0,0,0.5); }
+  }
+
+
+  .btn-hamburger-floating {
+    position: fixed;
+    top: 14px;
+    left: 14px;
+    z-index: 250;
+    background: rgba(8,12,20,0.85);
+    backdrop-filter: blur(10px);
+    -webkit-backdrop-filter: blur(10px);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    box-shadow: 0 4px 16px rgba(0,0,0,0.4);
+  }
+  .btn-hamburger-floating:hover {
+    background: rgba(0,212,255,0.12);
+  }
+
+
+  .drawer-logo-img {
+    width: 34px;
+    height: 34px;
+    border-radius: 50%;
+    object-fit: cover;
+  }
+  .drawer-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+  }
+
+
+  #loading-splash {
+    position: fixed;
+    inset: 0;
+    z-index: 99999;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 1rem;
+    background: var(--bg-deep, #0a0e1a);
+  }
+  #loading-splash img.loading-ball {
+    width: 84px;
+    height: 84px;
+    border-radius: 50%;
+    object-fit: cover;
+  }
+</style>

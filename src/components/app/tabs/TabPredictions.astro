@@ -1,0 +1,21 @@
+---
+// src/components/app/tabs/TabPredictions.astro
+// Responsabilidad: pestaña "Predicciones" — cabecera y contenedor de la
+// lista de predicciones. public/js/modules/predictions.js rellena
+// #predictions-list y maneja #btn-pred-history.
+---
+<section id="tab-predictions" class="tab-section">
+  <div class="pred-section-header">
+    <div class="pred-header-center">
+      <h2 class="pred-header-title">
+        <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-3px;margin-right:6px"><circle cx="12" cy="12" r="10"/><path d="M12 8v4l3 3"/></svg>Predicciones
+      </h2>
+      <span class="badge-info">Acierta y gana tiradas</span>
+    </div>
+    <button id="btn-pred-history" class="btn-pred-history-toggle">
+      <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+      <span class="btn-pred-history-text">Ver historial</span>
+    </button>
+  </div>
+  <div id="predictions-list" class="predictions-list"></div>
+</section>
