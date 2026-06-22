@@ -55,7 +55,7 @@ const App = {
     }
 
     if (!user) {
-      window.location.replace('login.html');
+      window.location.replace('/login');
       return;
     }
 
@@ -109,6 +109,7 @@ const App = {
   },
 
   navigateTo(tab) {
+    const previousTab = this._currentTab;
     this._currentTab = tab;
     document.querySelectorAll('.tab-section').forEach(s => s.classList.remove('active'));
     document.querySelectorAll('.nav-btn').forEach(b => b.classList.remove('active'));
@@ -121,7 +122,26 @@ const App = {
     if (navBtn)    navBtn.classList.add('active');
     if (drawerBtn) drawerBtn.classList.add('active');
 
+    if (previousTab === 'live' && tab !== 'live') this._unmountLivePlayer();
+
     return this._renderTab(tab);
+  },
+
+  _mountLivePlayer() {
+    const wrap = document.getElementById('live-player-wrap');
+    if (!wrap || wrap.querySelector('iframe')) return;
+    const iframe = document.createElement('iframe');
+    iframe.src = 'https://sudamericaplay2.com/canal_8112/cza_dsports.html';
+    iframe.setAttribute('allow', 'fullscreen; autoplay');
+    iframe.setAttribute('allowfullscreen', '');
+    iframe.setAttribute('scrolling', 'no');
+    iframe.setAttribute('title', 'FWC EN VIVO — DirecTV Sports');
+    wrap.appendChild(iframe);
+  },
+
+  _unmountLivePlayer() {
+    const wrap = document.getElementById('live-player-wrap');
+    if (wrap) wrap.innerHTML = '';
   },
 
   async _renderTab(tab) {
@@ -153,7 +173,7 @@ const App = {
       case 'battle':      await Battle.render(); break;
       case 'exchange':    await Exchange.render(); break;
       case 'profile':     await Profile.render(); break;
-      case 'live':  break;
+      case 'live':  this._mountLivePlayer(); break;
     }
   },
 
@@ -204,7 +224,7 @@ const App = {
       await Auth.logout();
       API.clearPhotoCache();            
       await DB.clear('stats_cache');   
-      window.location.replace('login.html');
+      window.location.replace('/login');
     });
 
     document.getElementById('btn-gacha-1')?.addEventListener('click',  () => this.doPull(1));

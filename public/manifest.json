@@ -2,12 +2,12 @@
   "name": "World Cup Collector — UES",
   "short_name": "WCC",
   "description": "Colecciona figuritas del Mundial 2026 — UES",
-  "start_url": "./app.html",
-  "scope": "./",
+  "start_url": "/app",
+  "scope": "/",
   "display": "standalone",
   "background_color": "#080c14",
   "theme_color": "#00d4ff",
-  "orientation": "portrait-primary",
+  "orientation": "any",
   "icons": [
     {
       "src": "./icons/icon-192.png",

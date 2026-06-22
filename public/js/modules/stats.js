@@ -379,6 +379,16 @@ const Stats = {
     if (!teams || teams.length === 0) {
       teams = await API.getTeams(query); 
     }
+    teams = [...teams].sort((a, b) => {
+      const ptsA = a.pts ?? 0, ptsB = b.pts ?? 0;
+      if (ptsB !== ptsA) return ptsB - ptsA;
+      const dgA = (a.gf ?? 0) - (a.gc ?? 0);
+      const dgB = (b.gf ?? 0) - (b.gc ?? 0);
+      if (dgB !== dgA) return dgB - dgA;
+      const wA = a.w ?? 0, wB = b.w ?? 0;
+      if (wB !== wA) return wB - wA;
+      return (b.gf ?? 0) - (a.gf ?? 0);
+    });
     const user    = await Auth.currentUser();
     const favIds  = new Set((user?.favoritos || []).map(f => f.id));
 

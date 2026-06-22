@@ -1,0 +1,39 @@
+---
+---
+<section id="tab-dashboard" class="tab-section active">
+  <div class="section-header">
+    <h2><svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-3px;margin-right:6px"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/></svg>Panel Principal</h2>
+    <button class="btn btn-sm" id="btn-update-stats"><svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="23 4 23 10 17 10"/><polyline points="1 20 1 14 7 14"/><path d="M3.51 9a9 9 0 0114.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0020.49 15"/></svg> Actualizar</button>
+  </div>
+  <div id="api-status-bar" class="api-status-bar" style="display:none;"></div>
+  <div class="quick-actions">
+    <button class="qa-btn" onclick="App.navigateTo('gacha')"><svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="3" width="14" height="18" rx="2"/><path d="M8 21h12a2 2 0 002-2V7a2 2 0 00-2-2h-2"/></svg><span>Tirar</span></button>
+    <button class="qa-btn" onclick="App.navigateTo('battle')"><svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg><span>Minijuegos</span></button>
+    <button class="qa-btn" onclick="App.navigateTo('exchange')"><svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M7 16V4m0 0L3 8m4-4l4 4"/><path d="M17 8v12m0 0l4-4m-4 4l-4-4"/></svg><span>Canjear</span></button>
+    <button class="qa-btn" onclick="App.navigateTo('predictions')"><svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg><span>Predecir</span></button>
+  </div>
+  <div class="dashboard-grid">
+    <div class="dash-sidebar">
+      <div class="dash-card card-live">
+        <h3><svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="margin-right:6px;vertical-align:-2px"><circle cx="12" cy="12" r="2"/><path d="M16.24 7.76a6 6 0 010 8.49m-8.48-.01a6 6 0 010-8.49m11.31-2.82a10 10 0 010 14.14m-14.14 0a10 10 0 010-14.14"/></svg>En Vivo</h3>
+        <div id="live-matches" class="match-list">
+          <p class="empty-state">No hay partidos en vivo ahora</p>
+        </div>
+      </div>
+      <div class="dash-card card-standings">
+        <h3><svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="margin-right:6px;vertical-align:-2px"><polyline points="8 21 12 17 16 21"/><line x1="12" y1="17" x2="12" y2="11"/><path d="M7 4H4a2 2 0 00-2 2v1a4 4 0 004 4h0a4 4 0 004-4V4H7z"/><path d="M17 4h3a2 2 0 012 2v1a4 4 0 01-4 4h0a4 4 0 01-4-4V4h3z"/><line x1="7" y1="4" x2="17" y2="4"/></svg>Tabla de Posiciones</h3>
+        <div id="standings-preview"></div>
+      </div>
+      <div class="dash-card card-favorites">
+        <h3><svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="margin-right:6px;vertical-align:-2px"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>Mis Favoritos</h3>
+        <div id="favorites-preview"></div>
+      </div>
+    </div>
+    <div class="dash-main">
+      <div class="dash-card card-upcoming">
+        <h3><svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="margin-right:6px;vertical-align:-2px"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>Próximos Partidos</h3>
+        <div id="upcoming-matches" class="match-list"></div>
+      </div>
+    </div>
+  </div>
+</section>

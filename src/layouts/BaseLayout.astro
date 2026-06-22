@@ -1,0 +1,86 @@
+---
+export interface Props {
+  title: string;
+  extraCSS?: string[];
+  extraScripts?: string[];
+}
+
+const { title, extraCSS = [], extraScripts = [] } = Astro.props;
+---
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover"/>
+  <meta name="color-scheme" content="dark"/>
+  <meta name="theme-color" content="#080c14"/>
+  <meta name="mobile-web-app-capable" content="yes"/>
+  <meta name="apple-mobile-web-app-capable" content="yes"/>
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent"/>
+  <meta name="apple-mobile-web-app-title" content="WCC UES"/>
+  <meta name="description" content="Colecciona figuritas del Mundial 2026, predice partidos y gana recompensas"/>
+  <title>{title}</title>
+
+  <link rel="manifest" href="/manifest.json"/>
+  <link rel="icon" type="image/png" sizes="192x192" href="/icons/icon-192.png"/>
+  <link rel="apple-touch-icon" href="/icons/icon-192.png"/>
+
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Barlow:wght@300;400;600;700&family=Barlow+Condensed:wght@400;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="/css/worldcup2026-theme.css"/>
+
+  {extraCSS.map(href => <link rel="stylesheet" href={href}/>)}
+
+  <slot name="head"/>
+</head>
+<body>
+  <slot/>
+
+  {extraScripts.map(src => <script src={src} is:inline></script>)}
+
+  <slot name="scripts"/>
+</body>
+</html>
+
+<style is:global>
+  .screen { display: none; min-height: 100vh; }
+  .screen.active { display: block; }
+
+  .app-main {
+    flex: 1;
+    overflow-y: auto;
+    padding: 1rem;
+    padding-bottom: calc(var(--nav-height, 64px) + 1rem);
+  }
+
+  .tab-section { display: none; width: 100%; animation: fadeUp 0.3s ease; }
+  .tab-section.active { display: block; width: 100%; }
+
+  @keyframes fadeUp {
+    from { opacity: 0; transform: translateY(12px); }
+    to   { opacity: 1; transform: translateY(0); }
+  }
+
+  .section-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 1rem;
+    padding-bottom: 0.75rem;
+    border-bottom: 1px solid var(--border, #1e2e45);
+  }
+  .section-header h2 {
+    font-family: 'Bebas Neue', cursive;
+    font-size: 1.3rem;
+    letter-spacing: 2px;
+    color: var(--text-primary, #e8f0ff);
+    margin: 0;
+  }
+
+  #screen-app {
+    display: flex;
+    flex-direction: column;
+    padding-bottom: var(--nav-height, 64px);
+    min-height: 100vh;
+  }
+</style>

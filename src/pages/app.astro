@@ -1,0 +1,73 @@
+---
+import BaseLayout from "../layouts/BaseLayout.astro";
+
+import PwaBanner from "../components/ui/PwaBanner.astro";
+import DiscordBanner from "../components/ui/DiscordBanner.astro";
+import Toast from "../components/ui/Toast.astro";
+import Modal from "../components/ui/Modal.astro";
+
+import AppDrawer from "../components/nav/AppDrawer.astro";
+import AppHeader from "../components/nav/AppHeader.astro";
+import BottomNav from "../components/nav/BottomNav.astro";
+
+import DashboardSection from "../components/sections/DashboardSection.astro";
+import StatsSection from "../components/sections/StatsSection.astro";
+import GachaSection from "../components/sections/GachaSection.astro";
+import AlbumSection from "../components/sections/AlbumSection.astro";
+import BattleSection from "../components/sections/BattleSection.astro";
+import ExchangeSection from "../components/sections/ExchangeSection.astro";
+import PredictionsSection from "../components/sections/PredictionsSection.astro";
+import LiveSection from "../components/sections/LiveSection.astro";
+import ProfileSection from "../components/sections/ProfileSection.astro";
+
+const appScripts = [
+  "/js/utils/db.js",
+  "/js/utils/auth.js",
+  "/js/utils/toast.js",
+  "/js/utils/modal.js",
+  "/js/modules/api.js",
+  "/js/modules/gacha.js",
+  "/js/modules/album.js",
+  "/js/modules/wc_predictor.js",
+  "/js/modules/predictions.js",
+  "/js/modules/profile.js",
+  "/js/modules/stats.js",
+  "/js/modules/dashboard.js",
+  "/js/modules/battle.js",
+  "/js/modules/exchange.js",
+  "/js/app.js",
+  "/js/drawer.js",
+  "/js/pwa.js",
+];
+---
+<BaseLayout title="World Cup Collector — UES" extraScripts={appScripts}>
+  <Fragment slot="head">
+    <link rel="stylesheet" href="/css/app.css"/>
+    <link rel="stylesheet" href="/css/live-section.css"/>
+    <script src="https://cdn.jsdelivr.net/npm/@twemoji/api@latest/dist/twemoji.min.js" crossorigin="anonymous" is:inline></script>
+  </Fragment>
+
+  <PwaBanner />
+  <DiscordBanner />
+
+  <div id="screen-app" class="screen active">
+    <AppDrawer />
+    <AppHeader />
+    <BottomNav />
+
+    <main class="app-main">
+      <DashboardSection />
+      <StatsSection />
+      <GachaSection />
+      <AlbumSection />
+      <BattleSection />
+      <ExchangeSection />
+      <PredictionsSection />
+      <LiveSection />
+      <ProfileSection />
+    </main>
+  </div>
+
+  <Toast />
+  <Modal />
+</BaseLayout>
