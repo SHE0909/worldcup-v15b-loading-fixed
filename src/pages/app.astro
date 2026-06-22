@@ -1,4 +1,5 @@
 ---
+// Página principal de la app — World Cup Collector UES
 
 ---
 <!DOCTYPE html>
@@ -13,7 +14,7 @@
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent"/>
   <meta name="apple-mobile-web-app-title" content="WCC UES"/>
   <meta name="description" content="Colecciona figuritas del Mundial 2026, predice partidos y gana recompensas"/>
-  <title>World Cup Collector — UES</title>
+  <title>Fifa World Cup Coleccion — UES</title>
 
   <link rel="manifest" href="/worldcup-v15b-loading-fixed/manifest.json"/>
   <link rel="icon" type="image/png" sizes="192x192" href="/worldcup-v15b-loading-fixed/icons/icon-192.png"/>
@@ -27,7 +28,7 @@
   <script src="https://cdn.jsdelivr.net/npm/@twemoji/api@latest/dist/twemoji.min.js" crossorigin="anonymous" is:inline></script>
 
   <style>
-
+    
     #tab-live .live-body {
       display: flex;
       flex-direction: column;
@@ -67,7 +68,7 @@
       #tab-live .live-player-wrap { border-radius: 4px; box-shadow: 0 4px 16px rgba(0,0,0,0.5); }
     }
 
-    /* ── Botón de menú flotante ── */
+   
     .btn-hamburger-floating {
       position: fixed;
       top: 14px;
@@ -84,7 +85,7 @@
       background: rgba(0,212,255,0.12);
     }
 
-    /* ── Logo dentro del sidebar ── */
+   
     .drawer-logo-img {
       width: 34px;
       height: 34px;
@@ -97,7 +98,7 @@
       justify-content: space-between;
     }
 
-    /* ── Pantalla de carga inicial ── */
+    
     #loading-splash {
       position: fixed;
       inset: 0;
@@ -125,7 +126,7 @@
   </div>
 
   <div id="pwa-install-banner" class="pwa-banner" style="display:none">
-    <span>⚽ Instala WCC UES como app</span>
+    <span>⚽ Instala FWCC UES como app</span>
     <button class="btn btn-sm btn-primary" id="pwa-install-btn">Instalar</button>
     <button class="pwa-banner-close" id="pwa-banner-close">✕</button>
   </div>
@@ -294,7 +295,7 @@
               <button class="btn btn-sobre-10" id="btn-gacha-10">
                 <span class="sobre-btn-icon">🗃️</span>
                 <span class="sobre-btn-text">Abrir 10 sobres</span>
-                <span class="sobre-btn-sub">10 figuritas + más probabilidad "legendario"</span>
+                <span class="sobre-btn-sub">10 figuritas · más probabilidad ★</span>
               </button>
             </div>
           </div>
@@ -532,7 +533,7 @@
     </div>
   </div>
 
-  <!-- Utilidades y módulos del cliente -->
+ 
   <script src="/worldcup-v15b-loading-fixed/js/utils/db.js" is:inline></script>
   <script src="/worldcup-v15b-loading-fixed/js/utils/auth.js" is:inline></script>
   <script src="/worldcup-v15b-loading-fixed/js/utils/toast.js" is:inline></script>
@@ -558,7 +559,7 @@
     const btnClose= document.getElementById('btn-drawer-close');
     const btnLogoutDrawer = document.getElementById('btn-drawer-logout');
 
-    // Track drawer state explicitly to avoid CSS/JS desync bugs
+  
     let _drawerOpen = false;
 
     function openDrawer() {
@@ -578,7 +579,7 @@
       document.body.style.overflow = '';
     }
 
-    // Always start closed and ensure body overflow is clean
+    
     closeDrawer();
 
     btnOpen?.addEventListener('click', openDrawer);
@@ -587,7 +588,7 @@
 
     drawer?.querySelectorAll('.drawer-nav-btn').forEach(btn => {
       btn.addEventListener('click', () => {
-        // Sync active state
+        
         drawer.querySelectorAll('.drawer-nav-btn').forEach(b => b.classList.remove('active'));
         btn.classList.add('active');
         closeDrawer();
@@ -600,11 +601,11 @@
       document.getElementById('btn-logout')?.click();
     });
 
-    // Swipe to open/close — use separate variables to avoid shared-state bug
+  
     let swipeStartX = -1;
     let swipeTracking = false;
 
-    // Swipe LEFT inside drawer → close
+   
     drawer?.addEventListener('touchstart', e => {
       swipeStartX = e.touches[0].clientX;
       swipeTracking = true;
@@ -615,7 +616,7 @@
       swipeStartX = -1;
     }, { passive: true });
 
-    // Swipe RIGHT from left edge → open (only when drawer is closed)
+    
     let edgeSwipeStartX = -1;
     document.addEventListener('touchstart', e => {
       if (!_drawerOpen && e.touches[0].clientX < 20) {
@@ -669,27 +670,26 @@
         navigator.serviceWorker.register('/worldcup-v15b-loading-fixed/sw.js').then(reg => {
           console.log('[PWA] SW registrado:', reg.scope);
 
-          // Detectar cuando hay un nuevo SW esperando (nueva versión desplegada)
           const onNewSW = (worker) => {
             worker.addEventListener('statechange', () => {
               if (worker.state === 'installed') {
-                // Hay una versión nueva lista — mostrar aviso y recargar automáticamente
+                
                 console.log('[PWA] Nueva versión disponible, actualizando...');
-                // Decirle al nuevo SW que tome el control ahora
+              
                 worker.postMessage('SKIP_WAITING');
               }
             });
           };
 
-          // Si ya hay un SW esperando al registrar (ej: página recargada sin cerrar)
+          
           if (reg.waiting) onNewSW(reg.waiting);
 
-          // Cuando se detecta una actualización durante la sesión
+         
           reg.addEventListener('updatefound', () => {
             if (reg.installing) onNewSW(reg.installing);
           });
 
-          // Cuando el nuevo SW toma el control, recargar la página para servir archivos frescos
+       
           let refreshing = false;
           navigator.serviceWorker.addEventListener('controllerchange', () => {
             if (!refreshing) {
@@ -698,7 +698,7 @@
             }
           });
 
-          // Verificar actualizaciones cada 5 minutos en segundo plano
+         
           setInterval(() => reg.update(), 5 * 60 * 1000);
 
         }).catch(e => console.warn('[PWA] SW fallo:', e));
@@ -707,7 +707,7 @@
       console.info('[PWA] SW desactivado en file:// — abre desde un servidor HTTP para PWA completo.');
     }
 
-    // ── FWC EN VIVO — reproductor iframe directo (sin lógica dinámica) ──
+   
 
     let deferredPrompt;
     window._pwaPrompt = null;
