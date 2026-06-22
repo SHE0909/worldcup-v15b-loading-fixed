@@ -1,9 +1,7 @@
 ---
-// src/components/app/PwaAndDiscordScript.astro
-// Responsabilidad: registro del Service Worker, flujo de instalación de la
-// PWA (banner + botón en perfil) y lógica de aparición/cierre del banner
-// de Discord. Es exactamente el segundo bloque <script is:inline> de
-// app.astro, sin ninguna modificación de lógica.
+
+// Responsabilidad: registro del Service Worker, flujo de instalación de la PWA (banner + botón en perfil) y lógica de aparición/cierre del banner
+
 ---
 <script is:inline>
   if ('serviceWorker' in navigator && location.protocol !== 'file:') {
