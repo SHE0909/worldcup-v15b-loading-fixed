@@ -1,11 +1,10 @@
 ---
-// Redirige a /login al igual que el index.html original
 ---
 <!DOCTYPE html>
 <html lang="es">
 <head>
   <meta charset="UTF-8"/>
-  <link rel="manifest" href="/manifest.json"/>
+  <link rel="manifest" href="/worldcup-v15b-loading-fixed/manifest.json"/>
   <meta name="theme-color" content="#080c14"/>
   <meta name="apple-mobile-web-app-capable" content="yes"/>
   <title>World Cup Collector — UES</title>
@@ -13,9 +12,9 @@
 <body>
   <script is:inline>
     if ('serviceWorker' in navigator && location.protocol !== 'file:') {
-      navigator.serviceWorker.register('/sw.js').catch(() => {});
+      navigator.serviceWorker.register('/worldcup-v15b-loading-fixed/sw.js').catch(() => {});
     }
-    window.location.replace('/login');
+    window.location.replace('/worldcup-v15b-loading-fixed/login');
   </script>
 </body>
 </html>

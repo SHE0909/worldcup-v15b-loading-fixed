@@ -1,22 +1,21 @@
 ---
-// Página de Login — World Cup Collector UES
-// Astro genera HTML estático; toda la lógica queda en JS del cliente
+
 ---
 <!DOCTYPE html>
 <html lang="es">
 <head>
   <meta charset="UTF-8"/>
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-  <link rel="manifest" href="/manifest.json"/>
-  <link rel="icon" type="image/png" sizes="192x192" href="/icons/icon-192.png"/>
-  <link rel="apple-touch-icon" href="/icons/icon-192.png"/>
+  <link rel="manifest" href="/worldcup-v15b-loading-fixed/manifest.json"/>
+  <link rel="icon" type="image/png" sizes="192x192" href="/worldcup-v15b-loading-fixed/icons/icon-192.png"/>
+  <link rel="apple-touch-icon" href="/worldcup-v15b-loading-fixed/icons/icon-192.png"/>
   <meta name="theme-color" content="#080c14"/>
   <meta name="apple-mobile-web-app-capable" content="yes"/>
   <title>World Cup Collector — UES · Login</title>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Barlow:wght@300;400;600;700&family=Barlow+Condensed:wght@400;700&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="/css/worldcup2026-theme.css"/>
-  <link rel="stylesheet" href="/css/auth.css"/>
+  <link rel="stylesheet" href="/worldcup-v15b-loading-fixed/css/worldcup2026-theme.css"/>
+  <link rel="stylesheet" href="/worldcup-v15b-loading-fixed/css/auth.css"/>
   <style>
     .file-drop {
       display:block;cursor:pointer;border:1.5px dashed rgba(0,212,255,0.3);
@@ -110,11 +109,11 @@
 <body>
 
   <div id="welcome-anim">
-    <video id="welcome-video" src="/videos/login-welcome.mp4" playsinline muted></video>
+    <video id="welcome-video" src="/worldcup-v15b-loading-fixed/videos/login-welcome.mp4" playsinline muted></video>
   </div>
 
   <div class="splash-loader" id="splash">
-    <img src="/icons/icon-192.png" class="splash-ball" style="width:80px;height:80px;border-radius:50%;object-fit:cover;" alt="WCC Logo"/>
+    <img src="/worldcup-v15b-loading-fixed/icons/icon-192.png" class="splash-ball" style="width:80px;height:80px;border-radius:50%;object-fit:cover;" alt="WCC Logo"/>
     <p class="splash-text">Verificando sesión…</p>
   </div>
 
@@ -126,7 +125,7 @@
 
   <div class="auth-container">
     <div class="auth-logo">
-      <img src="/icons/icon-192.png" class="logo-icon" style="width:72px;height:72px;border-radius:50%;object-fit:cover;" alt="WCC Logo"/>
+      <img src="/worldcup-v15b-loading-fixed/icons/icon-192.png" class="logo-icon" style="width:72px;height:72px;border-radius:50%;object-fit:cover;" alt="WCC Logo"/>
       <h1 class="logo-title">WORLD CUP<br><span>COLLECTOR</span></h1>
       <p class="logo-sub">Universidad de El Salvador</p>
     </div>
@@ -224,9 +223,9 @@
   </div>
 
   <!-- Utilidades del cliente — cargadas con is:inline para preservar el scope global -->
-  <script src="/js/utils/db.js" is:inline></script>
-  <script src="/js/utils/auth.js" is:inline></script>
-  <script src="/js/utils/toast.js" is:inline></script>
+  <script src="/worldcup-v15b-loading-fixed/js/utils/db.js" is:inline></script>
+  <script src="/worldcup-v15b-loading-fixed/js/utils/auth.js" is:inline></script>
+  <script src="/worldcup-v15b-loading-fixed/js/utils/toast.js" is:inline></script>
 
   <script is:inline>
     const splash = document.getElementById('splash');
@@ -243,7 +242,7 @@
         const user = await Auth.recoverSession();
         clearTimeout(safetyTimer);
         if (user) {
-          window.location.replace('/app');
+          window.location.replace('/worldcup-v15b-loading-fixed/app');
           return;
         }
       } catch(err) {
@@ -316,9 +315,9 @@
           welcomeVideo.muted = true;
           welcomeVideo.play().catch(() => {});
         });
-        setTimeout(() => window.location.replace('/app'), 3200);
+        setTimeout(() => window.location.replace('/worldcup-v15b-loading-fixed/app'), 3200);
       } else {
-        setTimeout(() => window.location.replace('/app'), 600);
+        setTimeout(() => window.location.replace('/worldcup-v15b-loading-fixed/app'), 600);
       }
     }
 
@@ -406,7 +405,7 @@
 
     function closeTutorialAndEnter() {
       document.getElementById('tutorial-overlay').classList.remove('show');
-      window.location.replace('/app');
+      window.location.replace('/worldcup-v15b-loading-fixed/app');
     }
 
     document.getElementById('tutorial-next').addEventListener('click', () => {
@@ -527,7 +526,7 @@
 
         await DB.setSession(email);
         Toast.success('✅ Cuenta restaurada — ¡Bienvenido de vuelta, ' + data.usuario.split(' ')[0] + '!');
-        setTimeout(() => window.location.replace('/app'), 800);
+        setTimeout(() => window.location.replace('/worldcup-v15b-loading-fixed/app'), 800);
       } catch(err) {
         document.getElementById('transfer-file-err').textContent = 'Error al leer el archivo: ' + err.message;
       } finally {
@@ -543,7 +542,7 @@
   <script is:inline>
     if ('serviceWorker' in navigator && location.protocol !== 'file:') {
       window.addEventListener('load', () => {
-        navigator.serviceWorker.register('/sw.js').catch(err => {
+        navigator.serviceWorker.register('/worldcup-v15b-loading-fixed/sw.js').catch(err => {
           console.error('[PWA] Error registrando SW:', err);
         });
       });

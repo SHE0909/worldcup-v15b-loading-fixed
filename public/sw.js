@@ -1,13 +1,4 @@
-/**
- * Service Worker — WCC UES
- * Estrategia:
- *   • HTML / JS / CSS  → Network First (siempre intenta la red, caché como fallback)
- *   • Imágenes / iconos → Cache First (no cambian seguido, mejor rendimiento)
- *   • APIs externas     → solo red, sin caché
- *
- * Al cambiar CACHE_VERSION el SW se instala automáticamente y limpia la caché vieja.
- * ¡Incrementar este número en cada deploy!
- */
+
 const CACHE_VERSION = 'wcc-ues-v18';
 const BASE = '/worldcup-v15b-loading-fixed';
 
@@ -36,18 +27,18 @@ const STATIC_ASSETS = [
   BASE + '/manifest.json'
 ];
 
-// ── INSTALL: pre-cachear assets estáticos ──────────────────────────────────
+
 self.addEventListener('install', e => {
   e.waitUntil(
     caches.open(CACHE_VERSION)
       .then(cache => cache.addAll(STATIC_ASSETS))
       .catch(() => {})
   );
-  // Activa el nuevo SW de inmediato sin esperar a que cierren las pestañas
+
   self.skipWaiting();
 });
 
-// ── ACTIVATE: limpiar cachés viejas y tomar control de todos los clientes ──
+
 self.addEventListener('activate', e => {
   e.waitUntil(
     caches.keys().then(keys =>
@@ -56,13 +47,13 @@ self.addEventListener('activate', e => {
   );
 });
 
-// ── FETCH ──────────────────────────────────────────────────────────────────
+
 self.addEventListener('fetch', e => {
   if (e.request.method !== 'GET') return;
 
   const url = e.request.url;
 
-  // APIs externas: solo red, nunca caché
+
   if (
     url.includes('worldcup26.ir') ||
     url.includes('api.football-data') ||
@@ -75,7 +66,7 @@ self.addEventListener('fetch', e => {
   const isImage    = /\.(png|jpg|jpeg|svg|webp|gif|ico)(\?.*)?$/.test(url);
 
   if (isImage) {
-    // Cache First para imágenes (raramente cambian)
+    
     e.respondWith(
       caches.match(e.request).then(cached => {
         if (cached) return cached;
@@ -91,11 +82,11 @@ self.addEventListener('fetch', e => {
     return;
   }
 
-  // Network First para HTML / JS / CSS y todo lo demás del app shell
+ 
   e.respondWith(
     fetch(e.request)
       .then(response => {
-        // Solo cachear respuestas válidas
+       
         if (response && response.status === 200 && response.type !== 'opaque') {
           const clone = response.clone();
           caches.open(CACHE_VERSION).then(c => c.put(e.request, clone));
@@ -103,26 +94,25 @@ self.addEventListener('fetch', e => {
         return response;
       })
       .catch(() => {
-        // Sin red → servir desde caché como fallback
+        
         return caches.match(e.request)
           .then(cached => cached || caches.match(BASE + '/app.html'));
       })
   );
 });
 
-// ── MENSAJE desde la app: forzar actualización ────────────────────────────
+
 self.addEventListener('message', e => {
   if (e.data === 'SKIP_WAITING') self.skipWaiting();
 });
 
-// ── PUSH notifications ────────────────────────────────────────────────────
 self.addEventListener('push', e => {
   const data = e.data?.json() || { title: 'WCC UES', body: '¡Tienes nuevas tiradas disponibles!' };
   e.waitUntil(
     self.registration.showNotification(data.title, {
       body:     data.body,
-      icon:     '/icons/icon-192.png',
-      badge:    '/icons/icon-192.png',
+      icon: '/worldcup-v15b-loading-fixed/icons/icon-192.png',
+      badge: '/worldcup-v15b-loading-fixed/icons/icon-192.png',
       vibrate:  [100, 50, 100]
     })
   );

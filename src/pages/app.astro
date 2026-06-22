@@ -1,6 +1,5 @@
 ---
-// Página principal de la app — World Cup Collector UES
-// Astro genera HTML estático; toda la lógica queda en JS del cliente
+
 ---
 <!DOCTYPE html>
 <html lang="es">
@@ -16,19 +15,19 @@
   <meta name="description" content="Colecciona figuritas del Mundial 2026, predice partidos y gana recompensas"/>
   <title>World Cup Collector — UES</title>
 
-  <link rel="manifest" href="/manifest.json"/>
-  <link rel="icon" type="image/png" sizes="192x192" href="/icons/icon-192.png"/>
-  <link rel="apple-touch-icon" href="/icons/icon-192.png"/>
+  <link rel="manifest" href="/worldcup-v15b-loading-fixed/manifest.json"/>
+  <link rel="icon" type="image/png" sizes="192x192" href="/worldcup-v15b-loading-fixed/icons/icon-192.png"/>
+  <link rel="apple-touch-icon" href="/worldcup-v15b-loading-fixed/icons/icon-192.png"/>
 
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Barlow:wght@300;400;600;700&family=Barlow+Condensed:wght@400;700&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="/css/worldcup2026-theme.css"/>
-  <link rel="stylesheet" href="/css/app.css"/>
+  <link rel="stylesheet" href="/worldcup-v15b-loading-fixed/css/worldcup2026-theme.css"/>
+  <link rel="stylesheet" href="/worldcup-v15b-loading-fixed/css/app.css"/>
 
   <script src="https://cdn.jsdelivr.net/npm/@twemoji/api@latest/dist/twemoji.min.js" crossorigin="anonymous" is:inline></script>
 
   <style>
-    /* ── Contenedor general de la sección live ── */
+
     #tab-live .live-body {
       display: flex;
       flex-direction: column;
@@ -121,7 +120,7 @@
 <body>
 
   <div id="loading-splash">
-    <img src="/icons/icon-192.png" class="loading-ball" alt="WCC"/>
+    <img src="/worldcup-v15b-loading-fixed/icons/icon-192.png" class="loading-ball" alt="WCC"/>
     <p class="loading-text">Cargando…</p>
   </div>
 
@@ -150,7 +149,7 @@
 
     <nav id="app-drawer" class="app-drawer" role="navigation" aria-label="Menú principal">
       <div class="drawer-header">
-        <img src="/icons/icon-192.png" class="drawer-logo-img" alt="WCC"/>
+        <img src="/worldcup-v15b-loading-fixed/icons/icon-192.png" class="drawer-logo-img" alt="WCC"/>
         <button class="drawer-close" id="btn-drawer-close" aria-label="Cerrar menú"><svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg></button>
       </div>
       <div class="drawer-user" id="drawer-user">
@@ -534,21 +533,21 @@
   </div>
 
   <!-- Utilidades y módulos del cliente -->
-  <script src="/js/utils/db.js" is:inline></script>
-  <script src="/js/utils/auth.js" is:inline></script>
-  <script src="/js/utils/toast.js" is:inline></script>
-  <script src="/js/utils/modal.js" is:inline></script>
-  <script src="/js/modules/api.js" is:inline></script>
-  <script src="/js/modules/gacha.js" is:inline></script>
-  <script src="/js/modules/album.js" is:inline></script>
-  <script src="/js/modules/wc_predictor.js" is:inline></script>
-  <script src="/js/modules/predictions.js" is:inline></script>
-  <script src="/js/modules/profile.js" is:inline></script>
-  <script src="/js/modules/stats.js" is:inline></script>
-  <script src="/js/modules/dashboard.js" is:inline></script>
-  <script src="/js/modules/battle.js" is:inline></script>
-  <script src="/js/modules/exchange.js" is:inline></script>
-  <script src="/js/app.js" is:inline></script>
+  <script src="/worldcup-v15b-loading-fixed/js/utils/db.js" is:inline></script>
+  <script src="/worldcup-v15b-loading-fixed/js/utils/auth.js" is:inline></script>
+  <script src="/worldcup-v15b-loading-fixed/js/utils/toast.js" is:inline></script>
+  <script src="/worldcup-v15b-loading-fixed/js/utils/modal.js" is:inline></script>
+  <script src="/worldcup-v15b-loading-fixed/js/modules/api.js" is:inline></script>
+  <script src="/worldcup-v15b-loading-fixed/js/modules/gacha.js" is:inline></script>
+  <script src="/worldcup-v15b-loading-fixed/js/modules/album.js" is:inline></script>
+  <script src="/worldcup-v15b-loading-fixed/js/modules/wc_predictor.js" is:inline></script>
+  <script src="/worldcup-v15b-loading-fixed/js/modules/predictions.js" is:inline></script>
+  <script src="/worldcup-v15b-loading-fixed/js/modules/profile.js" is:inline></script>
+  <script src="/worldcup-v15b-loading-fixed/js/modules/stats.js" is:inline></script>
+  <script src="/worldcup-v15b-loading-fixed/js/modules/dashboard.js" is:inline></script>
+  <script src="/worldcup-v15b-loading-fixed/js/modules/battle.js" is:inline></script>
+  <script src="/worldcup-v15b-loading-fixed/js/modules/exchange.js" is:inline></script>
+  <script src="/worldcup-v15b-loading-fixed/js/app.js" is:inline></script>
 
   <script is:inline>
 
@@ -667,7 +666,7 @@
   <script is:inline>
     if ('serviceWorker' in navigator && location.protocol !== 'file:') {
       window.addEventListener('load', () => {
-        navigator.serviceWorker.register('/sw.js').then(reg => {
+        navigator.serviceWorker.register('/worldcup-v15b-loading-fixed/sw.js').then(reg => {
           console.log('[PWA] SW registrado:', reg.scope);
 
           // Detectar cuando hay un nuevo SW esperando (nueva versión desplegada)
