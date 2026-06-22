@@ -1,18 +1,21 @@
+---
+
+---
 <!DOCTYPE html>
 <html lang="es">
 <head>
   <meta charset="UTF-8"/>
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-  <link rel="manifest" href="manifest.json"/>
-  <link rel="icon" type="image/png" sizes="192x192" href="./icons/icon-192.png"/>
-  <link rel="apple-touch-icon" href="./icons/icon-192.png"/>
+  <link rel="manifest" href="/worldcup-v15b-loading-fixed/manifest.json"/>
+  <link rel="icon" type="image/png" sizes="192x192" href="/worldcup-v15b-loading-fixed/icons/icon-192.png"/>
+  <link rel="apple-touch-icon" href="/worldcup-v15b-loading-fixed/icons/icon-192.png"/>
   <meta name="theme-color" content="#080c14"/>
   <meta name="apple-mobile-web-app-capable" content="yes"/>
   <title>World Cup Collector — UES · Login</title>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Barlow:wght@300;400;600;700&family=Barlow+Condensed:wght@400;700&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="css/worldcup2026-theme.css"/>
-  <link rel="stylesheet" href="css/auth.css"/>
+  <link rel="stylesheet" href="/worldcup-v15b-loading-fixed/css/worldcup2026-theme.css"/>
+  <link rel="stylesheet" href="/worldcup-v15b-loading-fixed/css/auth.css"/>
   <style>
     .file-drop {
       display:block;cursor:pointer;border:1.5px dashed rgba(0,212,255,0.3);
@@ -21,12 +24,96 @@
     }
     .file-drop:hover { border-color:rgba(0,212,255,0.7); color:#00d4ff; }
     .file-drop.has-file { border-color:#00d4ff; color:#00d4ff; }
+
+    /* ── Animación de bienvenida tras iniciar sesión ── */
+    #welcome-anim {
+      position: fixed;
+      inset: 0;
+      z-index: 99999;
+      display: none;
+      align-items: center;
+      justify-content: center;
+      background: #000;
+      opacity: 0;
+      transition: opacity 0.35s ease;
+    }
+    #welcome-anim.visible {
+      display: flex;
+      opacity: 1;
+    }
+    #welcome-anim video {
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+    }
+
+    /* ── Tutorial de bienvenida (solo al crear cuenta) ── */
+    .tutorial-overlay {
+      position: fixed; inset: 0; z-index: 10000;
+      background: rgba(5,8,14,0.88);
+      backdrop-filter: blur(6px);
+      display: flex; align-items: center; justify-content: center;
+      padding: 1.25rem;
+      opacity: 0; pointer-events: none;
+      transition: opacity 0.3s ease;
+    }
+    .tutorial-overlay.show { opacity: 1; pointer-events: all; }
+    .tutorial-card {
+      position: relative;
+      width: 100%; max-width: 440px;
+      background: var(--bg-card, #131d2e);
+      border: 1px solid var(--border-bright, #2a4060);
+      border-radius: var(--radius-lg, 20px);
+      box-shadow: 0 8px 40px rgba(0,0,0,0.6);
+      padding: 2rem 1.75rem 1.5rem;
+      text-align: center;
+      transform: translateY(14px) scale(0.98);
+      transition: transform 0.3s ease;
+    }
+    .tutorial-overlay.show .tutorial-card { transform: translateY(0) scale(1); }
+    .tutorial-skip {
+      position: absolute; top: 0.85rem; right: 1rem;
+      background: none; border: none; cursor: pointer;
+      color: var(--text-secondary, #7a8fa8);
+      font-family: 'Barlow Condensed', sans-serif;
+      font-size: 0.75rem; letter-spacing: 1px; text-transform: uppercase;
+    }
+    .tutorial-skip:hover { color: var(--accent, #00d4ff); }
+    .tutorial-icon { font-size: 2.6rem; line-height: 1; margin-bottom: 0.75rem; }
+    .tutorial-card h2 {
+      font-family: 'Bebas Neue', cursive;
+      font-size: 1.5rem; letter-spacing: 1.5px;
+      color: var(--accent, #00d4ff);
+      margin-bottom: 0.6rem;
+    }
+    .tutorial-card p {
+      color: var(--text-secondary, #7a8fa8);
+      font-size: 0.92rem; line-height: 1.55;
+      min-height: 3.2em;
+    }
+    .tutorial-dots {
+      display: flex; justify-content: center; gap: 6px;
+      margin: 1.25rem 0 1.4rem;
+    }
+    .tutorial-dot {
+      width: 7px; height: 7px; border-radius: 50%;
+      background: var(--border-bright, #2a4060);
+      transition: background 0.2s, transform 0.2s;
+    }
+    .tutorial-dot.active { background: var(--accent, #00d4ff); transform: scale(1.25); }
+    .tutorial-actions { display: flex; gap: 0.6rem; }
+    .tutorial-actions .btn { margin-top: 0; flex: 1; }
+    .tutorial-actions .btn-secondary { flex: 0 0 auto; padding: 0.75rem 1.1rem; }
   </style>
 </head>
 <body>
 
+  <div id="welcome-anim">
+    <video id="welcome-video" src="/worldcup-v15b-loading-fixed/videos/login-welcome.mp4" playsinline muted></video>
+  </div>
+
   <div class="splash-loader" id="splash">
-    <img src="./icons/icon-192.png" class="splash-ball" style="width:80px;height:80px;border-radius:50%;object-fit:cover;" alt="WCC Logo"/>
+    <img src="/worldcup-v15b-loading-fixed/icons/icon-192.png" class="splash-ball" style="width:80px;height:80px;border-radius:50%;object-fit:cover;" alt="WCC Logo"/>
     <p class="splash-text">Verificando sesión…</p>
   </div>
 
@@ -38,7 +125,7 @@
 
   <div class="auth-container">
     <div class="auth-logo">
-      <img src="./icons/icon-192.png" class="logo-icon" style="width:72px;height:72px;border-radius:50%;object-fit:cover;" alt="WCC Logo"/>
+      <img src="/worldcup-v15b-loading-fixed/icons/icon-192.png" class="logo-icon" style="width:72px;height:72px;border-radius:50%;object-fit:cover;" alt="WCC Logo"/>
       <h1 class="logo-title">WORLD CUP<br><span>COLLECTOR</span></h1>
       <p class="logo-sub">Universidad de El Salvador</p>
     </div>
@@ -87,7 +174,6 @@
       <p class="auth-switch">¿Ya tienes cuenta? <a href="#" id="go-login">Inicia sesión</a></p>
     </div>
 
-    
     <div id="form-transfer" class="auth-form">
       <h2>Restaurar desde otro navegador</h2>
       <p style="font-size:0.8rem;color:#8899aa;margin-bottom:1rem;line-height:1.5">
@@ -119,18 +205,29 @@
     </div>
   </div>
 
-  <script src="js/utils/db.js"></script>
-  <script src="js/utils/auth.js"></script>
-  <script src="js/utils/toast.js"></script>
-
   <div id="toast" class="toast"></div>
 
-  <script>
-    /* ─────────────────────────────────────────
-       login.js — inline
-       Verifica sesión al cargar y redirige a
-       app.html si ya hay sesión activa.
-    ───────────────────────────────────────── */
+  <!-- Tutorial de bienvenida — solo se muestra al crear una cuenta nueva -->
+  <div id="tutorial-overlay" class="tutorial-overlay">
+    <div class="tutorial-card">
+      <button class="tutorial-skip" id="tutorial-skip">Saltar</button>
+      <div class="tutorial-icon" id="tutorial-icon">⚽</div>
+      <h2 id="tutorial-title">¡Bienvenido!</h2>
+      <p id="tutorial-text"></p>
+      <div class="tutorial-dots" id="tutorial-dots"></div>
+      <div class="tutorial-actions">
+        <button class="btn btn-secondary" id="tutorial-back">Atrás</button>
+        <button class="btn btn-primary" id="tutorial-next">Siguiente</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Utilidades del cliente — cargadas con is:inline para preservar el scope global -->
+  <script src="/worldcup-v15b-loading-fixed/js/utils/db.js" is:inline></script>
+  <script src="/worldcup-v15b-loading-fixed/js/utils/auth.js" is:inline></script>
+  <script src="/worldcup-v15b-loading-fixed/js/utils/toast.js" is:inline></script>
+
+  <script is:inline>
     const splash = document.getElementById('splash');
 
     async function init() {
@@ -143,17 +240,14 @@
       try {
         await DB.open();
         const user = await Auth.recoverSession();
-
         clearTimeout(safetyTimer);
-
         if (user) {
-          window.location.replace('app.html');
+          window.location.replace('/worldcup-v15b-loading-fixed/app');
           return;
         }
       } catch(err) {
         console.error('Error al inicializar DB:', err);
         clearTimeout(safetyTimer);
-
         try { indexedDB.deleteDatabase('WCCollectorUES'); } catch(_) {}
       }
 
@@ -161,7 +255,6 @@
       setTimeout(() => { if (splash.parentNode) splash.parentNode.removeChild(splash); }, 450);
     }
 
-    /* ── Helpers ── */
     function setBtnLoading(btnId, loading) {
       const btn = document.getElementById(btnId);
       if (!btn) return;
@@ -177,7 +270,6 @@
         .forEach(id => { const el = document.getElementById(id); if (el) el.textContent = ''; });
     }
 
-    /* ── Cambiar formularios ── */
     document.getElementById('go-register').addEventListener('click', e => {
       e.preventDefault();
       clearErrors();
@@ -192,7 +284,6 @@
       document.getElementById('form-login').classList.add('active');
     });
 
-    /* ── LOGIN ── */
     async function doLogin() {
       clearErrors();
       const email = document.getElementById('login-email').value.trim();
@@ -212,7 +303,22 @@
       }
 
       Toast.success(`¡Bienvenido, ${result.user.name.split(' ')[0]}! 👋`);
-      setTimeout(() => window.location.replace('app.html'), 600);
+
+      const welcomeAnim  = document.getElementById('welcome-anim');
+      const welcomeVideo = document.getElementById('welcome-video');
+      if (welcomeAnim && welcomeVideo) {
+        welcomeAnim.classList.add('visible');
+        welcomeVideo.currentTime = 0;
+        welcomeVideo.muted = false;
+        welcomeVideo.play().catch(() => {
+          // El navegador bloqueó el audio — reproducir silenciado para no interrumpir la animación
+          welcomeVideo.muted = true;
+          welcomeVideo.play().catch(() => {});
+        });
+        setTimeout(() => window.location.replace('/worldcup-v15b-loading-fixed/app'), 3200);
+      } else {
+        setTimeout(() => window.location.replace('/worldcup-v15b-loading-fixed/app'), 600);
+      }
     }
 
     document.getElementById('btn-login').addEventListener('click', doLogin);
@@ -238,12 +344,85 @@
       }
 
       Toast.success('¡Cuenta creada! Iniciando sesión…');
-
       const loginResult = await Auth.login({ email, password: pass });
       if (loginResult.ok) {
-        setTimeout(() => window.location.replace('app.html'), 700);
+        setTimeout(() => showTutorial(), 500);
       }
     }
+
+    // ── Tutorial de bienvenida (solo se muestra justo después de crear una cuenta) ──
+    const TUTORIAL_STEPS = [
+      {
+        icon: '⚽',
+        title: '¡Bienvenido al Mundial!',
+        text: 'World Cup Collector UES es tu app para vivir la Copa Mundial 2026: colecciona figuritas, predice partidos y gana recompensas mientras sigues cada detalle del torneo.'
+      },
+      {
+        icon: '🎁',
+        title: 'Sobres y Álbum',
+        text: 'En "Gacha" abres sobres usando tus tiradas para conseguir figuritas de selecciones y jugadores. Guárdalas en tu "Álbum" y marca tus favoritas.'
+      },
+      {
+        icon: '📊',
+        title: 'Seguimiento y En Vivo',
+        text: 'En "Seguimiento" revisa estadísticas, grupos y la tabla de posiciones. En "En Vivo" sigue los partidos del Mundial en tiempo real.'
+      },
+      {
+        icon: '🔮',
+        title: 'Predicciones y Minijuegos',
+        text: 'Adivina los resultados en "Predicciones" para ganar monedas, y suma más jugando en "Minijuegos".'
+      },
+      {
+        icon: '🪙',
+        title: 'Canjear y Perfil',
+        text: 'Usa tus monedas en "Canjear" para conseguir recompensas, y revisa tu progreso y datos en "Perfil". ¡Ya estás listo para jugar!'
+      }
+    ];
+    let tutorialStep = 0;
+
+    function renderTutorialStep() {
+      const step = TUTORIAL_STEPS[tutorialStep];
+      document.getElementById('tutorial-icon').textContent  = step.icon;
+      document.getElementById('tutorial-title').textContent = step.title;
+      document.getElementById('tutorial-text').textContent  = step.text;
+
+      const dotsEl = document.getElementById('tutorial-dots');
+      dotsEl.innerHTML = TUTORIAL_STEPS.map((_, i) =>
+        `<span class="tutorial-dot${i === tutorialStep ? ' active' : ''}"></span>`
+      ).join('');
+
+      const backBtn = document.getElementById('tutorial-back');
+      const nextBtn = document.getElementById('tutorial-next');
+      backBtn.style.visibility = tutorialStep === 0 ? 'hidden' : 'visible';
+      nextBtn.textContent = tutorialStep === TUTORIAL_STEPS.length - 1 ? '¡Empezar a jugar!' : 'Siguiente';
+    }
+
+    function showTutorial() {
+      tutorialStep = 0;
+      renderTutorialStep();
+      document.getElementById('tutorial-overlay').classList.add('show');
+    }
+
+    function closeTutorialAndEnter() {
+      document.getElementById('tutorial-overlay').classList.remove('show');
+      window.location.replace('/worldcup-v15b-loading-fixed/app');
+    }
+
+    document.getElementById('tutorial-next').addEventListener('click', () => {
+      if (tutorialStep < TUTORIAL_STEPS.length - 1) {
+        tutorialStep++;
+        renderTutorialStep();
+      } else {
+        closeTutorialAndEnter();
+      }
+    });
+    document.getElementById('tutorial-back').addEventListener('click', () => {
+      if (tutorialStep > 0) {
+        tutorialStep--;
+        renderTutorialStep();
+      }
+    });
+    document.getElementById('tutorial-skip').addEventListener('click', closeTutorialAndEnter);
 
     document.getElementById('btn-register').addEventListener('click', doRegister);
     ['reg-name','reg-email','reg-pass'].forEach(id =>
@@ -307,7 +486,6 @@
 
         const existing = await DB.getUser(email);
         if (existing) {
-
           const hash = await Auth.hashPassword(pass);
           existing.passwordHash = hash;
           existing.figuritas    = data.figuritas || existing.figuritas;
@@ -318,7 +496,7 @@
           existing.favoritos    = data.favoritos    || existing.favoritos;
           existing.predicciones = data.predicciones || existing.predicciones;
           existing.equipo_ideal = data.equipo_ideal || existing.equipo_ideal;
-          if (data.photoURL)     existing.photoURL     = data.photoURL;
+          if (data.photoURL)      existing.photoURL     = data.photoURL;
           if (data.lastDailyPull) existing.lastDailyPull = data.lastDailyPull;
           if (data.lastDailySpin) existing.lastDailySpin = data.lastDailySpin;
           existing.freeSpinsClaimed = true;
@@ -348,7 +526,7 @@
 
         await DB.setSession(email);
         Toast.success('✅ Cuenta restaurada — ¡Bienvenido de vuelta, ' + data.usuario.split(' ')[0] + '!');
-        setTimeout(() => window.location.replace('app.html'), 800);
+        setTimeout(() => window.location.replace('/worldcup-v15b-loading-fixed/app'), 800);
       } catch(err) {
         document.getElementById('transfer-file-err').textContent = 'Error al leer el archivo: ' + err.message;
       } finally {
@@ -361,10 +539,10 @@
     init();
   </script>
 
-  <script>
+  <script is:inline>
     if ('serviceWorker' in navigator && location.protocol !== 'file:') {
       window.addEventListener('load', () => {
-        navigator.serviceWorker.register('./sw.js').catch(err => {
+        navigator.serviceWorker.register('/worldcup-v15b-loading-fixed/sw.js').catch(err => {
           console.error('[PWA] Error registrando SW:', err);
         });
       });

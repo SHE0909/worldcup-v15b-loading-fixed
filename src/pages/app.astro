@@ -1,3 +1,6 @@
+---
+
+---
 <!DOCTYPE html>
 <html lang="es">
 <head>
@@ -12,21 +15,19 @@
   <meta name="description" content="Colecciona figuritas del Mundial 2026, predice partidos y gana recompensas"/>
   <title>World Cup Collector — UES</title>
 
-  <link rel="manifest" href="manifest.json"/>
-  <link rel="icon" type="image/png" sizes="192x192" href="./icons/icon-192.png"/>
-  <link rel="apple-touch-icon" href="./icons/icon-192.png"/>
-  <link rel="apple-touch-icon" href="icons/icon-192.png"/>
+  <link rel="manifest" href="/worldcup-v15b-loading-fixed/manifest.json"/>
+  <link rel="icon" type="image/png" sizes="192x192" href="/worldcup-v15b-loading-fixed/icons/icon-192.png"/>
+  <link rel="apple-touch-icon" href="/worldcup-v15b-loading-fixed/icons/icon-192.png"/>
 
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Barlow:wght@300;400;600;700&family=Barlow+Condensed:wght@400;700&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="css/worldcup2026-theme.css"/>
-  <link rel="stylesheet" href="css/app.css"/>
+  <link rel="stylesheet" href="/worldcup-v15b-loading-fixed/css/worldcup2026-theme.css"/>
+  <link rel="stylesheet" href="/worldcup-v15b-loading-fixed/css/app.css"/>
 
-  <script src="https://cdn.jsdelivr.net/npm/@twemoji/api@latest/dist/twemoji.min.js" crossorigin="anonymous"></script>
+  <script src="https://cdn.jsdelivr.net/npm/@twemoji/api@latest/dist/twemoji.min.js" crossorigin="anonymous" is:inline></script>
 
-  <!-- ══ LIVE PLAYER — Responsive override ══ -->
   <style>
-    /* ── Contenedor general de la sección live ── */
+
     #tab-live .live-body {
       display: flex;
       flex-direction: column;
@@ -37,8 +38,6 @@
       overflow-x: hidden;
       gap: 1.25rem;
     }
-
-    /* ── Wrapper del reproductor: centrado, 16/9, responsive ── */
     #tab-live .live-player-wrap {
       position: relative;
       width: 100%;
@@ -51,8 +50,6 @@
       box-shadow: 0 8px 32px rgba(0,0,0,0.55);
       flex-shrink: 0;
     }
-
-    /* ── iframe ocupa todo el wrapper ── */
     #tab-live .live-player-wrap iframe {
       position: absolute;
       inset: 0;
@@ -61,33 +58,71 @@
       border: none;
       display: block;
     }
-
-    /* ── Tablet ── */
     @media (max-width: 768px) {
-      #tab-live .live-body {
-        padding: 0 0 1rem;
-        gap: 1rem;
-      }
-      #tab-live .live-player-wrap {
-        border-radius: 6px;
-      }
+      #tab-live .live-body { padding: 0 0 1rem; gap: 1rem; }
+      #tab-live .live-player-wrap { border-radius: 6px; }
+    }
+    @media (max-width: 480px) {
+      #tab-live .live-body { padding: 0 0 0.75rem; gap: 0.75rem; }
+      #tab-live .live-player-wrap { border-radius: 4px; box-shadow: 0 4px 16px rgba(0,0,0,0.5); }
     }
 
-    /* ── Móvil pequeño ── */
-    @media (max-width: 480px) {
-      #tab-live .live-body {
-        padding: 0 0 0.75rem;
-        gap: 0.75rem;
-      }
-      #tab-live .live-player-wrap {
-        border-radius: 4px;
-        box-shadow: 0 4px 16px rgba(0,0,0,0.5);
-      }
+    /* ── Botón de menú flotante ── */
+    .btn-hamburger-floating {
+      position: fixed;
+      top: 14px;
+      left: 14px;
+      z-index: 250;
+      background: rgba(8,12,20,0.85);
+      backdrop-filter: blur(10px);
+      -webkit-backdrop-filter: blur(10px);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      box-shadow: 0 4px 16px rgba(0,0,0,0.4);
+    }
+    .btn-hamburger-floating:hover {
+      background: rgba(0,212,255,0.12);
+    }
+
+    /* ── Logo dentro del sidebar ── */
+    .drawer-logo-img {
+      width: 34px;
+      height: 34px;
+      border-radius: 50%;
+      object-fit: cover;
+    }
+    .drawer-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+
+    /* ── Pantalla de carga inicial ── */
+    #loading-splash {
+      position: fixed;
+      inset: 0;
+      z-index: 99999;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      gap: 1rem;
+      background: var(--bg-deep, #0a0e1a);
+    }
+    #loading-splash img.loading-ball {
+      width: 84px;
+      height: 84px;
+      border-radius: 50%;
+      object-fit: cover;
     }
   </style>
-  <!-- ══ /LIVE PLAYER ══ -->
 </head>
 <body>
+
+  <div id="loading-splash">
+    <img src="/worldcup-v15b-loading-fixed/icons/icon-192.png" class="loading-ball" alt="WCC"/>
+    <p class="loading-text">Cargando…</p>
+  </div>
 
   <div id="pwa-install-banner" class="pwa-banner" style="display:none">
     <span>⚽ Instala WCC UES como app</span>
@@ -104,12 +139,17 @@
     <button class="pwa-banner-close" id="discord-banner-close" aria-label="Cerrar">✕</button>
   </div>
 
+  <button class="btn-hamburger btn-hamburger-floating" id="btn-drawer-open" aria-label="Abrir menú">
+    <span></span><span></span><span></span>
+  </button>
+
   <div id="screen-app" class="screen active">
 
     <div id="drawer-overlay" class="drawer-overlay"></div>
 
     <nav id="app-drawer" class="app-drawer" role="navigation" aria-label="Menú principal">
       <div class="drawer-header">
+        <img src="/worldcup-v15b-loading-fixed/icons/icon-192.png" class="drawer-logo-img" alt="WCC"/>
         <button class="drawer-close" id="btn-drawer-close" aria-label="Cerrar menú"><svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg></button>
       </div>
       <div class="drawer-user" id="drawer-user">
@@ -136,12 +176,7 @@
     </nav>
 
     <header class="app-header">
-      <div class="header-left">
-        <button class="btn-hamburger" id="btn-drawer-open" aria-label="Abrir menú">
-          <span></span><span></span><span></span>
-        </button>
-        <img src="./icons/icon-192.png" class="header-logo" style="width:30px;height:30px;border-radius:50%;object-fit:cover;" alt="WCC"/>
-      </div>
+      <div class="header-left"></div>
       <div class="header-center">
         <span id="header-greeting">Hola, Jugador</span>
       </div>
@@ -206,13 +241,12 @@
       <section id="tab-stats" class="tab-section">
         <div class="section-header"><h2><svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-3px;margin-right:6px"><line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/></svg>Estadísticas</h2></div>
         <div class="search-bar">
-          <input type="text" id="search-input" placeholder="Buscar equipo o jugador..."/>
+          <input type="text" id="search-input" placeholder="Buscar equipo..."/>
           <button class="btn btn-sm" id="btn-search">Buscar</button>
         </div>
         <div class="stats-tabs">
           <button class="stab active" data-stab="teams">Equipos</button>
           <button class="stab" data-stab="groups">Grupos A–L</button>
-          <button class="stab" data-stab="players">Jugadores</button>
         </div>
         <div id="stats-content" class="stats-content"></div>
       </section>
@@ -347,7 +381,8 @@
 
           <div class="live-player-wrap">
             <iframe
-              src="https://sudamericaplay2.com/canal_8112/cza_dsports.html"
+              id="live-iframe"
+              data-src="https://sudamericaplay2.com/canal_8112/cza_dsports.html"
               allow="fullscreen; autoplay"
               allowfullscreen
               scrolling="no"
@@ -487,22 +522,34 @@
     </div>
   </div>
 
-  <script src="js/utils/db.js"></script>
-  <script src="js/utils/auth.js"></script>
-  <script src="js/utils/toast.js"></script>
-  <script src="js/utils/modal.js"></script>
-  <script src="js/modules/api.js"></script>
-  <script src="js/modules/gacha.js"></script>
-  <script src="js/modules/album.js"></script>
-  <script src="js/modules/wc_predictor.js"></script>
-  <script src="js/modules/predictions.js"></script>
-  <script src="js/modules/profile.js"></script>
-  <script src="js/modules/stats.js"></script>
-  <script src="js/modules/dashboard.js"></script>
-  <script src="js/modules/battle.js"></script>
-  <script src="js/modules/exchange.js"></script>
-  <script src="js/app.js"></script>
-  <script>
+
+  <div id="toast" class="toast"></div>
+
+  <div id="modal-overlay" class="modal-overlay" style="display:none;">
+    <div class="modal-box" id="modal-box">
+      <button class="modal-close" id="modal-close">✕</button>
+      <div id="modal-content"></div>
+    </div>
+  </div>
+
+  <!-- Utilidades y módulos del cliente -->
+  <script src="/worldcup-v15b-loading-fixed/js/utils/db.js" is:inline></script>
+  <script src="/worldcup-v15b-loading-fixed/js/utils/auth.js" is:inline></script>
+  <script src="/worldcup-v15b-loading-fixed/js/utils/toast.js" is:inline></script>
+  <script src="/worldcup-v15b-loading-fixed/js/utils/modal.js" is:inline></script>
+  <script src="/worldcup-v15b-loading-fixed/js/modules/api.js" is:inline></script>
+  <script src="/worldcup-v15b-loading-fixed/js/modules/gacha.js" is:inline></script>
+  <script src="/worldcup-v15b-loading-fixed/js/modules/album.js" is:inline></script>
+  <script src="/worldcup-v15b-loading-fixed/js/modules/wc_predictor.js" is:inline></script>
+  <script src="/worldcup-v15b-loading-fixed/js/modules/predictions.js" is:inline></script>
+  <script src="/worldcup-v15b-loading-fixed/js/modules/profile.js" is:inline></script>
+  <script src="/worldcup-v15b-loading-fixed/js/modules/stats.js" is:inline></script>
+  <script src="/worldcup-v15b-loading-fixed/js/modules/dashboard.js" is:inline></script>
+  <script src="/worldcup-v15b-loading-fixed/js/modules/battle.js" is:inline></script>
+  <script src="/worldcup-v15b-loading-fixed/js/modules/exchange.js" is:inline></script>
+  <script src="/worldcup-v15b-loading-fixed/js/app.js" is:inline></script>
+
+  <script is:inline>
 
   (function() {
     const drawer  = document.getElementById('app-drawer');
@@ -616,10 +663,10 @@
   })();
   </script>
 
-  <script>
+  <script is:inline>
     if ('serviceWorker' in navigator && location.protocol !== 'file:') {
       window.addEventListener('load', () => {
-        navigator.serviceWorker.register('./sw.js').then(reg => {
+        navigator.serviceWorker.register('/worldcup-v15b-loading-fixed/sw.js').then(reg => {
           console.log('[PWA] SW registrado:', reg.scope);
 
           // Detectar cuando hay un nuevo SW esperando (nueva versión desplegada)
@@ -750,5 +797,7 @@
       if (outcome === 'accepted') Toast.success('¡App instalada exitosamente!');
     });
   </script>
+
+
 </body>
 </html>
