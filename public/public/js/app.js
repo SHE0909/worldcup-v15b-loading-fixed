@@ -109,7 +109,6 @@ const App = {
   },
 
   navigateTo(tab) {
-    const prevTab = this._currentTab;
     this._currentTab = tab;
     document.querySelectorAll('.tab-section').forEach(s => s.classList.remove('active'));
     document.querySelectorAll('.nav-btn').forEach(b => b.classList.remove('active'));
@@ -121,13 +120,6 @@ const App = {
     if (section)   section.classList.add('active');
     if (navBtn)    navBtn.classList.add('active');
     if (drawerBtn) drawerBtn.classList.add('active');
-
-    if (prevTab === 'live' && tab !== 'live') {
-      const liveIframe = document.getElementById('live-iframe');
-      if (liveIframe) {
-        liveIframe.removeAttribute('src');
-      }
-    }
 
     return this._renderTab(tab);
   },
@@ -161,14 +153,7 @@ const App = {
       case 'battle':      await Battle.render(); break;
       case 'exchange':    await Exchange.render(); break;
       case 'profile':     await Profile.render(); break;
-      case 'live': {
-        const liveIframe = document.getElementById('live-iframe');
-        if (liveIframe && !liveIframe.getAttribute('src')) {
-          const src = liveIframe.dataset.src;
-          if (src) liveIframe.setAttribute('src', src);
-        }
-        break;
-      }
+      case 'live':  break;
     }
   },
 

@@ -1,11 +1,21 @@
 ---
-import BaseLayout from "../layouts/BaseLayout.astro";
+// Redirige a /login al igual que el index.html original
 ---
-<BaseLayout title="World Cup Collector — UES">
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8"/>
+  <link rel="manifest" href="/manifest.json"/>
+  <meta name="theme-color" content="#080c14"/>
+  <meta name="apple-mobile-web-app-capable" content="yes"/>
+  <title>World Cup Collector — UES</title>
+</head>
+<body>
   <script is:inline>
     if ('serviceWorker' in navigator && location.protocol !== 'file:') {
-      navigator.serviceWorker.register('/worldcup-v15b-loading-fixed/sw.js').catch(() => {});
+      navigator.serviceWorker.register('/sw.js').catch(() => {});
     }
-    window.location.replace('/worldcup-v15b-loading-fixed/login');
+    window.location.replace('/login');
   </script>
-</BaseLayout>
+</body>
+</html>
