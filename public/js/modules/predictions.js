@@ -1,135 +1,135 @@
 const Predictions = {
 
-  async render(showHistory = false) {
-    const allMatches = await API.getPredictableMatches();
-    const user       = await Auth.currentUser();
-    const preds      = user?.predicciones || [];
-    const list       = document.getElementById('predictions-list');
-    const histBtn    = document.getElementById('btn-pred-history');
+  async renderizar(showHistory = false) {
+    const todosPartidos = await API.getPredictableMatches();
+    const usuario       = await Auth.currentUser();
+    const preds      = usuario?.predicciones || [];
+    const list       = document.getElementById('predicciones-list');
+    const btnHistorial    = document.getElementById('btn-prediccion-history');
     if (!list) return;
 
-    if (!allMatches || allMatches.length === 0) {
+    if (!todosPartidos || todosPartidos.length === 0) {
       list.innerHTML = '<p class="empty-state">No hay partidos disponibles para predecir en este momento.</p>';
       return;
     }
 
     
-    const finishedMatches = allMatches.filter(m => {
+    const partidosTerminados = todosPartidos.filter(m => {
       const state = API.getMatchState(m);
-      return state === 'finished';
+      return state === 'finalizados';
     });
-    const activeMatches = allMatches.filter(m => {
+    const partidosActivos = todosPartidos.filter(m => {
       const state = API.getMatchState(m);
-      return state !== 'finished';
+      return state !== 'finalizados';
     });
 
     
-    if (histBtn) {
-      const textSpan = histBtn.querySelector('.btn-pred-history-text');
-      if (textSpan) {
-        const isHistory = histBtn.dataset.mode === 'history';
-        textSpan.textContent = isHistory
+    if (btnHistorial) {
+      const spanTexto = btnHistorial.querySelector('.btn-prediccion-history-text');
+      if (spanTexto) {
+        const esHistorico = btnHistorial.dataset.mode === 'history';
+        spanTexto.textContent = esHistorico
           ? `Ver activos`
-          : `Ver historial (${finishedMatches.length})`;
+          : `Ver historial (${partidosTerminados.length})`;
       }
     }
 
-    const matches = showHistory
-      ? finishedMatches.slice().reverse()   
-      : activeMatches;
+    const partidos = showHistory
+      ? partidosTerminados.slice().reverse()   
+      : partidosActivos;
 
-    if (!matches.length) {
+    if (!partidos.length) {
       list.innerHTML = showHistory
         ? '<p class="empty-state">No hay partidos finalizados aún.</p>'
         : '<p class="empty-state">No hay partidos disponibles para predecir en este momento.</p>';
       return;
     }
 
-    list.innerHTML = matches.map(m => {
-      const existing   = preds.find(p => p.matchId === m.id);
-      const isLocked   = !!existing;
-      const isFriendly = m.type === 'friendly';
+    list.innerHTML = partidos.map(m => {
+      const existente   = preds.find(p => p.idPartido === m.id);
+      const estaBloqueado   = !!existente;
+      const esAmistoso = m.type === 'friendly';
       const state      = API.getMatchState(m);       
-      const isClosed   = isLocked || state === 'closed' || state === 'live' || state === 'finished';
+      const estaCerrado   = estaBloqueado || state === 'closed' || state === 'enVivo' || state === 'finalizados';
 
       
-      let stateHtml = '';
-      if (state === 'live') {
-        const minuteLabel = m.minute ? `· ⏱️ ${m.minute}'` : '';
-        stateHtml = `<span class="pred-state-badge pred-state-live" id="live-min-${m.id}">🔴 EN DIRECTO ${minuteLabel}</span>`;
+      let htmlEstado = '';
+      if (state === 'enVivo') {
+        const etiquetaMinuto = m.minute ? `· ⏱️ ${m.minute}'` : '';
+        htmlEstado = `<span class="prediccion-state-insignia prediccion-state-enVivo" id="enVivo-min-${m.id}">🔴 EN DIRECTO ${etiquetaMinuto}</span>`;
       } else if (state === 'starting_soon') {
-        stateHtml = `<span class="pred-state-badge pred-state-soon">⚡ Por comenzar · ${API.getTimeUntilMatch(m)}</span>`;
-      } else if (state === 'closed' && !isLocked) {
-        stateHtml = `<span class="pred-state-badge pred-state-closed">🔒 Predicción cerrada</span>`;
-      } else if (state === 'upcoming' && !isLocked) {
-        const timeLeft = API.getTimeUntilMatch(m);
+        htmlEstado = `<span class="prediccion-state-insignia prediccion-state-soon">⚡ Por comenzar · ${API.getTimeUntilMatch(m)}</span>`;
+      } else if (state === 'closed' && !estaBloqueado) {
+        htmlEstado = `<span class="prediccion-state-insignia prediccion-state-closed">🔒 Predicción cerrada</span>`;
+      } else if (state === 'proximos' && !estaBloqueado) {
+        const tiempoRestante = API.getTimeUntilMatch(m);
         
-        const matchTs = new Date(`${m.date}T${m.time}:00${API._venueOffset ? API._venueOffset(m.venue) : '-06:00'}`).getTime();
-        const diffH   = (matchTs - Date.now()) / 3600000;
-        if (diffH <= 5) {
-          stateHtml = `<span class="pred-state-badge pred-state-warning">⏰ Cierra ${timeLeft}</span>`;
+        const tsPartido = new Date(`${m.date}T${m.time}:00${API._venueOffset ? API._venueOffset(m.venue) : '-06:00'}`).getTime();
+        const difHoras   = (tsPartido - Date.now()) / 3600000;
+        if (difHoras <= 5) {
+          htmlEstado = `<span class="prediccion-state-insignia prediccion-state-warning">⏰ Cierra ${tiempoRestante}</span>`;
         }
       }
 
       
-      const homeCrest = API.getCrest(m.home);
-      const awayCrest = API.getCrest(m.away);
+      const escudoLocal = API.getCrest(m.local);
+      const escudoVisitante = API.getCrest(m.visitante);
 
       return `
-        <div class="prediction-card" data-match="${m.id}">
-          <div class="pred-meta">
+        <div class="prediccion-card" data-match="${m.id}">
+          <div class="prediccion-meta">
             <div style="display:flex;align-items:center;gap:0.5rem;flex-wrap:wrap;">
-              <span class="pred-type-badge ${isFriendly ? 'pred-type-friendly' : 'pred-type-worldcup'}">
-                ${isFriendly ? '🤝 Amistoso' : '🏆 Mundial 2026'}
+              <span class="prediccion-type-insignia ${esAmistoso ? 'prediccion-type-friendly' : 'prediccion-type-worldcup'}">
+                ${esAmistoso ? '🤝 Amistoso' : '🏆 Mundial 2026'}
               </span>
-              <span class="pred-competition">${m.competition || 'Mundial 2026'}</span>
-              ${stateHtml}
+              <span class="prediccion-competencia">${m.competencia || 'Mundial 2026'}</span>
+              ${htmlEstado}
             </div>
-            <span class="pred-date">${this._formatDate(m.date)}${m.time ? ' · ' + m.time : ''}</span>
+            <span class="prediccion-date">${this._formatDate(m.date)}${m.time ? ' · ' + m.time : ''}</span>
           </div>
 
-          <div class="prediction-match">
-            <div class="pred-team-block">
-              ${homeCrest
-                ? `<img src="${homeCrest}" alt="${m.home}" class="pred-crest" onerror="this.style.display='none';this.nextElementSibling.style.display='block'">`
+          <div class="prediccion-match">
+            <div class="prediccion-equipo-block">
+              ${escudoLocal
+                ? `<img src="${escudoLocal}" alt="${m.local}" class="prediccion-crest" onerror="this.style.display='none';this.nextElementSibling.style.display='block'">`
                 : ''}
-              <span class="pred-crest-fallback" style="${homeCrest ? 'display:none' : ''}">${m.homeFlag || '🏠'}</span>
-              <span class="pred-team-name">${m.home}</span>
+              <span class="prediccion-crest-fallback" style="${escudoLocal ? 'display:none' : ''}">${m.banderaLocal || '🏠'}</span>
+              <span class="prediccion-equipo-name">${m.local}</span>
             </div>
 
-            <div class="pred-vs-block">
-              <span class="pred-vs">${
-                state === 'live'
-                  ? `<span style="color:#ff4466">${m.scoreHome??0} — ${m.scoreAway??0}</span>`
-                  : state === 'finished' && m.scoreHome !== null && m.scoreAway !== null
-                    ? `<span style="color:#ccc;font-size:1rem">${m.scoreHome} — ${m.scoreAway}</span>`
+            <div class="prediccion-vs-block">
+              <span class="prediccion-vs">${
+                state === 'enVivo'
+                  ? `<span style="color:#ff4466">${m.golesLocal??0} — ${m.golesVisitante??0}</span>`
+                  : state === 'finalizados' && m.golesLocal !== null && m.golesVisitante !== null
+                    ? `<span style="color:#ccc;font-size:1rem">${m.golesLocal} — ${m.golesVisitante}</span>`
                     : 'VS'
               }</span>
-              ${state === 'live' && m.minute
-                ? `<span class="pred-live-minute">⏱️ ${m.minute}'</span>`
-                : `<span class="pred-date-badge">${this._formatDate(m.date)}</span>`
+              ${state === 'enVivo' && m.minute
+                ? `<span class="prediccion-enVivo-minute">⏱️ ${m.minute}'</span>`
+                : `<span class="prediccion-date-insignia">${this._formatDate(m.date)}</span>`
               }
             </div>
 
-            <div class="pred-team-block">
-              ${awayCrest
-                ? `<img src="${awayCrest}" alt="${m.away}" class="pred-crest" onerror="this.style.display='none';this.nextElementSibling.style.display='block'">`
+            <div class="prediccion-equipo-block">
+              ${escudoVisitante
+                ? `<img src="${escudoVisitante}" alt="${m.visitante}" class="prediccion-crest" onerror="this.style.display='none';this.nextElementSibling.style.display='block'">`
                 : ''}
-              <span class="pred-crest-fallback" style="${awayCrest ? 'display:none' : ''}">${m.awayFlag || '✈️'}</span>
-              <span class="pred-team-name">${m.away}</span>
+              <span class="prediccion-crest-fallback" style="${escudoVisitante ? 'display:none' : ''}">${m.banderaVisitante || '✈️'}</span>
+              <span class="prediccion-equipo-name">${m.visitante}</span>
             </div>
           </div>
 
-          ${m.venue ? `<div class="pred-venue">📍 ${m.venue}</div>` : ''}
+          ${m.venue ? `<div class="prediccion-venue">📍 ${m.venue}</div>` : ''}
 
-          ${state === 'starting_soon' && !isLocked ? `
-            <div class="pred-lineup-row">
+          ${state === 'starting_soon' && !estaBloqueado ? `
+            <div class="prediccion-lineup-row">
               <button class="btn-lineup" data-match="${m.id}">👕 Ver alineación</button>
             </div>` : ''}
 
-          ${isLocked
-            ? this._renderLocked(existing)
-            : isClosed
+          ${estaBloqueado
+            ? this._renderLocked(existente)
+            : estaCerrado
               ? this._renderClosed(state, m)
               : this._renderOpen(m)
           }
@@ -138,41 +138,41 @@ const Predictions = {
     }).join('');
 
     
-    list.querySelectorAll('.pred-btn').forEach(btn => {
+    list.querySelectorAll('.prediccion-btn').forEach(btn => {
       btn.addEventListener('click', () => {
-        const card = btn.closest('.prediction-card');
-        card.querySelectorAll('.pred-btn').forEach(b => b.classList.remove('selected'));
-        btn.classList.add('selected');
+        const card = btn.closest('.prediccion-card');
+        card.querySelectorAll('.prediccion-btn').forEach(b => b.classList.remove('seleccionado'));
+        btn.classList.add('seleccionado');
         
-        const hint = card.querySelector('.draw-score-hint');
-        if (hint) hint.style.display = btn.dataset.pick === 'draw' ? 'block' : 'none';
+        const pista = card.querySelector('.draw-score-pista');
+        if (pista) pista.style.display = btn.dataset.pick === 'draw' ? 'block' : 'none';
       });
     });
 
     
-    list.querySelectorAll('.btn-confirm-pred').forEach(btn => {
+    list.querySelectorAll('.btn-confirm-prediccion').forEach(btn => {
       btn.addEventListener('click', () => {
-        const card     = btn.closest('.prediction-card');
-        const matchId  = card.dataset.match;
-        const selected = card.querySelector('.pred-btn.selected');
-        if (!selected) { Toast.warn('Selecciona un resultado antes de confirmar'); return; }
-        const exact = card.querySelector('.exact-score')?.value.trim() || '';
-        this._savePrediction(matchId, selected.dataset.pick, exact, card);
+        const card     = btn.closest('.prediccion-card');
+        const idPartido  = card.dataset.match;
+        const seleccionado = card.querySelector('.prediccion-btn.seleccionado');
+        if (!seleccionado) { Toast.warn('Selecciona un resultado antes de confirmar'); return; }
+        const exacto = card.querySelector('.exacto-score')?.value.trim() || '';
+        this._savePrediction(idPartido, seleccionado.dataset.pick, exacto, card);
       });
     });
 
     
     list.querySelectorAll('.btn-lineup').forEach(btn => {
-      btn.addEventListener('click', () => this._showLineup(btn.dataset.match, matches));
+      btn.addEventListener('click', () => this._showLineup(btn.dataset.match, partidos));
     });
 
     
-    const existingBtn = document.getElementById('btn-predict-wc-wrap');
-    if (!existingBtn) {
-      const wcBtn = document.createElement('div');
-      wcBtn.id = 'btn-predict-wc-wrap';
-      wcBtn.style.cssText = 'padding:0 0 1.2rem;margin-top:0.2rem';
-      wcBtn.innerHTML = `
+    const btnExistente = document.getElementById('btn-predict-wc-wrap');
+    if (!btnExistente) {
+      const btnMundial = document.createElement('div');
+      btnMundial.id = 'btn-predict-wc-wrap';
+      btnMundial.style.cssText = 'padding:0 0 1.2rem;margin-top:0.2rem';
+      btnMundial.innerHTML = `
         <button id="btn-predict-wc" style="
           background:linear-gradient(135deg,#c0a022,#e8c840);
           color:#000;font-weight:800;font-size:1.05rem;
@@ -185,109 +185,109 @@ const Predictions = {
           <span style="font-size:0.72rem;font-weight:500;opacity:0.75">· Hasta 50+ tiradas</span>
         </button>`;
       
-      list.parentElement.insertBefore(wcBtn, list);
+      list.parentElement.insertBefore(btnMundial, list);
       document.getElementById('btn-predict-wc').addEventListener('click', () => WorldCupPredictor.open());
     }
 
     
-    const histBtn2 = document.getElementById('btn-pred-history');
-    if (histBtn2 && !histBtn2._wccBound) {
-      histBtn2._wccBound = true;
-      histBtn2.addEventListener('click', () => {
-        const isHistory = histBtn2.dataset.mode === 'history';
-        if (isHistory) {
-          histBtn2.dataset.mode = '';
-          histBtn2.classList.remove('active');
-          Predictions.render(false);
+    const btnHistorial2 = document.getElementById('btn-prediccion-history');
+    if (btnHistorial2 && !btnHistorial2._wccBound) {
+      btnHistorial2._wccBound = true;
+      btnHistorial2.addEventListener('click', () => {
+        const esHistorico = btnHistorial2.dataset.mode === 'history';
+        if (esHistorico) {
+          btnHistorial2.dataset.mode = '';
+          btnHistorial2.classList.remove('active');
+          Predictions.renderizar(false);
         } else {
-          histBtn2.dataset.mode = 'history';
-          histBtn2.classList.add('active');
-          Predictions.render(true);
+          btnHistorial2.dataset.mode = 'history';
+          btnHistorial2.classList.add('active');
+          Predictions.renderizar(true);
         }
       });
     }
     
-    if (histBtn2 && histBtn2.dataset.mode === 'history') {
-      histBtn2.classList.add('active');
+    if (btnHistorial2 && btnHistorial2.dataset.mode === 'history') {
+      btnHistorial2.classList.add('active');
     }
   },
 
   _renderOpen(m) {
-    const homeCrest = API.getCrest(m.home);
-    const awayCrest = API.getCrest(m.away);
+    const escudoLocal = API.getCrest(m.local);
+    const escudoVisitante = API.getCrest(m.visitante);
 
     return `
-      <div class="prediction-btns">
-        <button class="pred-btn" data-pick="home">
-          ${homeCrest ? `<img src="${homeCrest}" style="width:20px;height:20px;object-fit:contain;vertical-align:middle;margin-right:4px" onerror="this.remove()">` : (m.homeFlag || '') + ' '}
-          ${m.home}
+      <div class="prediccion-btns">
+        <button class="prediccion-btn" data-pick="local">
+          ${escudoLocal ? `<img src="${escudoLocal}" style="width:20px;height:20px;object-fit:contain;vertical-align:middle;margin-right:4px" onerror="this.remove()">` : (m.banderaLocal || '') + ' '}
+          ${m.local}
         </button>
-        <button class="pred-btn" data-pick="draw">🤝 Empate</button>
-        <button class="pred-btn" data-pick="away">
-          ${awayCrest ? `<img src="${awayCrest}" style="width:20px;height:20px;object-fit:contain;vertical-align:middle;margin-right:4px" onerror="this.remove()">` : (m.awayFlag || '') + ' '}
-          ${m.away}
+        <button class="prediccion-btn" data-pick="draw">🤝 Empate</button>
+        <button class="prediccion-btn" data-pick="visitante">
+          ${escudoVisitante ? `<img src="${escudoVisitante}" style="width:20px;height:20px;object-fit:contain;vertical-align:middle;margin-right:4px" onerror="this.remove()">` : (m.banderaVisitante || '') + ' '}
+          ${m.visitante}
         </button>
       </div>
-      <div class="pred-exact-row">
-        <input type="text" class="exact-score"
+      <div class="prediccion-exacto-row">
+        <input type="text" class="exacto-score"
           placeholder="Resultado exacto opcional: 2-1"
           pattern="[0-9]+-[0-9]+"
           maxlength="7"
           title="Formato: goles_local-goles_visitante (ej: 2-1)">
-        <div class="draw-score-hint" style="display:none;font-size:0.75rem;color:#ffaa44;margin-top:4px">
+        <div class="draw-score-pista" style="display:none;font-size:0.75rem;color:#ffaa44;margin-top:4px">
           ⚠️ Para empate el marcador debe ser igualado: 0-0, 1-1, 2-2…
         </div>
       </div>
-      <div class="pred-rewards-info">
+      <div class="prediccion-rewards-info">
         <span>🎴 Acertar ganador: <strong>+1 tirada</strong></span>
         <span>🎯 Resultado exacto: <strong>+3 tiradas</strong></span>
       </div>
-      <button class="btn-confirm-pred">
+      <button class="btn-confirm-prediccion">
         Confirmar predicción ✓
       </button>
     `;
   },
 
   _renderClosed(state, m) {
-    const hasScore = m && m.status === 'finished' && m.scoreHome !== null && m.scoreAway !== null;
-    const scoreStr = hasScore ? ` · <strong style="color:#ddd">${m.scoreHome} — ${m.scoreAway}</strong>` : '';
-    const msg = state === 'live'
+    const tieneScore = m && m.status === 'finalizados' && m.golesLocal !== null && m.golesVisitante !== null;
+    const strMarcador = tieneScore ? ` · <strong style="color:#ddd">${m.golesLocal} — ${m.golesVisitante}</strong>` : '';
+    const msg = state === 'enVivo'
       ? `🔴 Partido en curso — predicciones cerradas`
-      : state === 'finished'
-        ? `✅ Partido finalizado${scoreStr}`
+      : state === 'finalizados'
+        ? `✅ Partido finalizado${strMarcador}`
         : '🔒 Predicciones cerradas (falta menos de 1h)';
     return `
-      <div class="pred-locked" style="text-align:center;padding:0.75rem 0;">
+      <div class="prediccion-locked" style="text-align:center;padding:0.75rem 0;">
         <span style="font-size:0.78rem;color:var(--text-muted)">${msg}</span>
       </div>
     `;
   },
 
-  async _showLineup(matchId, matches) {
-    const m = matches.find(x => x.id === matchId);
+  async _showLineup(idPartido, partidos) {
+    const m = partidos.find(x => x.id === idPartido);
     if (!m) return;
 
     
-    let lineupHtml = '';
-    if (matchId.startsWith('af_')) {
+    let htmlAlineacion = '';
+    if (idPartido.startsWith('af_')) {
       try {
-        const fixtureId = matchId.replace('af_', '');
-        const af = await API._af(`/fixtures/lineups?fixture=${fixtureId}`);
+        const idFixture = idPartido.replace('af_', '');
+        const af = await API._af(`/fixtures/lineups?fixture=${idFixture}`);
         if (af?.response?.length > 0) {
-          lineupHtml = af.response.map(team => {
-            const starters   = (team.startXI || []).map(p => p.player.name).join(', ');
-            const subs       = (team.substitutes || []).map(p => p.player.name).join(', ');
-            const formation  = team.formation ? `[${team.formation}]` : '';
+          htmlAlineacion = af.response.map(equipo => {
+            const titulares   = (equipo.startXI || []).map(p => p.player.name).join(', ');
+            const suplentes       = (equipo.substitutes || []).map(p => p.player.name).join(', ');
+            const formation  = equipo.formation ? `[${equipo.formation}]` : '';
             return `
               <div style="margin-bottom:0.75rem">
                 <p style="font-weight:700;color:var(--gold);margin-bottom:0.25rem">
-                  ${team.team?.name || ''} ${formation}
+                  ${equipo.equipo?.name || ''} ${formation}
                 </p>
                 <p style="font-size:0.7rem;color:var(--text-secondary);margin-bottom:0.15rem">
-                  <strong>Titulares:</strong> ${starters || '—'}
+                  <strong>Titulares:</strong> ${titulares || '—'}
                 </p>
                 <p style="font-size:0.7rem;color:var(--text-muted)">
-                  <strong>Suplentes:</strong> ${subs || '—'}
+                  <strong>Suplentes:</strong> ${suplentes || '—'}
                 </p>
               </div>`;
           }).join('<hr style="border-color:var(--border);margin:0.5rem 0">');
@@ -295,44 +295,44 @@ const Predictions = {
       } catch(_) {}
     }
 
-    if (!lineupHtml) {
-      lineupHtml = `<p style="font-size:0.75rem;color:var(--text-muted);text-align:center;padding:0.5rem 0">
+    if (!htmlAlineacion) {
+      htmlAlineacion = `<p style="font-size:0.75rem;color:var(--text-muted);text-align:center;padding:0.5rem 0">
         Alineación aún no confirmada.<br>Vuelve a revisar más cerca del inicio.
       </p>`;
     }
 
     Modal.open(`
-      <div class="modal-player-detail">
-        <h2 class="modal-player-name" style="margin-bottom:0.25rem">👕 Alineación</h2>
+      <div class="modal2-player-detail">
+        <h2 class="modal2-player-name" style="margin-bottom:0.25rem">👕 Alineación</h2>
         <p style="font-size:0.7rem;color:var(--text-muted);margin-bottom:0.75rem">
-          ${m.homeFlag||''} ${m.home} vs ${m.away} ${m.awayFlag||''}
+          ${m.banderaLocal||''} ${m.local} vs ${m.visitante} ${m.banderaVisitante||''}
         </p>
-        ${lineupHtml}
+        ${htmlAlineacion}
       </div>
     `);
   },
 
-  _renderLocked(pred) {
-    const resultIcon = pred.result === 'win' ? '✅' : pred.result === 'loss' ? '❌' : '⏳';
-    const resultText = pred.result === 'win' ? 'Acertaste' : pred.result === 'loss' ? 'Fallaste' : 'Pendiente';
+  _renderLocked(prediccion) {
+    const iconoResultado = prediccion.result === 'win' ? '✅' : prediccion.result === 'loss' ? '❌' : '⏳';
+    const textoResultado = prediccion.result === 'win' ? 'Acertaste' : prediccion.result === 'loss' ? 'Fallaste' : 'Pendiente';
     return `
-      <div class="pred-locked">
-        <div class="pred-locked-pick">
-          🎯 Predicción: <strong>${this._labelPred(pred.pick)}</strong>
-          ${pred.exact ? ` · Marcador: <strong>${pred.exact}</strong>` : ''}
+      <div class="prediccion-locked">
+        <div class="prediccion-locked-pick">
+          🎯 Predicción: <strong>${this._labelPred(prediccion.pick)}</strong>
+          ${prediccion.exacto ? ` · Marcador: <strong>${prediccion.exacto}</strong>` : ''}
         </div>
-        <div class="pred-result ${pred.result}">
-          ${resultIcon} ${resultText}
-          ${pred.result === 'win' ? ' — +1 🎴' : ''}
-          ${pred.exactCorrect ? ' +3 🎴 (¡marcador exacto!)' : ''}
+        <div class="prediccion-result ${prediccion.result}">
+          ${iconoResultado} ${textoResultado}
+          ${prediccion.result === 'win' ? ' — +1 🎴' : ''}
+          ${prediccion.exactCorrect ? ' +3 🎴 (¡marcador exacto!)' : ''}
         </div>
       </div>
     `;
   },
 
   _labelPred(pick) {
-    if (pick === 'home') return 'Local';
-    if (pick === 'away') return 'Visitante';
+    if (pick === 'local') return 'Local';
+    if (pick === 'visitante') return 'Visitante';
     if (pick === 'draw') return 'Empate';
     return pick;
   },
@@ -341,20 +341,20 @@ const Predictions = {
     if (!dateStr) return '';
     try {
       const [y, m, d] = dateStr.split('-');
-      const months = ['Ene','Feb','Mar','Abr','May','Jun','Jul','Ago','Sep','Oct','Nov','Dic'];
-      return `${d} ${months[parseInt(m)-1]}`;
+      const meses = ['Ene','Feb','Mar','Abr','May','Jun','Jul','Ago','Sep','Oct','Nov','Dic'];
+      return `${d} ${meses[parseInt(m)-1]}`;
     } catch(_) { return dateStr; }
   },
 
-  async _savePrediction(matchId, pick, exact, card) {
-    if (exact && !/^\d+-\d+$/.test(exact)) {
+  async _savePrediction(idPartido, pick, exacto, card) {
+    if (exacto && !/^\d+-\d+$/.test(exacto)) {
       Toast.warn('Formato de marcador inválido. Usa: 2-1');
       return;
     }
 
     
-    if (pick === 'draw' && exact) {
-      const [g1, g2] = exact.split('-').map(Number);
+    if (pick === 'draw' && exacto) {
+      const [g1, g2] = exacto.split('-').map(Number);
       if (g1 !== g2) {
         Toast.warn('En un empate ambos equipos deben tener los mismos goles. Ej: 1-1');
         return;
@@ -364,239 +364,239 @@ const Predictions = {
     
     
     
-    if (pick === 'home' && exact) {
-      const [g1, g2] = exact.split('-').map(Number);
+    if (pick === 'local' && exacto) {
+      const [g1, g2] = exacto.split('-').map(Number);
       if (g1 <= g2) {
         Toast.warn('El marcador no coincide con la victoria local. El local debe tener más goles. Ej: 2-1');
         return;
       }
     }
-    if (pick === 'away' && exact) {
-      const [g1, g2] = exact.split('-').map(Number);
+    if (pick === 'visitante' && exacto) {
+      const [g1, g2] = exacto.split('-').map(Number);
       if (g2 <= g1) {
         Toast.warn('El marcador no coincide con la victoria visitante. El visitante debe tener más goles. Ej: 1-2');
         return;
       }
     }
 
-    const user = await Auth.currentUser();
-    if (!user) return;
+    const usuario = await Auth.currentUser();
+    if (!usuario) return;
 
-    const preds = user.predicciones || [];
-    if (preds.find(p => p.matchId === matchId)) {
+    const preds = usuario.predicciones || [];
+    if (preds.find(p => p.idPartido === idPartido)) {
       Toast.warn('Ya tienes una predicción para este partido');
       return;
     }
 
     
-    let matchHome = '', matchAway = '', matchHomeFlag = '', matchAwayFlag = '';
+    let localPartido = '', matchAway = '', matchHomeFlag = '', matchAwayFlag = '';
     try {
-      const allMatches = await API.getPredictableMatches();
-      const m = (allMatches || []).find(x => String(x.id) === String(matchId));
+      const todosPartidos = await API.getPredictableMatches();
+      const m = (todosPartidos || []).find(x => String(x.id) === String(idPartido));
       if (m) {
-        matchHome     = m.home     || '';
-        matchAway     = m.away     || '';
-        matchHomeFlag = m.homeFlag || '';
-        matchAwayFlag = m.awayFlag || '';
+        localPartido     = m.local     || '';
+        matchAway     = m.visitante     || '';
+        matchHomeFlag = m.banderaLocal || '';
+        matchAwayFlag = m.banderaVisitante || '';
       }
     } catch(_) {}
 
     preds.push({
-      matchId,
-      matchHome,
+      idPartido,
+      localPartido,
       matchAway,
       matchHomeFlag,
       matchAwayFlag,
       pick,
-      exact:     exact || null,
-      result:    'pending',
+      exacto:     exacto || null,
+      result:    'pendientes',
       timestamp: new Date().toISOString()
     });
 
-    user.predicciones = preds;
-    await Auth.updateUser(user);
-    await DB.logActivity(user.email, 'prediction', `${matchId}: ${pick}${exact ? ' ('+exact+')' : ''}`);
+    usuario.predicciones = preds;
+    await Auth.updateUser(usuario);
+    await DB.logActivity(usuario.email, 'prediccion', `${idPartido}: ${pick}${exacto ? ' ('+exacto+')' : ''}`);
 
     Toast.success('¡Predicción guardada! 🎯 Buena suerte');
-    setTimeout(() => this.render(), 800);
+    setTimeout(() => this.renderizar(), 800);
   },
 
   
-  async evaluatePredictions(finishedMatches) {
-    const user = await Auth.currentUser();
-    if (!user || !Array.isArray(finishedMatches) || !finishedMatches.length) return 0;
+  async evaluatePredictions(partidosTerminados) {
+    const usuario = await Auth.currentUser();
+    if (!usuario || !Array.isArray(partidosTerminados) || !partidosTerminados.length) return 0;
 
     let tirasGanadas = 0;
-    let newWins      = 0;
-    const preds      = user.predicciones || [];
-    const newlyResolved = [];
+    let nuevasVictorias      = 0;
+    const preds      = usuario.predicciones || [];
+    const recienResueltos = [];
 
-    for (const pred of preds) {
-      if (pred.result !== 'pending') continue;
-      const match = finishedMatches.find(m => String(m.id) === String(pred.matchId));
+    for (const prediccion of preds) {
+      if (prediccion.result !== 'pendientes') continue;
+      const match = partidosTerminados.find(m => String(m.id) === String(prediccion.idPartido));
       if (!match) continue;
 
       
-      let finalResult = match.finalResult;
-      if (!finalResult && match.scoreHome !== undefined && match.scoreAway !== undefined
-          && match.status === 'finished') {
-        const sh = Number(match.scoreHome), sa = Number(match.scoreAway);
-        finalResult = sh > sa ? 'home' : sa > sh ? 'away' : 'draw';
+      let resultadoFinal = match.resultadoFinal;
+      if (!resultadoFinal && match.golesLocal !== undefined && match.golesVisitante !== undefined
+          && match.status === 'finalizados') {
+        const sh = Number(match.golesLocal), sa = Number(match.golesVisitante);
+        resultadoFinal = sh > sa ? 'local' : sa > sh ? 'visitante' : 'draw';
         
-        pred.finalScore = `${sh}-${sa}`;
-        pred.finalHome  = match.home  || '';
-        pred.finalAway  = match.away  || '';
+        prediccion.finalScore = `${sh}-${sa}`;
+        prediccion.finalHome  = match.local  || '';
+        prediccion.finalAway  = match.visitante  || '';
       }
-      if (!finalResult) continue;
+      if (!resultadoFinal) continue;
 
       
-      if (!pred.matchHome && match.home) pred.matchHome = match.home;
-      if (!pred.matchAway && match.away) pred.matchAway = match.away;
-      if (!pred.matchHomeFlag && match.homeFlag) pred.matchHomeFlag = match.homeFlag;
-      if (!pred.matchAwayFlag && match.awayFlag) pred.matchAwayFlag = match.awayFlag;
+      if (!prediccion.localPartido && match.local) prediccion.localPartido = match.local;
+      if (!prediccion.matchAway && match.visitante) prediccion.matchAway = match.visitante;
+      if (!prediccion.matchHomeFlag && match.banderaLocal) prediccion.matchHomeFlag = match.banderaLocal;
+      if (!prediccion.matchAwayFlag && match.banderaVisitante) prediccion.matchAwayFlag = match.banderaVisitante;
 
       let predTiradas = 0;
-      if (pred.pick === finalResult) {
-        pred.result = 'win';
+      if (prediccion.pick === resultadoFinal) {
+        prediccion.result = 'win';
         tirasGanadas += 1;
         predTiradas  += 1;
-        newWins++;
+        nuevasVictorias++;
       } else {
-        pred.result = 'loss';
+        prediccion.result = 'loss';
       }
 
       
-      const normalizeScore = s => (s || '').replace(/[–—]/g, '-').trim();
-      const exactScore = normalizeScore(match.exactScore || pred.finalScore);
-      const predExact  = normalizeScore(pred.exact || '');
-      if (predExact && exactScore && predExact === exactScore) {
-        pred.exactCorrect = true;
+      const normalizarScore = s => (s || '').replace(/[–—]/g, '-').trim();
+      const marcadorExacto = normalizarScore(match.marcadorExacto || prediccion.finalScore);
+      const predExacto  = normalizarScore(prediccion.exacto || '');
+      if (predExacto && marcadorExacto && predExacto === marcadorExacto) {
+        prediccion.exactCorrect = true;
         tirasGanadas += 3;
         predTiradas  += 3;
       }
 
-      newlyResolved.push({
-        matchHome:     pred.matchHome || match.home,
-        matchAway:     pred.matchAway || match.away,
-        matchHomeFlag: pred.matchHomeFlag || match.homeFlag,
-        matchAwayFlag: pred.matchAwayFlag || match.awayFlag,
-        finalScore:    exactScore,
-        pick:          pred.pick,
-        exact:         pred.exact || null,
-        won:           pred.result === 'win',
-        exactCorrect:  !!pred.exactCorrect,
+      recienResueltos.push({
+        localPartido:     prediccion.localPartido || match.local,
+        matchAway:     prediccion.matchAway || match.visitante,
+        matchHomeFlag: prediccion.matchHomeFlag || match.banderaLocal,
+        matchAwayFlag: prediccion.matchAwayFlag || match.banderaVisitante,
+        finalScore:    marcadorExacto,
+        pick:          prediccion.pick,
+        exacto:         prediccion.exacto || null,
+        won:           prediccion.result === 'win',
+        exactCorrect:  !!prediccion.exactCorrect,
         tiradas:       predTiradas,
       });
     }
 
     if (tirasGanadas > 0) {
-      user.tiradas  = (user.tiradas  || 0) + tirasGanadas;
-      user.aciertos = (user.aciertos || 0) + newWins;
-      user.predicciones = preds;
-      await Auth.updateUser(user);
-      await DB.logActivity(user.email, 'pred_reward', `+${tirasGanadas} tiradas por predicciones`);
+      usuario.tiradas  = (usuario.tiradas  || 0) + tirasGanadas;
+      usuario.aciertos = (usuario.aciertos || 0) + nuevasVictorias;
+      usuario.predicciones = preds;
+      await Auth.updateUser(usuario);
+      await DB.logActivity(usuario.email, 'pred_reward', `+${tirasGanadas} tiradas por predicciones`);
       Toast.success(`¡Predicciones acertadas! +${tirasGanadas} tiradas`);
     } else {
       
-      const hadPending = (user.predicciones || []).some(p => p.result === 'pending'
-        && finishedMatches.some(m => String(m.id) === String(p.matchId)));
-      if (hadPending) {
-        user.predicciones = preds;
-        await Auth.updateUser(user);
+      const teniaPendientes = (usuario.predicciones || []).some(p => p.result === 'pendientes'
+        && partidosTerminados.some(m => String(m.id) === String(p.idPartido)));
+      if (teniaPendientes) {
+        usuario.predicciones = preds;
+        await Auth.updateUser(usuario);
       }
     }
 
     if (typeof App !== 'undefined') await App.refreshHeader();
     
-    if (typeof App !== 'undefined' && App._currentTab === 'profile') {
-      await Profile.render();
+    if (typeof App !== 'undefined' && App._currentTab === 'perfil') {
+      await Profile.renderizar();
     }
-    if (newlyResolved.length) this._showResultModals(newlyResolved);
+    if (recienResueltos.length) this._showResultModals(recienResueltos);
 
     return tirasGanadas;
   },
 
   
-  _showResultModals(results) {
-    if (!results.length) return;
+  _showResultModals(resultados) {
+    if (!resultados.length) return;
 
     
     const SHOWN_KEY = 'wcc_pred_modals_shown';
-    let shownSet;
-    try { shownSet = new Set(JSON.parse(localStorage.getItem(SHOWN_KEY) || '[]')); }
-    catch(_) { shownSet = new Set(); }
+    let setMostrados;
+    try { setMostrados = new Set(JSON.parse(localStorage.getItem(SHOWN_KEY) || '[]')); }
+    catch(_) { setMostrados = new Set(); }
 
-    const pending = results.filter(r => {
-      const key = `${r.matchHome}-${r.matchAway}-${r.pick}`;
-      return !shownSet.has(key);
+    const pendientes = resultados.filter(r => {
+      const key = `${r.localPartido}-${r.matchAway}-${r.pick}`;
+      return !setMostrados.has(key);
     });
 
-    if (!pending.length) return;
+    if (!pendientes.length) return;
 
     
-    pending.forEach(r => {
-      shownSet.add(`${r.matchHome}-${r.matchAway}-${r.pick}`);
+    pendientes.forEach(r => {
+      setMostrados.add(`${r.localPartido}-${r.matchAway}-${r.pick}`);
     });
-    try { localStorage.setItem(SHOWN_KEY, JSON.stringify([...shownSet])); } catch(_) {}
+    try { localStorage.setItem(SHOWN_KEY, JSON.stringify([...setMostrados])); } catch(_) {}
 
-    const [first, ...rest] = pending;
+    const [first, ...rest] = pendientes;
 
-    const home = first.matchHome || 'Local';
-    const away = first.matchAway || 'Visitante';
-    const homeFlag = first.matchHomeFlag || '🏠';
-    const awayFlag = first.matchAwayFlag || '✈️';
+    const local = first.localPartido || 'Local';
+    const visitante = first.matchAway || 'Visitante';
+    const banderaLocal = first.matchHomeFlag || '🏠';
+    const banderaVisitante = first.matchAwayFlag || '✈️';
 
-    const headerIcon  = first.won ? '🏆' : '❌';
-    const headerText  = first.won ? '¡Acertaste!' : 'Fallaste esta vez';
-    const headerColor = first.won ? '#44ff88' : '#ff6666';
+    const iconoEncabezado  = first.won ? '🏆' : '❌';
+    const textoEncabezado  = first.won ? '¡Acertaste!' : 'Fallaste esta vez';
+    const colorEncabezado = first.won ? '#44ff88' : '#ff6666';
 
-    const pickLabels = { home: home, away: away, draw: 'Empate' };
-    const pickLabel  = pickLabels[first.pick] || first.pick;
+    const etiquetasEleccion = { local: local, visitante: visitante, draw: 'Empate' };
+    const etiquetaEleccion  = etiquetasEleccion[first.pick] || first.pick;
 
-    const rewardLines = [];
-    if (first.won) rewardLines.push(`🎴 +1 tirada por acertar el ganador`);
-    if (first.exactCorrect) rewardLines.push(`🎯 +3 tiradas por marcador exacto`);
-    if (!first.won && !first.exactCorrect) rewardLines.push('Sin recompensa esta vez. ¡Suerte para la próxima!');
+    const lineasRecompensa = [];
+    if (first.won) lineasRecompensa.push(`🎴 +1 tirada por acertar el ganador`);
+    if (first.exactCorrect) lineasRecompensa.push(`🎯 +3 tiradas por marcador exacto`);
+    if (!first.won && !first.exactCorrect) lineasRecompensa.push('Sin recompensa esta vez. ¡Suerte para la próxima!');
 
     Modal.open(`
       <div style="text-align:center;padding:0.5rem 0">
-        <div style="font-size:2rem;margin-bottom:0.25rem">${headerIcon}</div>
-        <h3 style="font-family:'Bebas Neue',cursive;font-size:1.4rem;color:${headerColor};letter-spacing:1px;margin:0 0 0.5rem">
-          ${headerText}
+        <div style="font-size:2rem;margin-bottom:0.25rem">${iconoEncabezado}</div>
+        <h3 style="font-family:'Bebas Neue',cursive;font-size:1.4rem;color:${colorEncabezado};letter-spacing:1px;margin:0 0 0.5rem">
+          ${textoEncabezado}
         </h3>
         <p style="font-size:0.85rem;color:var(--text-secondary);margin:0 0 0.25rem">
-          ${homeFlag} ${home} <strong style="color:var(--text-primary)">${first.finalScore || ''}</strong> ${away} ${awayFlag}
+          ${banderaLocal} ${local} <strong style="color:var(--text-primary)">${first.finalScore || ''}</strong> ${visitante} ${banderaVisitante}
         </p>
         <p style="font-size:0.75rem;color:var(--text-muted);margin:0 0 0.75rem">
-          Tu predicción: <strong>${pickLabel}</strong>${first.exact ? ` · Marcador: <strong>${first.exact}</strong>` : ''}
+          Tu predicción: <strong>${etiquetaEleccion}</strong>${first.exacto ? ` · Marcador: <strong>${first.exacto}</strong>` : ''}
         </p>
         <div style="background:var(--bg-surface);border-radius:10px;padding:0.6rem;margin-bottom:0.75rem">
-          ${rewardLines.map(l => `<div style="font-size:0.8rem;color:var(--text-primary);padding:2px 0">${l}</div>`).join('')}
+          ${lineasRecompensa.map(l => `<div style="font-size:0.8rem;color:var(--text-primary);padding:2px 0">${l}</div>`).join('')}
           ${first.tiradas > 0 ? `<div style="font-size:1rem;font-weight:800;color:var(--accent);margin-top:4px">Total: +${first.tiradas} 🎴</div>` : ''}
         </div>
-        <button class="btn btn-primary" id="pred-result-next" style="width:100%">
+        <button class="btn btn-primary" id="prediccion-result-next" style="width:100%">
           ${rest.length ? 'Siguiente' : '¡Genial!'}
         </button>
       </div>
     `);
 
-    document.getElementById('pred-result-next')?.addEventListener('click', () => {
+    document.getElementById('prediccion-result-next')?.addEventListener('click', () => {
       Modal.close();
       if (rest.length) this._showResultModals(rest); 
     });
   },
 
   
-  async checkLiveFinished(allMatches) {
-    if (!Array.isArray(allMatches) || !allMatches.length) return;
-    const finished = allMatches.filter(m => m.status === 'finished'
-      && m.scoreHome !== undefined && m.scoreAway !== undefined);
-    if (!finished.length) return;
-    await this.evaluatePredictions(finished);
+  async checkLiveFinished(todosPartidos) {
+    if (!Array.isArray(todosPartidos) || !todosPartidos.length) return;
+    const finalizados = todosPartidos.filter(m => m.status === 'finalizados'
+      && m.golesLocal !== undefined && m.golesVisitante !== undefined);
+    if (!finalizados.length) return;
+    await this.evaluatePredictions(finalizados);
     
-    const el = document.getElementById('predictions-list');
-    if (el && document.getElementById('tab-predictions')?.classList.contains('active')) {
-      await this.render();
+    const el = document.getElementById('predicciones-list');
+    if (el && document.getElementById('tab-predicciones')?.classList.contains('active')) {
+      await this.renderizar();
     }
   }
 };

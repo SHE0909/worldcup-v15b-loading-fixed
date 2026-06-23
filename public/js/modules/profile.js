@@ -1,64 +1,64 @@
 const Profile = {
 
-  async render() {
-    const user = await Auth.currentUser();
-    if (!user) return;
+  async renderizar() {
+    const usuario = await Auth.currentUser();
+    if (!usuario) return;
 
-    const setEl = (id, val) => { const el = document.getElementById(id); if (el) el.textContent = val; };
-    setEl('profile-name',  user.name  || 'Jugador');
-    setEl('profile-email', user.email || '-');
-    const fechaStr = user.createdAt
-      ? new Date(user.createdAt).toLocaleDateString('es-SV', { dateStyle: 'long' })
+    const elemSet = (id, val) => { const el = document.getElementById(id); if (el) el.textContent = val; };
+    elemSet('perfil-name',  usuario.name  || 'Jugador');
+    elemSet('perfil-email', usuario.email || '-');
+    const fechaStr = usuario.createdAt
+      ? new Date(usuario.createdAt).toLocaleDateString('es-SV', { dateStyle: 'long' })
       : '-';
-    setEl('profile-date', 'Registrado: ' + fechaStr);
+    elemSet('perfil-date', 'Registrado: ' + fechaStr);
 
     
-    const avatarEl = document.getElementById('profile-avatar');
-    if (avatarEl) {
-      if (user.photoURL) {
-        avatarEl.innerHTML = `<img src="${user.photoURL}" alt="Avatar" style="width:100%;height:100%;object-fit:cover;border-radius:50%">`;
+    const elemAvatar = document.getElementById('perfil-avatarUser');
+    if (elemAvatar) {
+      if (usuario.photoURL) {
+        elemAvatar.innerHTML = `<img src="${usuario.photoURL}" alt="Avatar" style="width:100%;height:100%;object-fit:cover;border-radius:50%">`;
       } else {
-        const initials = (user.name || 'J').split(' ').map(w => w[0]).join('').substring(0,2).toUpperCase();
-        avatarEl.textContent = initials;
+        const iniciales = (usuario.name || 'J').split(' ').map(w => w[0]).join('').substring(0,2).toUpperCase();
+        elemAvatar.textContent = iniciales;
       }
     }
 
     
-    const figuritas   = user.figuritas || [];
+    const figuritas   = usuario.figuritas || [];
     const unicas      = figuritas.length;
     const total       = Gacha.getTotalFiguritas();
-    const pct         = total > 0 ? Math.round((unicas / total) * 100) : 0;
-    const monedas     = user.monedas || 0;
+    const porcentaje         = total > 0 ? Math.vuelta((unicas / total) * 100) : 0;
+    const monedas     = usuario.monedas || 0;
     const duplicados  = figuritas.reduce((s, f) => s + (f.duplicados||0), 0);
 
-    setEl('ps-figuritas', `${unicas}/${total}`);
-    setEl('ps-tiradas',   user.tiradas ?? 0);
-    setEl('ps-wins',      user.battleWins || 0);
-    setEl('ps-losses',    user.battleLosses || 0);
-    setEl('ps-aciertos',  user.aciertos ?? 0);
+    elemSet('ps-figuritas', `${unicas}/${total}`);
+    elemSet('ps-tiradas',   usuario.tiradas ?? 0);
+    elemSet('ps-victorias',      usuario.battleWins || 0);
+    elemSet('ps-derrotas',    usuario.battleLosses || 0);
+    elemSet('ps-aciertos',  usuario.aciertos ?? 0);
 
-    const pityEl = document.getElementById('ps-pity');
-    if (pityEl) pityEl.textContent = `${user.pityCount || 0}/${50}`;
+    const elemPity = document.getElementById('ps-pity');
+    if (elemPity) elemPity.textContent = `${usuario.contadorPity || 0}/${50}`;
 
-    const monedasEl = document.getElementById('ps-monedas');
-    if (monedasEl) monedasEl.textContent = monedas;
+    const elemMonedas = document.getElementById('ps-monedas');
+    if (elemMonedas) elemMonedas.textContent = monedas;
 
-    const pctEl = document.getElementById('ps-album-pct');
-    if (pctEl) pctEl.textContent = `${pct}%`;
+    const elemPorcentaje = document.getElementById('ps-album-porcentaje');
+    if (elemPorcentaje) elemPorcentaje.textContent = `${porcentaje}%`;
 
-    this.renderFavorites(user);
-    this.renderBetHistory(user);
+    this.renderFavorites(usuario);
+    this.renderBetHistory(usuario);
     this._bindEditEvents();
 
-    const btnConvert = document.getElementById('btn-convert-dupes');
-    if (btnConvert) {
-      btnConvert.textContent = `Convertir duplicados (${duplicados}) en monedas`;
-      btnConvert.disabled = duplicados === 0;
-      btnConvert.onclick = async () => {
-        const { coins, converted } = await Gacha.convertDuplicates();
-        if (coins > 0) {
-          Toast.success(`+${coins} monedas obtenidas (${converted} duplicados)`);
-          await this.render();
+    const btnConvertir = document.getElementById('btn-convert-duplicados');
+    if (btnConvertir) {
+      btnConvertir.textContent = `Convertir duplicados (${duplicados}) en monedas`;
+      btnConvertir.disabled = duplicados === 0;
+      btnConvertir.onclick = async () => {
+        const { monedas, converted } = await Gacha.convertDuplicates();
+        if (monedas > 0) {
+          Toast.success(`+${monedas} monedas obtenidas (${converted} duplicados)`);
+          await this.renderizar();
         } else {
           Toast.warn('No tienes duplicados para convertir');
         }
@@ -68,24 +68,24 @@ const Profile = {
 
   _bindEditEvents() {
     
-    const btnName = document.getElementById('btn-edit-name');
-    if (btnName && !btnName._bound) {
-      btnName._bound = true;
-      btnName.addEventListener('click', () => this._editField('name', 'Nuevo nombre', 'text'));
+    const btnNombre = document.getElementById('btn-edit-name');
+    if (btnNombre && !btnNombre._bound) {
+      btnNombre._bound = true;
+      btnNombre.addEventListener('click', () => this._editField('name', 'Nuevo nombre', 'text'));
     }
     
-    const btnEmail = document.getElementById('btn-edit-email');
-    if (btnEmail && !btnEmail._bound) {
-      btnEmail._bound = true;
-      btnEmail.addEventListener('click', () => this._editField('email', 'Nuevo correo', 'email'));
+    const btnCorreo = document.getElementById('btn-edit-email');
+    if (btnCorreo && !btnCorreo._bound) {
+      btnCorreo._bound = true;
+      btnCorreo.addEventListener('click', () => this._editField('email', 'Nuevo correo', 'email'));
     }
     
-    const btnAvatar = document.getElementById('btn-edit-avatar');
-    const inputFile = document.getElementById('input-avatar-file');
-    if (btnAvatar && inputFile && !btnAvatar._bound) {
+    const btnAvatar = document.getElementById('btn-edit-avatarUser');
+    const archivoEntrada = document.getElementById('input-avatarUser-file');
+    if (btnAvatar && archivoEntrada && !btnAvatar._bound) {
       btnAvatar._bound = true;
-      btnAvatar.addEventListener('click', () => inputFile.click());
-      inputFile.addEventListener('change', async (e) => {
+      btnAvatar.addEventListener('click', () => archivoEntrada.click());
+      archivoEntrada.addEventListener('change', async (e) => {
         const file = e.target.files[0];
         if (!file) return;
         await this._updateAvatar(file);
@@ -95,22 +95,22 @@ const Profile = {
   },
 
   async _editField(field, placeholder, type = 'text') {
-    const user = await Auth.currentUser();
-    if (!user) return;
+    const usuario = await Auth.currentUser();
+    if (!usuario) return;
 
-    const currentVal = user[field] || '';
-    const newVal = prompt(`${placeholder}:`, currentVal);
-    if (newVal === null || newVal.trim() === '') return;
+    const valorActual = usuario[field] || '';
+    const nuevoValor = prompt(`${placeholder}:`, valorActual);
+    if (nuevoValor === null || nuevoValor.trim() === '') return;
 
-    if (type === 'email' && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(newVal.trim())) {
+    if (type === 'email' && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(nuevoValor.trim())) {
       Toast.error('Correo no válido');
       return;
     }
 
-    user[field] = newVal.trim();
-    await Auth.updateUser(user);
+    usuario[field] = nuevoValor.trim();
+    await Auth.updateUser(usuario);
     Toast.success(`${field === 'name' ? 'Nombre' : 'Correo'} actualizado`);
-    await this.render();
+    await this.renderizar();
   },
 
   async _updateAvatar(file) {
@@ -118,7 +118,7 @@ const Profile = {
     if (file.size > 2 * 1024 * 1024) { Toast.error('La imagen no debe superar 2 MB'); return; }
 
     
-    const dataURL = await new Promise((resolve, reject) => {
+    const urlDatos = await new Promise((resolve, reject) => {
       const img = new Image();
       const url = URL.createObjectURL(file);
       img.onload = () => {
@@ -138,36 +138,36 @@ const Profile = {
       img.src = url;
     });
 
-    const user = await Auth.currentUser();
-    if (!user) return;
-    user.photoURL = dataURL;
-    await Auth.updateUser(user);
+    const usuario = await Auth.currentUser();
+    if (!usuario) return;
+    usuario.photoURL = urlDatos;
+    await Auth.updateUser(usuario);
     Toast.success('Foto de perfil actualizada');
-    await this.render();
+    await this.renderizar();
     if (typeof window.fillDrawerUser === 'function') await window.fillDrawerUser();
   },
 
-  renderFavorites(user) {
-    const favTeams   = document.getElementById('fav-teams-list');
-    const favPlayers = document.getElementById('fav-players-list');
-    const favs       = user.favoritos || [];
+  renderFavorites(usuario) {
+    const equiposFav   = document.getElementById('fav-equipos-list');
+    const jugadoresFav = document.getElementById('fav-jugadores-list');
+    const favoritos       = usuario.favoritos || [];
 
-    const teams   = favs.filter(f => f.tipo === 'team');
-    const players = favs.filter(f => f.tipo === 'player');
+    const equipos   = favoritos.filter(f => f.tipo === 'equipo');
+    const jugadores = favoritos.filter(f => f.tipo === 'player');
 
-    if (favTeams) {
-      favTeams.innerHTML = teams.length
-        ? teams.map(f => `
+    if (equiposFav) {
+      equiposFav.innerHTML = equipos.length
+        ? equipos.map(f => `
             <span class="fav-tag">
               ${f.flag || ''} ${f.name}
-              <button data-id="${f.id}" data-tipo="team" title="Eliminar">✕</button>
+              <button data-id="${f.id}" data-tipo="equipo" title="Eliminar">✕</button>
             </span>`).join('')
         : '<span class="text-muted" style="font-size:0.8rem">Sin equipos favoritos</span>';
     }
 
-    if (favPlayers) {
-      favPlayers.innerHTML = players.length
-        ? players.map(f => `
+    if (jugadoresFav) {
+      jugadoresFav.innerHTML = jugadores.length
+        ? jugadores.map(f => `
             <span class="fav-tag">
               ${f.flag || ''} ${f.name}
               <button data-id="${f.id}" data-tipo="player" title="Eliminar">✕</button>
@@ -176,21 +176,21 @@ const Profile = {
     }
 
     
-    const allBtns = [
-      ...(favTeams?.querySelectorAll('button') || []),
-      ...(favPlayers?.querySelectorAll('button') || [])
+    const todosLosBtns = [
+      ...(equiposFav?.querySelectorAll('button') || []),
+      ...(jugadoresFav?.querySelectorAll('button') || [])
     ];
-    allBtns.forEach(btn => {
+    todosLosBtns.forEach(btn => {
       btn.addEventListener('click', async () => {
         await this.removeFavorite(btn.dataset.id, btn.dataset.tipo);
       });
     });
   },
 
-  renderBetHistory(user) {
+  renderBetHistory(usuario) {
     const history = document.getElementById('bet-history');
     if (!history) return;
-    const preds = (user.predicciones || []).slice().reverse();
+    const preds = (usuario.predicciones || []).slice().reverse();
 
     if (!preds.length) {
       history.innerHTML = '<p class="empty-state" style="font-size:0.8rem">Sin predicciones aún</p>';
@@ -198,48 +198,48 @@ const Profile = {
     }
 
     
-    const wins       = preds.filter(p => p.result === 'win').length;
-    const losses     = preds.filter(p => p.result === 'loss').length;
+    const victorias       = preds.filter(p => p.result === 'win').length;
+    const derrotas     = preds.filter(p => p.result === 'loss').length;
     const totalGanado = preds.reduce((acc, p) => {
       if (p.exactCorrect) return acc + 3;
       if (p.result === 'win') return acc + 1;
       return acc;
     }, 0);
 
-    const summaryHtml = `
+    const htmlResumen = `
       <div class="bet-summary" style="display:flex;gap:0.5rem;margin-bottom:0.6rem;padding:0.5rem 0.75rem;background:var(--surface-2,rgba(255,255,255,0.05));border-radius:8px;font-size:0.75rem;flex-wrap:wrap;">
-        <span>🏆 <strong>${wins}</strong> ganados</span>
+        <span>🏆 <strong>${victorias}</strong> ganados</span>
         <span style="color:var(--text-muted)">·</span>
-        <span>❌ <strong>${losses}</strong> perdidos</span>
+        <span>❌ <strong>${derrotas}</strong> perdidos</span>
         <span style="color:var(--text-muted)">·</span>
         <span style="color:var(--gold)">🎴 <strong>+${totalGanado}</strong> tiradas ganadas</span>
       </div>`;
 
-    history.innerHTML = summaryHtml + preds.slice(0, 20).map(p => {
+    history.innerHTML = htmlResumen + preds.slice(0, 20).map(p => {
       const icon    = p.result === 'win' ? '✅' : p.result === 'loss' ? '❌' : '⏳';
       const tiradas = p.exactCorrect ? 3 : p.result === 'win' ? 1 : 0;
-      const rewardHtml = tiradas > 0
-        ? `<span class="bet-reward-badge" style="font-size:0.65rem;background:rgba(255,193,7,0.15);color:var(--gold);border-radius:4px;padding:1px 5px;margin-left:4px">+${tiradas} 🎴</span>`
+      const htmlRecompensa = tiradas > 0
+        ? `<span class="bet-recompensa-insignia" style="font-size:0.65rem;background:rgba(255,193,7,0.15);color:var(--gold);border-radius:4px;padding:1px 5px;margin-left:4px">+${tiradas} 🎴</span>`
         : '';
-      const exactBadge = p.exactCorrect
+      const insigniaExacta = p.exactCorrect
         ? `<span style="font-size:0.6rem;color:#4fc3f7;margin-left:4px">EXACTO</span>` : '';
       
-      const scoreHtml = p.finalScore
+      const htmlMarcador = p.finalScore
         ? `<span class="bet-score" style="font-size:0.65rem;color:var(--text-muted)">${p.finalHome || ''} ${p.finalScore} ${p.finalAway || ''}</span>`
         : '';
       
-      const matchLabel = (p.matchHome && p.matchAway)
-        ? `${p.matchHomeFlag || ''} ${p.matchHome} vs ${p.matchAway} ${p.matchAwayFlag || ''}`
-        : p.matchId;
+      const etiquetaPartido = (p.localPartido && p.matchAway)
+        ? `${p.matchHomeFlag || ''} ${p.localPartido} vs ${p.matchAway} ${p.matchAwayFlag || ''}`
+        : p.idPartido;
       return `
         <div class="bet-item">
           <div class="bet-left">
-            <span class="bet-match">${matchLabel}</span>
-            <span class="bet-pick">${this._labelPick(p.pick)}${p.exact ? ' · ' + p.exact : ''}${exactBadge}</span>
-            ${scoreHtml}
+            <span class="bet-match">${etiquetaPartido}</span>
+            <span class="bet-pick">${this._labelPick(p.pick)}${p.exacto ? ' · ' + p.exacto : ''}${insigniaExacta}</span>
+            ${htmlMarcador}
           </div>
           <span class="bet-result ${p.result}">
-            ${icon}${rewardHtml}
+            ${icon}${htmlRecompensa}
           </span>
         </div>
       `;
@@ -247,87 +247,87 @@ const Profile = {
   },
 
   _labelPick(p) {
-    return { home:'Local', away:'Visitante', draw:'Empate' }[p] || p;
+    return { local:'Local', visitante:'Visitante', draw:'Empate' }[p] || p;
   },
 
   
   async addFavorite(item, tipo) {
-    const user = await Auth.currentUser();
-    if (!user) return;
-    const favs = user.favoritos || [];
-    if (favs.find(f => f.id === item.id && f.tipo === tipo)) {
+    const usuario = await Auth.currentUser();
+    if (!usuario) return;
+    const favoritos = usuario.favoritos || [];
+    if (favoritos.find(f => f.id === item.id && f.tipo === tipo)) {
       Toast.warn('Ya está en favoritos');
       return;
     }
-    favs.push({ ...item, tipo });
-    user.favoritos = favs;
-    await Auth.updateUser(user);
+    favoritos.push({ ...item, tipo });
+    usuario.favoritos = favoritos;
+    await Auth.updateUser(usuario);
     
-    try { await DB.logActivity(user.email, 'add_favorite', `${tipo}: ${item.name}`); } catch(_) {}
+    try { await DB.logActivity(usuario.email, 'add_favorite', `${tipo}: ${item.name}`); } catch(_) {}
     Toast.success(`⭐ ${item.name} agregado a favoritos`);
     
-    this.renderFavorites(user);
+    this.renderFavorites(usuario);
   },
 
   async removeFavorite(id, tipo) {
-    const user = await Auth.currentUser();
-    if (!user) return;
-    user.favoritos = (user.favoritos || []).filter(f => !(f.id === id && f.tipo === tipo));
-    await Auth.updateUser(user);
+    const usuario = await Auth.currentUser();
+    if (!usuario) return;
+    usuario.favoritos = (usuario.favoritos || []).filter(f => !(f.id === id && f.tipo === tipo));
+    await Auth.updateUser(usuario);
     Toast.show('Eliminado de favoritos');
-    this.renderFavorites(user);
+    this.renderFavorites(usuario);
   },
 
   
   async isFavorite(id, tipo = null) {
-    const user = await Auth.currentUser();
-    return (user?.favoritos || []).some(f => f.id === id && (tipo === null || f.tipo === tipo));
+    const usuario = await Auth.currentUser();
+    return (usuario?.favoritos || []).some(f => f.id === id && (tipo === null || f.tipo === tipo));
   },
 
   
   async exportData() {
-    const user = await Auth.currentUser();
-    if (!user) return;
+    const usuario = await Auth.currentUser();
+    if (!usuario) return;
 
-    const exportObj = {
+    const objExportar = {
       version:      '2.2',
       exportedAt:   new Date().toISOString(),
       app:          'World Cup Collector UES',
-      usuario:      user.name,
-      email:        user.email,
-      photoURL:     user.photoURL || null,
-      tiradas:      user.tiradas,
-      aciertos:     user.aciertos,
-      monedas:      user.monedas || 0,
-      pityCount:    user.pityCount || 0,
-      battleWins:   user.battleWins   || 0,
-      battleLosses: user.battleLosses || 0,
-      exchangeLog:  user.exchangeLog  || [],
-      lastDailyPull: user.lastDailyPull || null,
-      lastDailySpin: user.lastDailySpin || null,
-      figuritas: (user.figuritas || []).map(f => ({
+      usuario:      usuario.name,
+      email:        usuario.email,
+      photoURL:     usuario.photoURL || null,
+      tiradas:      usuario.tiradas,
+      aciertos:     usuario.aciertos,
+      monedas:      usuario.monedas || 0,
+      contadorPity:    usuario.contadorPity || 0,
+      battleWins:   usuario.battleWins   || 0,
+      battleLosses: usuario.battleLosses || 0,
+      exchangeLog:  usuario.exchangeLog  || [],
+      lastDailyPull: usuario.lastDailyPull || null,
+      lastDailySpin: usuario.lastDailySpin || null,
+      figuritas: (usuario.figuritas || []).map(f => ({
         id:         f.id,
         nombre:     f.name,
-        equipo:     f.team,
+        equipo:     f.equipo,
         rareza:     f.rareza,
         duplicados: f.duplicados || 0,
         obtenida:   f.obtenida
       })),
-      favoritos:    user.favoritos || [],
-      predicciones: (user.predicciones || []).map(p => ({
-        matchId:      p.matchId,
+      favoritos:    usuario.favoritos || [],
+      predicciones: (usuario.predicciones || []).map(p => ({
+        idPartido:      p.idPartido,
         pick:         p.pick,
-        exact:        p.exact,
+        exacto:        p.exacto,
         result:       p.result,
         exactCorrect: p.exactCorrect || false
       })),
-      equipo_ideal: user.equipo_ideal || {},
-      wcPrediction: user.wcPrediction || (() => {
+      equipo_ideal: usuario.equipo_ideal || {},
+      wcPrediction: usuario.wcPrediction || (() => {
         try { return JSON.parse(localStorage.getItem('wcc_wc_prediction') || 'null'); } catch(_) { return null; }
       })(),
       battleAttempts: (() => {
         
-        const key = user.email ? `wcc_battle_attempts_${user.email}` : 'wcc_battle_attempts';
+        const key = usuario.email ? `wcc_battle_attempts_${usuario.email}` : 'wcc_battle_attempts';
         try { return JSON.parse(localStorage.getItem(key) || 'null'); } catch(_) { return null; }
       })(),
       minigameStats: (() => {
@@ -342,15 +342,15 @@ const Profile = {
       })()
     };
 
-    const blob = new Blob([JSON.stringify(exportObj, null, 2)], { type: 'application/json' });
+    const blob = new Blob([JSON.stringify(objExportar, null, 2)], { type: 'application/json' });
     const url  = URL.createObjectURL(blob);
     const a    = document.createElement('a');
     a.href     = url;
-    a.download = `wcc_${user.name.replace(/\s/g,'_')}_${Date.now()}.json`;
+    a.download = `wcc_${usuario.name.replace(/\s/g,'_')}_${Date.now()}.json`;
     a.click();
     URL.revokeObjectURL(url);
     Toast.success('Datos exportados 📥');
-    await DB.logActivity(user.email, 'export', 'JSON export');
+    await DB.logActivity(usuario.email, 'export', 'JSON export');
   },
 
   
@@ -377,60 +377,60 @@ const Profile = {
         return;
       }
 
-      const user = await Auth.currentUser();
-      if (!user)             { Toast.error('Inicia sesión primero'); return; }
-      if (user.email !== data.email) {
+      const usuario = await Auth.currentUser();
+      if (!usuario)             { Toast.error('Inicia sesión primero'); return; }
+      if (usuario.email !== data.email) {
         Toast.error(`El archivo pertenece a otro usuario (${data.email})`);
         return;
       }
 
-      const confirmed = confirm(
+      const confirmado = confirm(
         `¿Importar datos de "${data.usuario}"?\n` +
         `Figuritas: ${data.figuritas.length} | Tiradas: ${data.tiradas} | Monedas: ${data.monedas || 0}\n\n` +
         `⚠️ Esto REEMPLAZARÁ tu progreso actual de figuritas y tiradas.`
       );
-      if (!confirmed) return;
+      if (!confirmado) return;
 
       
       const pool   = Gacha.getPool();
-      const merged = data.figuritas.map(f => {
+      const combinados = data.figuritas.map(f => {
         const base = pool.find(p => p.id === f.id);
         return base
           ? { ...base, duplicados: f.duplicados || 0, obtenida: f.obtenida || new Date().toISOString() }
           : null;
       }).filter(Boolean);
 
-      user.figuritas        = merged;
+      usuario.figuritas        = combinados;
       
-      user.tiradas          = typeof data.tiradas === 'number' ? data.tiradas : (user.tiradas ?? 0);
-      user.freeSpinsClaimed = true;
-      user.aciertos         = Number(data.aciertos)  || user.aciertos;
-      user.monedas          = typeof data.monedas === 'number' ? data.monedas : (user.monedas ?? 0);
-      user.pityCount        = Number(data.pityCount) || 0;
-      user.battleWins       = typeof data.battleWins   === 'number' ? data.battleWins   : (user.battleWins   ?? 0);
-      user.battleLosses     = typeof data.battleLosses === 'number' ? data.battleLosses : (user.battleLosses ?? 0);
-      user.exchangeLog      = Array.isArray(data.exchangeLog) ? data.exchangeLog : (user.exchangeLog || []);
-      user.favoritos        = data.favoritos    || user.favoritos;
-      user.predicciones     = data.predicciones || user.predicciones;
-      user.equipo_ideal     = data.equipo_ideal || user.equipo_ideal;
+      usuario.tiradas          = typeof data.tiradas === 'number' ? data.tiradas : (usuario.tiradas ?? 0);
+      usuario.freeSpinsClaimed = true;
+      usuario.aciertos         = Number(data.aciertos)  || usuario.aciertos;
+      usuario.monedas          = typeof data.monedas === 'number' ? data.monedas : (usuario.monedas ?? 0);
+      usuario.contadorPity        = Number(data.contadorPity) || 0;
+      usuario.battleWins       = typeof data.battleWins   === 'number' ? data.battleWins   : (usuario.battleWins   ?? 0);
+      usuario.battleLosses     = typeof data.battleLosses === 'number' ? data.battleLosses : (usuario.battleLosses ?? 0);
+      usuario.exchangeLog      = Array.isArray(data.exchangeLog) ? data.exchangeLog : (usuario.exchangeLog || []);
+      usuario.favoritos        = data.favoritos    || usuario.favoritos;
+      usuario.predicciones     = data.predicciones || usuario.predicciones;
+      usuario.equipo_ideal     = data.equipo_ideal || usuario.equipo_ideal;
       if (data.wcPrediction) {
-        user.wcPrediction = data.wcPrediction;
+        usuario.wcPrediction = data.wcPrediction;
         
         try { localStorage.setItem('wcc_wc_prediction', JSON.stringify(data.wcPrediction)); } catch(_) {}
       }
       
-      if (data.usuario)  user.name     = data.usuario;
-      if (data.photoURL) user.photoURL = data.photoURL;
+      if (data.usuario)  usuario.name     = data.usuario;
+      if (data.photoURL) usuario.photoURL = data.photoURL;
       
-      if (data.lastDailyPull) user.lastDailyPull = data.lastDailyPull;
-      if (data.lastDailySpin) user.lastDailySpin = data.lastDailySpin;
+      if (data.lastDailyPull) usuario.lastDailyPull = data.lastDailyPull;
+      if (data.lastDailySpin) usuario.lastDailySpin = data.lastDailySpin;
       
       if (data.battleAttempts) {
         try {
-          const key = user.email ? `wcc_battle_attempts_${user.email}` : 'wcc_battle_attempts';
+          const key = usuario.email ? `wcc_battle_attempts_${usuario.email}` : 'wcc_battle_attempts';
           localStorage.setItem(key, JSON.stringify(data.battleAttempts));
           
-          if (typeof BattleAttempts !== 'undefined') BattleAttempts.setUser(user.email);
+          if (typeof IntentosPartido !== 'undefined') IntentosPartido.setUser(usuario.email);
         } catch(_) {}
       }
       
@@ -442,8 +442,8 @@ const Profile = {
         } catch(_) {}
       }
 
-      await Auth.updateUser(user);
-      await DB.logActivity(user.email, 'import', `JSON import v${data.version || '1.0'}`);
+      await Auth.updateUser(usuario);
+      await DB.logActivity(usuario.email, 'import', `JSON import v${data.version || '1.0'}`);
       Toast.success('✅ Datos importados correctamente');
       await App.loadUserData();
     } catch (err) {

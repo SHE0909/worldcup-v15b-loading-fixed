@@ -1,4 +1,4 @@
-const FORMATIONS = {
+const FORMACIONES = {
   '4-3-3': [
     { slots: ['POR'] },
     { slots: ['DEF','DEF','DEF','DEF'] },
@@ -38,13 +38,13 @@ const FORMATIONS = {
   ],
 };
 
-function getFormationRows(name) {
-  return FORMATIONS[name] || FORMATIONS['4-3-3'];
+function obtenerFilasFormacion(name) {
+  return FORMACIONES[name] || FORMACIONES['4-3-3'];
 }
 
-function buildPlayerStats() {
+function construirStatsJugadores() {
   const map = {};
-  const pool = (typeof FIGURITAS_POOL !== 'undefined') ? FIGURITAS_POOL : [];
+  const pool = (typeof POZO_FIGURITAS !== 'undefined') ? POZO_FIGURITAS : [];
   for (const f of pool) {
     map[f.id] = {
       goals:   f.goals   ?? 0,
@@ -56,7 +56,7 @@ function buildPlayerStats() {
   }
   return map;
 }
-const PLAYER_STATS = buildPlayerStats();
+const STATS_JUGADORES = construirStatsJugadores();
 
 const Album = {
   _currentFilter: 'all',
@@ -91,18 +91,18 @@ const Album = {
   },
 
   
-  async render(filter = 'all') {
+  async renderizar(filter = 'all') {
     this._currentFilter = filter;
-    const user     = await Auth.currentUser();
-    const owned    = this._enrichOwned(user?.figuritas);
+    const usuario     = await Auth.currentUser();
+    const coleccion    = this._enrichOwned(usuario?.figuritas);
     const pool     = Gacha.getPool();
-    const filtered = filter === 'all' ? pool : pool.filter(f => f.rareza === filter);
-    const ownedSet = new Set(owned.map(f => f.id));
-    const pct      = pool.length > 0 ? Math.round((ownedSet.size / pool.length) * 100) : 0;
+    const filtradas = filter === 'all' ? pool : pool.filter(f => f.rareza === filter);
+    const setColeccion = new Set(coleccion.map(f => f.id));
+    const porcentaje      = pool.length > 0 ? Math.vuelta((setColeccion.size / pool.length) * 100) : 0;
 
-    document.getElementById('album-pct').textContent =
-      `${pct}% completado (${ownedSet.size}/${pool.length})`;
-    document.getElementById('album-bar').style.width = `${pct}%`;
+    document.getElementById('album-porcentaje').textContent =
+      `${porcentaje}% completado (${setColeccion.size}/${pool.length})`;
+    document.getElementById('album-bar').style.width = `${porcentaje}%`;
 
     const grid = document.getElementById('album-grid');
     if (!grid) return;
@@ -115,33 +115,33 @@ const Album = {
       if (localStorage.getItem('wcc_photos_v2')) localStorage.removeItem('wcc_photos_v2');
     } catch(_) {}
 
-    grid.innerHTML = filtered.map(fig => {
-      const uFig  = owned.find(f => f.id === fig.id);
-      const has   = !!uFig;
-      const dupes = uFig?.duplicados || 0;
+    grid.innerHTML = filtradas.map(fig => {
+      const figUsuario  = coleccion.find(f => f.id === fig.id);
+      const has   = !!figUsuario;
+      const duplicados = figUsuario?.duplicados || 0;
       
       const cached    = has ? API.getPhotoSync(fig) : null;
-      const photoHtml = has
+      const htmlFoto = has
         ? (cached
             ? `<img src="${cached}" class="album-slot-img" alt="${fig.name}" referrerpolicy="no-referrer" loading="lazy"
                     onerror="this.style.display='none';this.parentNode.querySelector('.album-slot-emoji-fb').style.display='inline'"><span class="album-slot-emoji album-slot-emoji-fb" style="display:none">${this._emojiStr(fig.emoji)}</span>`
             : `<span class="album-slot-emoji">${this._emojiStr(fig.emoji)}</span>`)
         : `<span class="album-slot-unknown">❓</span>`;
       return `
-        <div class="album-slot ${has?'owned':'empty'} ${fig.rareza}" data-id="${fig.id}">
-          <div class="album-slot-photo" id="aphoto-${fig.id}">${photoHtml}</div>
+        <div class="album-slot ${has?'coleccion':'empty'} ${fig.rareza}" data-id="${fig.id}">
+          <div class="album-slot-photo" id="aphoto-${fig.id}">${htmlFoto}</div>
           ${has ? `<span class="album-slot-name">${fig.name.split(' ')[0]}</span>` : ''}
-          ${dupes > 0 ? `<span class="album-slot-dupe">×${dupes+1}</span>` : ''}
-          <span class="rarity-badge badge-${fig.rareza}">${Gacha.getRarityLabel(fig.rareza)[0]}</span>
+          ${duplicados > 0 ? `<span class="album-slot-dupe">×${duplicados+1}</span>` : ''}
+          <span class="rarity-insignia insignia-${fig.rareza}">${Gacha.getRarityLabel(fig.rareza)[0]}</span>
         </div>`;
     }).join('');
 
-    grid.querySelectorAll('.album-slot.owned').forEach(el =>
-      el.addEventListener('click', () => this.showCardDetail(el.dataset.id, owned))
+    grid.querySelectorAll('.album-slot.coleccion').forEach(el =>
+      el.addEventListener('click', () => this.showCardDetail(el.dataset.id, coleccion))
     );
 
     
-    filtered.filter(f => ownedSet.has(f.id)).forEach(fig => {
+    filtradas.filter(f => setColeccion.has(f.id)).forEach(fig => {
       if (API.getPhotoSync(fig)) return; 
       this._getPhoto(fig).then(url => {
         if (!url) return;
@@ -154,61 +154,61 @@ const Album = {
     });
   },
   
-  async showCardDetail(id, owned) {
+  async showCardDetail(id, coleccion) {
     const fig   = Gacha.getPool().find(f => f.id === id);
-    const uFig  = owned.find(f => f.id === id);
+    const figUsuario  = coleccion.find(f => f.id === id);
     if (!fig) return;
-    const stats = PLAYER_STATS[fig.id] || {};
+    const stats = STATS_JUGADORES[fig.id] || {};
     const photo = await this._getPhoto(fig);  
-    const isPOR = fig.pos === 'POR';
-    const s1v   = isPOR ? (stats.saves??0) : (stats.goals??0);
-    const s1l   = isPOR ? 'Paradas' : 'Goles';
-    const s2v   = isPOR ? (stats.apps??0)  : (stats.assists??0);
-    const s2l   = isPOR ? 'PJ' : 'Asist.';
+    const esPortero = fig.pos === 'POR';
+    const s1v   = esPortero ? (stats.saves??0) : (stats.goals??0);
+    const s1l   = esPortero ? 'Paradas' : 'Goles';
+    const s2v   = esPortero ? (stats.apps??0)  : (stats.assists??0);
+    const s2l   = esPortero ? 'PJ' : 'Asist.';
     Modal.open(`
-      <div class="modal-player-detail">
+      <div class="modal2-player-detail">
         ${photo
-          ? `<div class="modal-player-photo">
+          ? `<div class="modal2-player-photo">
                <img referrerpolicy="no-referrer" src="${photo}" alt="${fig.name}"
                     style="width:100%;height:100%;object-fit:cover;object-position:top center;border-radius:8px;"
                     onerror="this.parentNode.innerHTML='<span style=font-size:2rem>${this._emojiStr(fig.emoji)}</span>'"/>
              </div>`
           : `<div style="font-size:2.5rem;margin-bottom:0.75rem">${this._emojiStr(fig.emoji)}</div>`}
-        <h2 class="modal-player-name">${fig.name}</h2>
-        <p class="modal-player-team">${fig.flag||''} ${fig.team}</p>
+        <h2 class="modal2-player-name">${fig.name}</h2>
+        <p class="modal2-player-equipo">${fig.flag||''} ${fig.equipo}</p>
         <div style="display:flex;gap:0.5rem;justify-content:center;margin-bottom:1rem;flex-wrap:wrap">
           <span class="rarity ${fig.rareza}">${Gacha.getRarityLabel(fig.rareza)}</span>
-          <span class="pos-badge">${fig.pos}</span>
+          <span class="pos-insignia">${fig.pos}</span>
           <span class="figurita-rating">⭐${fig.rating}</span>
         </div>
-        <div class="modal-stats-row">
-          <div class="modal-stat"><span>${s1v}</span><label>${s1l}</label></div>
-          <div class="modal-stat"><span>${s2v}</span><label>${s2l}</label></div>
-          <div class="modal-stat"><span>${stats.apps??0}</span><label>Partidos</label></div>
+        <div class="modal2-stats-row">
+          <div class="modal2-stat"><span>${s1v}</span><etiqueta>${s1l}</etiqueta></div>
+          <div class="modal2-stat"><span>${s2v}</span><etiqueta>${s2l}</etiqueta></div>
+          <div class="modal2-stat"><span>${stats.apps??0}</span><etiqueta>Partidos</etiqueta></div>
         </div>
-        ${(uFig?.duplicados||0)>0
-          ? `<p style="font-size:0.75rem;color:var(--gold);margin-top:0.75rem">🔁 ${uFig.duplicados} dupl.</p>`:''}
+        ${(figUsuario?.duplicados||0)>0
+          ? `<p style="font-size:0.75rem;color:var(--gold);margin-top:0.75rem">🔁 ${figUsuario.duplicados} dupl.</p>`:''}
         <p style="font-size:0.7rem;color:var(--text-muted);margin-top:0.5rem">
-          Obtenida: ${uFig?.obtenida?new Date(uFig.obtenida).toLocaleDateString('es'):'-'}
+          Obtenida: ${figUsuario?.obtenida?new Date(figUsuario.obtenida).toLocaleDateString('es'):'-'}
         </p>
       </div>`);
   },
 
   
   async renderIdealTeam() {
-    const user      = await Auth.currentUser();
-    const owned     = this._enrichOwned(user?.figuritas);
-    const saved     = user?.equipo_ideal || {};
-    const formation = user?.formacion || '4-3-3';
-    const rows      = getFormationRows(formation);
+    const usuario      = await Auth.currentUser();
+    const coleccion     = this._enrichOwned(usuario?.figuritas);
+    const guardado     = usuario?.equipo_ideal || {};
+    const formation = usuario?.formacion || '4-3-3';
+    const rows      = obtenerFilasFormacion(formation);
 
     
-    const selWrap = document.getElementById('formation-selector');
-    if (selWrap) {
-      selWrap.innerHTML = Object.keys(FORMATIONS).map(f =>
+    const selectFormacion = document.getElementById('formation-selector');
+    if (selectFormacion) {
+      selectFormacion.innerHTML = Object.keys(FORMACIONES).map(f =>
         `<button class="formation-btn ${f===formation?'active':''}" data-f="${f}">${f}</button>`
       ).join('');
-      selWrap.querySelectorAll('.formation-btn').forEach(btn => {
+      selectFormacion.querySelectorAll('.formation-btn').forEach(btn => {
         btn.addEventListener('click', async () => {
           const u = await Auth.currentUser();
           u.formacion = btn.dataset.f;
@@ -225,16 +225,16 @@ const Album = {
     if (!field) return;
 
     
-    const usedIds = new Set(Object.values(saved).filter(Boolean));
+    const idsUsados = new Set(Object.values(guardado).filter(Boolean));
 
     field.innerHTML = '';
     rows.forEach((row, ri) => {
-      const rowDiv = document.createElement('div');
-      rowDiv.className = 'formation-row';
+      const divFila = document.createElement('div');
+      divFila.className = 'formation-row';
       row.slots.forEach((pos, si) => {
         const key    = `${ri}_${si}`;
-        const figId  = saved[key];
-        const fig    = figId ? owned.find(f => f.id === figId) : null;
+        const idFigura  = guardado[key];
+        const fig    = idFigura ? coleccion.find(f => f.id === idFigura) : null;
         const photo  = fig ? API.getPhotoSync(fig) : null;
         const slot   = document.createElement('div');
         slot.className = `formation-slot${fig?' filled':''}`;
@@ -251,15 +251,15 @@ const Album = {
              <span class="formation-pos">${pos}</span>`
           : `<span style="font-size:1rem;opacity:0.3">+</span>
              <span class="formation-pos">${pos}</span>`;
-        slot.addEventListener('click', () => this.openPicker(key, pos, owned, saved, user));
-        rowDiv.appendChild(slot);
+        slot.addEventListener('click', () => this.openPicker(key, pos, coleccion, guardado, usuario));
+        divFila.appendChild(slot);
       });
-      field.appendChild(rowDiv);
+      field.appendChild(divFila);
     });
 
     
-    Object.values(saved).filter(Boolean).forEach(id => {
-      const fig = owned.find(f => f.id === id);
+    Object.values(guardado).filter(Boolean).forEach(id => {
+      const fig = coleccion.find(f => f.id === id);
       if (fig && !API.getPhotoSync(fig)) {
         this._getPhoto(fig).then(() => this.renderIdealTeam());
       }
@@ -267,33 +267,33 @@ const Album = {
   },
 
   
-  openPicker(key, pos, owned, saved, user) {
+  openPicker(key, pos, coleccion, guardado, usuario) {
     
-    const usedInOtherSlots = new Set(
-      Object.entries(saved)
+    const usadoEnOtrasRanuras = new Set(
+      Object.entries(guardado)
         .filter(([k, v]) => k !== key && v)
         .map(([, v]) => v)
     );
 
     
-    const available = owned.filter(f =>
-      f.pos === pos && !usedInOtherSlots.has(f.id)
+    const disponibles = coleccion.filter(f =>
+      f.pos === pos && !usadoEnOtrasRanuras.has(f.id)
     );
-    if (!available.length) {
+    if (!disponibles.length) {
       
-      const posAny = owned.filter(f => f.pos === pos);
-      if (posAny.length > 0) {
+      const cualquierPosicion = coleccion.filter(f => f.pos === pos);
+      if (cualquierPosicion.length > 0) {
         Toast.warn(`Tus figuritas de ${pos} ya están todas asignadas`);
       } else {
         Toast.warn(`No tienes figuritas de ${pos} aún 🎴`);
       }
       return;
     }
-    const currentId = saved[key];
-    const cardsHtml = available.map(f => {
+    const idActual = guardado[key];
+    const htmlCartas = disponibles.map(f => {
       const photo = API.getPhotoSync(f);
       return `
-        <div class="slot-pick-card${f.id===currentId?' slot-pick-active':''}" data-pick="${f.id}">
+        <div class="slot-pick-card${f.id===idActual?' slot-pick-active':''}" data-pick="${f.id}">
           <div class="slot-pick-photo">
             ${photo
               ? `<img referrerpolicy="no-referrer" src="${photo}" alt="${f.name}"
@@ -302,92 +302,92 @@ const Album = {
               : `<span style="font-size:1.5rem">${this._emojiStr(f.emoji)}</span>`}
           </div>
           <span class="slot-pick-name">${f.name.split(' ')[0]}</span>
-          <span class="rarity-badge badge-${f.rareza}" style="position:static;font-size:0.48rem">⭐${f.rating}</span>
-          ${f.id===currentId?'<span class="slot-pick-current">✓</span>':''}
+          <span class="rarity-insignia insignia-${f.rareza}" style="position:static;font-size:0.48rem">⭐${f.rating}</span>
+          ${f.id===idActual?'<span class="slot-pick-current">✓</span>':''}
         </div>`;
     }).join('');
 
     Modal.open(`
       <div class="slot-picker-header">
         <h3>Elegir <span class="text-accent">${pos}</span></h3>
-        <p style="font-size:0.75rem;color:var(--text-muted)">${available.length} disponible(s)</p>
+        <p style="font-size:0.75rem;color:var(--text-muted)">${disponibles.length} disponible(s)</p>
       </div>
       <div class="slot-picker-grid">
         <div class="slot-pick-card slot-pick-clear" data-pick="__clear__">
           <span style="font-size:1.4rem">✕</span>
           <span style="font-size:0.62rem;color:var(--text-muted)">Vaciar</span>
         </div>
-        ${cardsHtml}
+        ${htmlCartas}
       </div>`);
 
     
-    const box = document.getElementById('modal-box');
-    const overlay = document.getElementById('modal-overlay');
+    const box = document.getElementById('modal2-box');
+    const overlay = document.getElementById('modal2-overlay');
 
-    const cleanupListeners = () => {
+    const limpiarListeners = () => {
       box.removeEventListener('click', handler);
-      if (overlay) overlay.removeEventListener('click', onOverlayClose);
+      if (overlay) overlay.removeEventListener('click', alCerrarCapa);
     };
 
     const handler = async (e) => {
       const card = e.target.closest('[data-pick]');
       if (!card) return;
-      if (e.target.closest('#modal-close')) {
+      if (e.target.closest('#modal2-close')) {
         
-        cleanupListeners();
+        limpiarListeners();
         return;
       }
-      cleanupListeners();
+      limpiarListeners();
       const pick = card.dataset.pick;
-      if (pick === '__clear__') delete saved[key];
+      if (pick === '__clear__') delete guardado[key];
       else {
-        saved[key] = pick;
+        guardado[key] = pick;
         
-        const f = owned.find(x => x.id === pick);
+        const f = coleccion.find(x => x.id === pick);
         if (f && !API.getPhotoSync(f)) await this._getPhoto(f);
       }
-      user.equipo_ideal = saved;
-      await Auth.updateUser(user);
+      usuario.equipo_ideal = guardado;
+      await Auth.updateUser(usuario);
       Modal.close();
       await this.renderIdealTeam();
       Toast.success('Alineación actualizada ✅');
     };
 
     
-    const onOverlayClose = () => {
-      cleanupListeners();
+    const alCerrarCapa = () => {
+      limpiarListeners();
     };
 
     box.addEventListener('click', handler);
-    if (overlay) overlay.addEventListener('click', onOverlayClose);
+    if (overlay) overlay.addEventListener('click', alCerrarCapa);
 
     
-    available.forEach(f => {
+    disponibles.forEach(f => {
       if (!API.getPhotoSync(f)) this._getPhoto(f);
     });
   },
 
   async saveTeam() {
-    const user = await Auth.currentUser();
-    if (!user) return;
-    await Auth.updateUser(user);
+    const usuario = await Auth.currentUser();
+    if (!usuario) return;
+    await Auth.updateUser(usuario);
     Toast.success('Alineación guardada ✅');
   },
 
   
-buildIdealTeamPlayers(rawOwned, saved, formation = '4-3-3') {
-    const owned   = this._enrichOwned(rawOwned);
-    const players = [];
-    const rows    = getFormationRows(formation);
+buildIdealTeamPlayers(rawOwned, guardado, formation = '4-3-3') {
+    const coleccion   = this._enrichOwned(rawOwned);
+    const jugadores = [];
+    const rows    = obtenerFilasFormacion(formation);
     rows.forEach((row, ri) => {
       row.slots.forEach((pos, si) => {
-        const id  = saved[`${ri}_${si}`];
-        const fig = id ? owned.find(f => f.id === id) : null;
-        if (fig) players.push({ ...fig });
+        const id  = guardado[`${ri}_${si}`];
+        const fig = id ? coleccion.find(f => f.id === id) : null;
+        if (fig) jugadores.push({ ...fig });
       });
     });
-    return players;
+    return jugadores;
   },
 
-  getPlayerStats(id) { return PLAYER_STATS[id] || null; }
+  getPlayerStats(id) { return STATS_JUGADORES[id] || null; }
 };
