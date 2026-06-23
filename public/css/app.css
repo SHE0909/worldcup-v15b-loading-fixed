@@ -130,11 +130,48 @@ input, button { font-family: inherit; }
   transform: translateY(-1px);
 }
 
+/* ── Video de fondo del menú principal ──
+   Cubre todo el viewport, detrás de la interfaz, con un overlay oscuro
+   para que las cards, header, nav y demás elementos "de frente" resalten. */
+#menu-bg-video {
+  position: fixed;
+  inset: 0;
+  z-index: 0;
+  overflow: hidden;
+  background: var(--bg-base);
+  pointer-events: none;
+}
+#menu-bg-video video {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: 100%;
+  height: 100%;
+  min-width: 100%;
+  min-height: 100%;
+  transform: translate(-50%, -50%);
+  object-fit: cover;
+}
+#menu-bg-video::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background:
+    radial-gradient(circle at 15% 20%, rgba(126,63,242,0.12), transparent 45%),
+    radial-gradient(circle at 85% 15%, rgba(255,43,179,0.10), transparent 50%),
+    rgba(8,12,20,0.72);
+}
+@media (prefers-reduced-motion: reduce) {
+  #menu-bg-video video { display: none; }
+}
+
 #screen-app {
   display: flex;
   flex-direction: column;
   padding-bottom: var(--nav-height);
   min-height: 100vh;
+  position: relative;
+  z-index: 1;
 }
 
 .app-header {
