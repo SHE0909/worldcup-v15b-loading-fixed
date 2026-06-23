@@ -1,12 +1,13 @@
-
 const CACHE_VERSION = 'wcc-ues-v18';
 const BASE = '/worldcup-v15b-loading-fixed';
 
 const STATIC_ASSETS = [
   BASE + '/',
   BASE + '/index.html',
-  BASE + '/app.html',
-  BASE + '/login.html',
+  BASE + '/app/',
+  BASE + '/app/index.html',
+  BASE + '/login/',
+  BASE + '/login/index.html',
   BASE + '/css/app.css',
   BASE + '/css/main.css',
   BASE + '/css/auth.css',
@@ -96,7 +97,7 @@ self.addEventListener('fetch', e => {
       .catch(() => {
         
         return caches.match(e.request)
-          .then(cached => cached || caches.match(BASE + '/app.html'));
+          .then(cached => cached || caches.match(BASE + '/app/index.html'));
       })
   );
 });
