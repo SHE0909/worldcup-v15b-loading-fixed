@@ -787,8 +787,7 @@ const API = {
 
   
   _venueOffset(venue) {
-    // All times in _ALL_MATCHES are stored as El Salvador local time (UTC-6).
-    // Return '-06:00' for mock/fallback data so match state calculations are correct.
+   
     return '-06:00';
   },
 
