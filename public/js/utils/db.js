@@ -1,44 +1,44 @@
-const NOMBRE_BD    = 'WCCollectorUES';
-const VERSION_BD = 3;
+const DB_NAME    = 'WCCollectorUES';
+const DB_VERSION = 3;
 
-let _bd     = null;
-let _promBD = null; 
+let _db     = null;
+let _dbProm = null; 
 
 const DB = {
   open() {
-    if (_bd)     return Promise.resolve(_bd);
-    if (_promBD) return _promBD;
+    if (_db)     return Promise.resolve(_db);
+    if (_dbProm) return _dbProm;
 
-    _promBD = new Promise((resolve, reject) => {
-      let solicitud;
+    _dbProm = new Promise((resolve, reject) => {
+      let req;
       try {
-        solicitud = indexedDB.open(NOMBRE_BD, VERSION_BD);
+        req = indexedDB.open(DB_NAME, DB_VERSION);
       } catch(e) {
-        _promBD = null;
+        _dbProm = null;
         reject(e);
         return;
       }
 
       
       const timeout = setTimeout(() => {
-        _promBD = null;
+        _dbProm = null;
         reject(new Error('IndexedDB timeout — puede haber otra pestaña bloqueando'));
       }, 8000);
 
-      solicitud.onblocked = () => {
+      req.onblocked = () => {
         
         
         console.warn('DB bloqueada por otra pestaña — esperando...');
       };
 
-      solicitud.onupgradeneeded = (e) => {
+      req.onupgradeneeded = (e) => {
         const db  = e.target.result;
         const old = e.oldVersion;
 
         
         db.onerror = (ev) => console.error('DB upgrade error:', ev);
 
-        const asegurar = (name, opts, indexFn) => {
+        const ensure = (name, opts, indexFn) => {
           if (!db.objectStoreNames.contains(name)) {
             const store = db.createObjectStore(name, opts);
             if (indexFn) indexFn(store);
@@ -46,53 +46,53 @@ const DB = {
         };
 
         
-        asegurar('users',       { keyPath: 'email' }, s => s.createIndex('email','email',{unique:true}));
-        asegurar('session',     { keyPath: 'key' });
-        asegurar('figuritas',   { keyPath: 'id'  },   s => s.createIndex('rareza','rareza',{unique:false}));
-        asegurar('predicciones',{ keyPath: 'idPartido' });
-        asegurar('favoritos',   { keyPath: 'id'  },   s => s.createIndex('tipo','tipo',{unique:false}));
-        asegurar('stats_cache', { keyPath: 'key' });
+        ensure('users',       { keyPath: 'email' }, s => s.createIndex('email','email',{unique:true}));
+        ensure('session',     { keyPath: 'key' });
+        ensure('figuritas',   { keyPath: 'id'  },   s => s.createIndex('rareza','rareza',{unique:false}));
+        ensure('predicciones',{ keyPath: 'matchId' });
+        ensure('favoritos',   { keyPath: 'id'  },   s => s.createIndex('tipo','tipo',{unique:false}));
+        ensure('stats_cache', { keyPath: 'key' });
 
         
-        asegurar('equipo_ideal', { keyPath: 'email' });
-        asegurar('activity_log', { keyPath: 'id', autoIncrement: true }, s => {
+        ensure('equipo_ideal', { keyPath: 'email' });
+        ensure('activity_log', { keyPath: 'id', autoIncrement: true }, s => {
           s.createIndex('email',     'email',     { unique: false });
           s.createIndex('timestamp', 'timestamp', { unique: false });
         });
 
         
-        asegurar('photo_cache', { keyPath: 'id' });
+        ensure('photo_cache', { keyPath: 'id' });
       };
 
-      solicitud.onsuccess = (e) => {
+      req.onsuccess = (e) => {
         clearTimeout(timeout);
-        _bd = e.target.result;
+        _db = e.target.result;
         
-        _bd.onclose        = () => { _bd = null; _promBD = null; };
-        _bd.onversionchange = () => { _bd.close(); _bd = null; _promBD = null; };
-        resolve(_bd);
+        _db.onclose        = () => { _db = null; _dbProm = null; };
+        _db.onversionchange = () => { _db.close(); _db = null; _dbProm = null; };
+        resolve(_db);
       };
 
-      solicitud.onerror = (e) => {
+      req.onerror = (e) => {
         clearTimeout(timeout);
-        _promBD = null;
+        _dbProm = null;
         console.error('IndexedDB error:', e.target.error);
         reject(e.target.error);
       };
     });
 
-    return _promBD;
+    return _dbProm;
   },
 
   
   async resetDB() {
-    _bd     = null;
-    _promBD = null;
+    _db     = null;
+    _dbProm = null;
     return new Promise((res, rej) => {
-      const solicitud = indexedDB.deleteDatabase(NOMBRE_BD);
-      solicitud.onsuccess = () => res();
-      solicitud.onerror   = () => rej(solicitud.error);
-      solicitud.onblocked = () => { res(); }; 
+      const req = indexedDB.deleteDatabase(DB_NAME);
+      req.onsuccess = () => res();
+      req.onerror   = () => rej(req.error);
+      req.onblocked = () => { res(); }; 
     });
   },
 
@@ -100,61 +100,61 @@ const DB = {
   async put(store, value) {
     const db = await this.open();
     return new Promise((res, rej) => {
-      const transaccion  = db.transaction(store, 'readwrite');
-      const solicitud = transaccion.objectStore(store).put(value);
-      solicitud.onsuccess = () => res(solicitud.result);
-      solicitud.onerror   = () => rej(solicitud.error);
+      const tx  = db.transaction(store, 'readwrite');
+      const req = tx.objectStore(store).put(value);
+      req.onsuccess = () => res(req.result);
+      req.onerror   = () => rej(req.error);
     });
   },
 
   async get(store, key) {
     const db = await this.open();
     return new Promise((res, rej) => {
-      const transaccion  = db.transaction(store, 'readonly');
-      const solicitud = transaccion.objectStore(store).get(key);
-      solicitud.onsuccess = () => res(solicitud.result);
-      solicitud.onerror   = () => rej(solicitud.error);
+      const tx  = db.transaction(store, 'readonly');
+      const req = tx.objectStore(store).get(key);
+      req.onsuccess = () => res(req.result);
+      req.onerror   = () => rej(req.error);
     });
   },
 
   async getAll(store) {
     const db = await this.open();
     return new Promise((res, rej) => {
-      const transaccion  = db.transaction(store, 'readonly');
-      const solicitud = transaccion.objectStore(store).getAll();
-      solicitud.onsuccess = () => res(solicitud.result);
-      solicitud.onerror   = () => rej(solicitud.error);
+      const tx  = db.transaction(store, 'readonly');
+      const req = tx.objectStore(store).getAll();
+      req.onsuccess = () => res(req.result);
+      req.onerror   = () => rej(req.error);
     });
   },
 
   async getAllByIndex(store, indexName, value) {
     const db = await this.open();
     return new Promise((res, rej) => {
-      const transaccion  = db.transaction(store, 'readonly');
-      const idx = transaccion.objectStore(store).index(indexName);
-      const solicitud = idx.getAll(value);
-      solicitud.onsuccess = () => res(solicitud.result);
-      solicitud.onerror   = () => rej(solicitud.error);
+      const tx  = db.transaction(store, 'readonly');
+      const idx = tx.objectStore(store).index(indexName);
+      const req = idx.getAll(value);
+      req.onsuccess = () => res(req.result);
+      req.onerror   = () => rej(req.error);
     });
   },
 
   async delete(store, key) {
     const db = await this.open();
     return new Promise((res, rej) => {
-      const transaccion  = db.transaction(store, 'readwrite');
-      const solicitud = transaccion.objectStore(store).delete(key);
-      solicitud.onsuccess = () => res();
-      solicitud.onerror   = () => rej(solicitud.error);
+      const tx  = db.transaction(store, 'readwrite');
+      const req = tx.objectStore(store).delete(key);
+      req.onsuccess = () => res();
+      req.onerror   = () => rej(req.error);
     });
   },
 
   async clear(store) {
     const db = await this.open();
     return new Promise((res, rej) => {
-      const transaccion  = db.transaction(store, 'readwrite');
-      const solicitud = transaccion.objectStore(store).clear();
-      solicitud.onsuccess = () => res();
-      solicitud.onerror   = () => rej(solicitud.error);
+      const tx  = db.transaction(store, 'readwrite');
+      const req = tx.objectStore(store).clear();
+      req.onsuccess = () => res();
+      req.onerror   = () => rej(req.error);
     });
   },
 
@@ -165,7 +165,7 @@ const DB = {
 
   
   async getUser(email)  { return await this.get('users', email); },
-  async saveUser(usuario)  { return await this.put('users', usuario); },
+  async saveUser(user)  { return await this.put('users', user); },
 
   
   async getCacheStats(key) {
@@ -204,7 +204,7 @@ const DB = {
 
   
   async countOwnedFiguritas(email) {
-    const usuario = await this.getUser(email);
-    return (usuario?.figuritas || []).length;
+    const user = await this.getUser(email);
+    return (user?.figuritas || []).length;
   }
 };

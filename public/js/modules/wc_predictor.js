@@ -1,4 +1,4 @@
-const GRUPOS_WC2026 = {
+const WC2026_GROUPS = {
   A: ['México',         'Sudáfrica',    'Corea del Sur', 'Rep. Checa'],
   B: ['Canadá',         'Bosnia-Herz.', 'Qatar',         'Suiza'],
   C: ['Brasil',         'Marruecos',    'Haití',         'Escocia'],
@@ -13,29 +13,29 @@ const GRUPOS_WC2026 = {
   L: ['Inglaterra',     'Croacia',      'Ghana',         'Panamá'],
 };
 
-const FASES_WC = [
-  { id:'grupos',   etiqueta:'Fase de Grupos',  recompensa:10 },
-  { id:'round32',  etiqueta:'Ronda de 32',     recompensa:10 },
-  { id:'r16',      etiqueta:'Octavos de Final',recompensa:10 },
-  { id:'qf',       etiqueta:'Cuartos de Final',recompensa:10 },
-  { id:'sf',       etiqueta:'Semifinales',     recompensa:10 },
-  { id:'final',    etiqueta:'Final',           recompensa:10 },
-  { id:'champion', etiqueta:'Campeón',         recompensa:50 },
+const WC_PHASES = [
+  { id:'groups',   label:'Fase de Grupos',  reward:10 },
+  { id:'round32',  label:'Ronda de 32',     reward:10 },
+  { id:'r16',      label:'Octavos de Final',reward:10 },
+  { id:'qf',       label:'Cuartos de Final',reward:10 },
+  { id:'sf',       label:'Semifinales',     reward:10 },
+  { id:'final',    label:'Final',           reward:10 },
+  { id:'champion', label:'Campeón',         reward:50 },
 ];
 
-const CLAVE_LS_WC = 'wcc_wc_prediction';   
+const WC_LS_KEY = 'wcc_wc_prediction';   
 
 const WorldCupPredictor = {
 
   
   async open() {
-    const usuario = await Auth.currentUser();
-    if (!usuario) { Toast.warn('Inicia sesión para predecir'); return; }
+    const user = await Auth.currentUser();
+    if (!user) { Toast.warn('Inicia sesión para predecir'); return; }
 
     
     await this._loadGroupsFromTeams();
 
-    const prediccion = usuario.wcPrediction || {};
+    const pred = user.wcPrediction || {};
     const overlay = document.createElement('div');
     overlay.id = 'wcp-overlay';
     overlay.style.cssText = `
@@ -43,7 +43,7 @@ const WorldCupPredictor = {
       background:rgba(10,12,20,0.97);overflow-y:auto;
       display:flex;flex-direction:column;`;
 
-    overlay.innerHTML = this._buildUI(prediccion);
+    overlay.innerHTML = this._buildUI(pred);
     document.body.appendChild(overlay);
 
     
@@ -64,39 +64,39 @@ const WorldCupPredictor = {
     overlay.querySelector('#wcp-save').addEventListener('click', () => this._save(overlay));
 
     
-    this._initGroupPickers(overlay, prediccion);
-    this._initKnockoutPickers(overlay, prediccion);
+    this._initGroupPickers(overlay, pred);
+    this._initKnockoutPickers(overlay, pred);
   },
 
   
   async _loadGroupsFromTeams() {
     try {
       
-      const equipos = typeof API !== 'undefined' ? await API.getTeams() : null;
-      const fuenteDatos = (equipos?.length) ? equipos : (typeof MOCK !== 'undefined' ? MOCK.equipos : null);
-      if (!fuenteDatos?.length) return;
+      const teams = typeof API !== 'undefined' ? await API.getTeams() : null;
+      const source = (teams?.length) ? teams : (typeof MOCK !== 'undefined' ? MOCK.teams : null);
+      if (!source?.length) return;
 
       
-      const porGrupo = {};
-      fuenteDatos.forEach(t => {
+      const byGroup = {};
+      source.forEach(t => {
         if (!t.group) return;
-        if (!porGrupo[t.group]) porGrupo[t.group] = [];
-        porGrupo[t.group].push(t.name);
+        if (!byGroup[t.group]) byGroup[t.group] = [];
+        byGroup[t.group].push(t.name);
       });
 
       
-      const keys = Object.keys(porGrupo);
+      const keys = Object.keys(byGroup);
       if (keys.length >= 8) {
         keys.forEach(g => {
-          if (porGrupo[g].length >= 2) GRUPOS_WC2026[g] = porGrupo[g];
+          if (byGroup[g].length >= 2) WC2026_GROUPS[g] = byGroup[g];
         });
       }
     } catch(_) {}
   },
 
   
-  _buildUI(prediccion) {
-    const infoEstado = this._calcStatus(prediccion);
+  _buildUI(pred) {
+    const statusInfo = this._calcStatus(pred);
     return `
       <div style="max-width:600px;width:100%;margin:0 auto;padding:1rem;">
 
@@ -119,31 +119,31 @@ const WorldCupPredictor = {
           <p style="font-size:0.65rem;font-weight:700;color:var(--text-muted);letter-spacing:1px;
             text-transform:uppercase;margin:0 0 0.5rem">Recompensas por fase</p>
           <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(120px,1fr));gap:0.4rem;">
-            ${FASES_WC.map(etapa => {
-              const s = infoEstado[etapa.id] || 'pendientes';
+            ${WC_PHASES.map(ph => {
+              const s = statusInfo[ph.id] || 'pending';
               const icon = s === 'won' ? '✅' : s === 'lost' ? '❌' : '⏳';
               const col  = s === 'won' ? '#4caf6a' : s === 'lost' ? '#e05555' : 'var(--text-muted)';
               return `<div style="font-size:0.7rem;color:${col};background:rgba(255,255,255,0.04);
                 border-radius:8px;padding:0.35rem 0.5rem;text-align:center;">
-                ${icon} ${etapa.etiqueta}<br>
-                <span style="font-weight:800;color:var(--gold)">${etapa.recompensa} 🎴</span>
+                ${icon} ${ph.label}<br>
+                <span style="font-weight:800;color:var(--gold)">${ph.reward} 🎴</span>
               </div>`;
             }).join('')}
           </div>
           <p style="font-size:0.72rem;color:var(--gold);font-weight:700;margin:0.6rem 0 0;text-align:right">
-            Total posible: <strong>${FASES_WC.reduce((s,p)=>s+p.recompensa,0)} tiradas</strong>
+            Total posible: <strong>${WC_PHASES.reduce((s,p)=>s+p.reward,0)} tiradas</strong>
           </p>
         </div>
 
         <!-- Tabs de fases -->
         <div style="display:flex;gap:0.4rem;flex-wrap:wrap;margin-bottom:0.75rem;">
-          ${['grupos','round32','r16','qf','sf','final','champion'].map((etapa,i) => `
-            <button class="wcp-phase-tab${i===0?' active':''}" data-phase="${etapa}"
+          ${['groups','round32','r16','qf','sf','final','champion'].map((ph,i) => `
+            <button class="wcp-phase-tab${i===0?' active':''}" data-phase="${ph}"
               style="background:${i===0?'var(--gold)':'var(--card-bg,#181c28)'};
                 color:${i===0?'#000':'var(--text-secondary)'};
                 border:1px solid ${i===0?'var(--gold)':'var(--border)'};
                 border-radius:8px;padding:0.3rem 0.6rem;cursor:pointer;font-size:0.7rem;font-weight:700;">
-              ${FASES_WC[i].etiqueta}
+              ${WC_PHASES[i].label}
             </button>`).join('')}
         </div>
 
@@ -172,28 +172,28 @@ const WorldCupPredictor = {
   },
 
   _buildGroupsPanel() {
-    const grupos = Object.keys(GRUPOS_WC2026);
+    const groups = Object.keys(WC2026_GROUPS);
     return `
-      <div class="wcp-phase-panel" id="wcp-panel-grupos" style="">
+      <div class="wcp-phase-panel" id="wcp-panel-groups" style="">
         <p style="font-size:0.72rem;color:var(--text-muted);margin:0 0 0.75rem">
           Selecciona los <strong style="color:var(--gold)">2 equipos</strong> que clasifican de cada grupo.
         </p>
         <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(240px,1fr));gap:0.5rem;">
-          ${grupos.map(g => `
+          ${groups.map(g => `
             <div style="background:var(--card-bg,#181c28);border:1px solid var(--border);
               border-radius:10px;padding:0.75rem;">
               <p style="font-size:0.65rem;font-weight:800;color:var(--gold);letter-spacing:1px;
                 text-transform:uppercase;margin:0 0 0.4rem">Grupo ${g}</p>
-              <div class="wcp-group-elecciones" data-group="${g}"
+              <div class="wcp-group-picks" data-group="${g}"
                 style="display:grid;grid-template-columns:1fr 1fr;gap:0.3rem;">
-                ${GRUPOS_WC2026[g].map(equipo => `
-                  <button class="wcp-equipo-btn" data-equipo="${equipo}" data-group="${g}"
+                ${WC2026_GROUPS[g].map(team => `
+                  <button class="wcp-team-btn" data-team="${team}" data-group="${g}"
                     style="background:rgba(255,255,255,0.05);border:1px solid var(--border);
                       border-radius:8px;padding:0.4rem 0.5rem;cursor:pointer;
                       font-size:0.72rem;color:var(--text-secondary);text-align:left;
                       transition:all 0.15s;white-space:nowrap;overflow:hidden;
                       text-overflow:ellipsis;">
-                    ${this._getFlag(equipo)} ${equipo}
+                    ${this._getFlag(team)} ${team}
                   </button>`).join('')}
               </div>
             </div>`).join('')}
@@ -201,30 +201,30 @@ const WorldCupPredictor = {
       </div>`;
   },
 
-  _buildKnockoutPanel(phaseId, etiqueta, slots, out) {
-    const pares = slots / 2;
+  _buildKnockoutPanel(phaseId, label, slots, out) {
+    const pairs = slots / 2;
     return `
       <div class="wcp-phase-panel" id="wcp-panel-${phaseId}" style="display:none">
         <p style="font-size:0.72rem;color:var(--text-muted);margin:0 0 0.75rem">
-          Selecciona los <strong style="color:var(--gold)">${out} clasificados</strong> de ${etiqueta}.
+          Selecciona los <strong style="color:var(--gold)">${out} clasificados</strong> de ${label}.
           <br><span style="font-size:0.65rem">(Los equipos disponibles se poblarán con tu predicción de la fase anterior)</span>
         </p>
         <div id="wcp-knockout-${phaseId}" style="display:flex;flex-direction:column;gap:0.5rem;">
-          ${Array(pares).fill(0).map((_,i) => `
+          ${Array(pairs).fill(0).map((_,i) => `
             <div class="wcp-match-row" data-phase="${phaseId}" data-pair="${i}"
               style="background:var(--card-bg,#181c28);border:1px solid var(--border);
                 border-radius:10px;padding:0.6rem 0.75rem;display:flex;align-items:center;gap:0.5rem;">
-              <button class="wcp-ko-pick" data-phase="${phaseId}" data-pair="${i}" data-side="local"
+              <button class="wcp-ko-pick" data-phase="${phaseId}" data-pair="${i}" data-side="home"
                 style="flex:1;background:rgba(255,255,255,0.05);border:1px solid var(--border);
                   border-radius:8px;padding:0.4rem;cursor:pointer;font-size:0.75rem;
                   color:var(--text-muted);">?</button>
               <span style="font-size:0.65rem;color:var(--text-muted);flex-shrink:0">vs</span>
-              <button class="wcp-ko-pick" data-phase="${phaseId}" data-pair="${i}" data-side="visitante"
+              <button class="wcp-ko-pick" data-phase="${phaseId}" data-pair="${i}" data-side="away"
                 style="flex:1;background:rgba(255,255,255,0.05);border:1px solid var(--border);
                   border-radius:8px;padding:0.4rem;cursor:pointer;font-size:0.75rem;
                   color:var(--text-muted);">?</button>
               <span style="font-size:0.65rem;color:var(--text-muted);flex-shrink:0">→</span>
-              <div class="wcp-ganador-slot" data-phase="${phaseId}" data-pair="${i}"
+              <div class="wcp-winner-slot" data-phase="${phaseId}" data-pair="${i}"
                 style="flex:1;background:rgba(200,160,0,0.1);border:1px dashed var(--gold);
                   border-radius:8px;padding:0.4rem;font-size:0.75rem;color:var(--gold);
                   text-align:center;min-height:30px;display:flex;align-items:center;justify-content:center;">
@@ -259,26 +259,26 @@ const WorldCupPredictor = {
   },
 
   
-  _initGroupPickers(overlay, prediccion) {
-    const predGrupo = prediccion.grupos || {};
+  _initGroupPickers(overlay, pred) {
+    const groupPred = pred.groups || {};
 
     
-    Object.keys(predGrupo).forEach(g => {
-      const elecciones = predGrupo[g] || [];
-      elecciones.forEach(equipo => {
-        const btn = overlay.querySelector(`.wcp-equipo-btn[data-equipo="${equipo}"][data-group="${g}"]`);
+    Object.keys(groupPred).forEach(g => {
+      const picks = groupPred[g] || [];
+      picks.forEach(team => {
+        const btn = overlay.querySelector(`.wcp-team-btn[data-team="${team}"][data-group="${g}"]`);
         if (btn) this._selectTeamBtn(btn, overlay, g);
       });
     });
 
-    overlay.querySelectorAll('.wcp-equipo-btn').forEach(btn => {
+    overlay.querySelectorAll('.wcp-team-btn').forEach(btn => {
       btn.addEventListener('click', () => {
         const group = btn.dataset.group;
-        const elecciones = overlay.querySelectorAll(`.wcp-equipo-btn.seleccionado[data-group="${group}"]`);
-        if (btn.classList.contains('seleccionado')) {
-          btn.classList.remove('seleccionado');
+        const picks = overlay.querySelectorAll(`.wcp-team-btn.selected[data-group="${group}"]`);
+        if (btn.classList.contains('selected')) {
+          btn.classList.remove('selected');
           this._styleTeamBtn(btn, false);
-        } else if (elecciones.length < 2) {
+        } else if (picks.length < 2) {
           this._selectTeamBtn(btn, overlay, group);
         } else {
           Toast.warn('Solo puedes seleccionar 2 equipos por grupo');
@@ -288,12 +288,12 @@ const WorldCupPredictor = {
   },
 
   _selectTeamBtn(btn, overlay, group) {
-    btn.classList.add('seleccionado');
+    btn.classList.add('selected');
     this._styleTeamBtn(btn, true);
   },
 
-  _styleTeamBtn(btn, seleccionado) {
-    if (seleccionado) {
+  _styleTeamBtn(btn, selected) {
+    if (selected) {
       btn.style.background = 'rgba(200,160,0,0.2)';
       btn.style.borderColor = 'var(--gold)';
       btn.style.color = 'var(--gold)';
@@ -310,38 +310,38 @@ const WorldCupPredictor = {
   _getAvailableTeams(overlay, phaseId) {
     if (phaseId === 'round32') {
       
-      const equipos = new Set();
-      Object.keys(GRUPOS_WC2026).forEach(g => {
-        overlay.querySelectorAll(`.wcp-equipo-btn.seleccionado[data-group="${g}"]`).forEach(b => equipos.add(b.dataset.equipo));
+      const teams = new Set();
+      Object.keys(WC2026_GROUPS).forEach(g => {
+        overlay.querySelectorAll(`.wcp-team-btn.selected[data-group="${g}"]`).forEach(b => teams.add(b.dataset.team));
       });
-      return [...equipos];
+      return [...teams];
     }
     
-    const mapaAnterior = { r16:'round32', qf:'r16', sf:'qf', final:'sf', champion_from_final:'final' };
-    const faseAnterior = mapaAnterior[phaseId];
-    if (!faseAnterior) return this._getAllTeams();
-    const contenedorAnterior = overlay.querySelector(`#wcp-knockout-${faseAnterior}`);
-    const equipos = new Set();
-    if (contenedorAnterior) {
-      contenedorAnterior.querySelectorAll('.wcp-ganador-slot').forEach(slot => {
-        if (slot.dataset.elegido2) equipos.add(slot.dataset.elegido2);
+    const prevMap = { r16:'round32', qf:'r16', sf:'qf', final:'sf', champion_from_final:'final' };
+    const prevPhase = prevMap[phaseId];
+    if (!prevPhase) return this._getAllTeams();
+    const prevContainer = overlay.querySelector(`#wcp-knockout-${prevPhase}`);
+    const teams = new Set();
+    if (prevContainer) {
+      prevContainer.querySelectorAll('.wcp-winner-slot').forEach(slot => {
+        if (slot.dataset.picked) teams.add(slot.dataset.picked);
       });
     }
-    return [...equipos];
+    return [...teams];
   },
 
   
   _refreshChampionOptions(overlay) {
-    const finalistas = this._getAvailableTeams(overlay, 'champion_from_final');
+    const finalists = this._getAvailableTeams(overlay, 'champion_from_final');
     const grid = overlay.querySelector('#wcp-champion-grid');
     if (!grid) return;
-    if (finalistas.length === 0) {
+    if (finalists.length === 0) {
       grid.innerHTML = `<p style="grid-column:1/-1;font-size:0.7rem;color:var(--text-muted);text-align:center">
         Primero selecciona los finalistas en la pestaña "Final"</p>`;
       return;
     }
-    grid.innerHTML = finalistas.map(t => `
-      <button class="wcp-champion-btn" data-equipo="${t}"
+    grid.innerHTML = finalists.map(t => `
+      <button class="wcp-champion-btn" data-team="${t}"
         style="background:rgba(255,255,255,0.05);border:1px solid var(--border);
           border-radius:8px;padding:0.4rem 0.3rem;cursor:pointer;font-size:0.68rem;
           color:var(--text-secondary);transition:all 0.15s;">
@@ -354,82 +354,82 @@ const WorldCupPredictor = {
         });
         btn.style.background='rgba(200,160,0,0.2)'; btn.style.borderColor='var(--gold)'; btn.style.color='var(--gold)'; btn.style.fontWeight='700';
         const el = overlay.querySelector('#wcp-champion-pick');
-        if (el) el.textContent = `🏆 ${this._getFlag(btn.dataset.equipo)} ${btn.dataset.equipo}`;
+        if (el) el.textContent = `🏆 ${this._getFlag(btn.dataset.team)} ${btn.dataset.team}`;
       });
     });
   },
 
   
-  _initKnockoutPickers(overlay, prediccion) {
+  _initKnockoutPickers(overlay, pred) {
     
     
-    const fases = ['round32','r16','qf','sf','final'];
-    fases.forEach(phaseId => {
-      const predFase = prediccion[phaseId] || {};
-      const contenedor = overlay.querySelector(`#wcp-knockout-${phaseId}`);
-      if (!contenedor) return;
+    const phases = ['round32','r16','qf','sf','final'];
+    phases.forEach(phaseId => {
+      const phasePred = pred[phaseId] || {};
+      const container = overlay.querySelector(`#wcp-knockout-${phaseId}`);
+      if (!container) return;
 
       
-      Object.entries(predFase).forEach(([pairKey, data]) => {
+      Object.entries(phasePred).forEach(([pairKey, data]) => {
         const pair = parseInt(pairKey);
-        if (data.local) {
-          const btnLocal = contenedor.querySelector(`.wcp-ko-pick[data-pair="${pair}"][data-side="local"]`);
-          if (btnLocal) { btnLocal.textContent = `${this._getFlag(data.local)} ${data.local}`; btnLocal.dataset.elegido2 = data.local; this._styleKoBtn(btnLocal, false); }
+        if (data.home) {
+          const homeBtn = container.querySelector(`.wcp-ko-pick[data-pair="${pair}"][data-side="home"]`);
+          if (homeBtn) { homeBtn.textContent = `${this._getFlag(data.home)} ${data.home}`; homeBtn.dataset.picked = data.home; this._styleKoBtn(homeBtn, false); }
         }
-        if (data.visitante) {
-          const btnVisitante = contenedor.querySelector(`.wcp-ko-pick[data-pair="${pair}"][data-side="visitante"]`);
-          if (btnVisitante) { btnVisitante.textContent = `${this._getFlag(data.visitante)} ${data.visitante}`; btnVisitante.dataset.elegido2 = data.visitante; this._styleKoBtn(btnVisitante, false); }
+        if (data.away) {
+          const awayBtn = container.querySelector(`.wcp-ko-pick[data-pair="${pair}"][data-side="away"]`);
+          if (awayBtn) { awayBtn.textContent = `${this._getFlag(data.away)} ${data.away}`; awayBtn.dataset.picked = data.away; this._styleKoBtn(awayBtn, false); }
         }
-        if (data.ganador) {
-          const slot = contenedor.querySelector(`.wcp-ganador-slot[data-pair="${pair}"]`);
-          if (slot) { slot.textContent = `${this._getFlag(data.ganador)} ${data.ganador}`; slot.dataset.elegido2 = data.ganador; }
+        if (data.winner) {
+          const slot = container.querySelector(`.wcp-winner-slot[data-pair="${pair}"]`);
+          if (slot) { slot.textContent = `${this._getFlag(data.winner)} ${data.winner}`; slot.dataset.picked = data.winner; }
         }
       });
 
       
-      contenedor.querySelectorAll('.wcp-ko-pick').forEach(btn => {
+      container.querySelectorAll('.wcp-ko-pick').forEach(btn => {
         btn.addEventListener('click', () => {
           const pair = btn.dataset.pair;
           const side = btn.dataset.side;
-          this._openTeamPicker(overlay, phaseId, pair, side, prediccion);
+          this._openTeamPicker(overlay, phaseId, pair, side, pred);
         });
       });
     });
 
     
-    const predCampeon = prediccion.champion;
+    const champPred = pred.champion;
     this._refreshChampionOptions(overlay);
-    if (predCampeon) {
+    if (champPred) {
       const el = overlay.querySelector('#wcp-champion-pick');
-      if (el) el.textContent = `🏆 ${this._getFlag(predCampeon)} ${predCampeon}`;
-      const btn = overlay.querySelector(`.wcp-champion-btn[data-equipo="${predCampeon}"]`);
+      if (el) el.textContent = `🏆 ${this._getFlag(champPred)} ${champPred}`;
+      const btn = overlay.querySelector(`.wcp-champion-btn[data-team="${champPred}"]`);
       if (btn) { btn.style.background='rgba(200,160,0,0.2)'; btn.style.borderColor='var(--gold)'; btn.style.color='var(--gold)'; btn.style.fontWeight='700'; }
     }
   },
 
-  _styleKoBtn(btn, seleccionado) {
+  _styleKoBtn(btn, selected) {
     btn.style.color = 'var(--text-secondary)';
   },
 
   
-  _openTeamPicker(overlay, phaseId, pair, side, prediccion) {
-    const disponibles = this._getAvailableTeams(overlay, phaseId);
-    if (disponibles.length === 0) {
-      const etiquetaAnterior = phaseId === 'round32' ? 'Fase de Grupos' : 'la fase anterior';
-      Toast.warn(`Primero selecciona los clasificados en ${etiquetaAnterior}`);
+  _openTeamPicker(overlay, phaseId, pair, side, pred) {
+    const available = this._getAvailableTeams(overlay, phaseId);
+    if (available.length === 0) {
+      const prevLabel = phaseId === 'round32' ? 'Fase de Grupos' : 'la fase anterior';
+      Toast.warn(`Primero selecciona los clasificados en ${prevLabel}`);
       return;
     }
-    const modal2 = document.createElement('div');
-    modal2.style.cssText = `
+    const modal = document.createElement('div');
+    modal.style.cssText = `
       position:fixed;top:0;left:0;right:0;bottom:0;z-index:10000;
       background:rgba(0,0,0,0.85);display:flex;align-items:center;justify-content:center;`;
-    modal2.innerHTML = `
+    modal.innerHTML = `
       <div style="background:var(--bg,#0f1117);border:1px solid var(--border);border-radius:16px;
         padding:1rem;max-width:350px;width:90%;max-height:80vh;overflow-y:auto;">
         <h3 style="font-size:0.9rem;color:var(--gold);margin:0 0 0.75rem">Seleccionar equipo</h3>
         <div style="display:grid;grid-template-columns:1fr 1fr;gap:0.35rem;">
-          ${disponibles.map(t => `
-            <button class="wcp-pick-equipo-btn" data-equipo="${t}"
+          ${available.map(t => `
+            <button class="wcp-pick-team-btn" data-team="${t}"
               style="background:rgba(255,255,255,0.05);border:1px solid var(--border);
                 border-radius:8px;padding:0.4rem;cursor:pointer;font-size:0.7rem;
                 color:var(--text-secondary);">
@@ -442,69 +442,69 @@ const WorldCupPredictor = {
           Cancelar
         </button>
       </div>`;
-    document.body.appendChild(modal2);
+    document.body.appendChild(modal);
 
-    modal2.querySelector('#wcp-picker-cancel').addEventListener('click', () => modal2.remove());
-    modal2.querySelectorAll('.wcp-pick-equipo-btn').forEach(btn => {
+    modal.querySelector('#wcp-picker-cancel').addEventListener('click', () => modal.remove());
+    modal.querySelectorAll('.wcp-pick-team-btn').forEach(btn => {
       btn.addEventListener('click', () => {
-        const equipo = btn.dataset.equipo;
-        const contenedor = overlay.querySelector(`#wcp-knockout-${phaseId}`);
-        if (contenedor) {
-          const btnEliminacion = contenedor.querySelector(`.wcp-ko-pick[data-pair="${pair}"][data-side="${side}"]`);
-          if (btnEliminacion) {
-            btnEliminacion.textContent = `${this._getFlag(equipo)} ${equipo}`;
-            btnEliminacion.dataset.elegido2 = equipo;
-            btnEliminacion.style.color = 'var(--text-secondary)';
+        const team = btn.dataset.team;
+        const container = overlay.querySelector(`#wcp-knockout-${phaseId}`);
+        if (container) {
+          const koBtn = container.querySelector(`.wcp-ko-pick[data-pair="${pair}"][data-side="${side}"]`);
+          if (koBtn) {
+            koBtn.textContent = `${this._getFlag(team)} ${team}`;
+            koBtn.dataset.picked = team;
+            koBtn.style.color = 'var(--text-secondary)';
           }
         }
-        modal2.remove();
+        modal.remove();
       });
     });
 
-    modal2.addEventListener('click', e => { if(e.target===modal2) modal2.remove(); });
+    modal.addEventListener('click', e => { if(e.target===modal) modal.remove(); });
   },
 
   
   async _save(overlay) {
-    const usuario = await Auth.currentUser();
-    if (!usuario) return;
+    const user = await Auth.currentUser();
+    if (!user) return;
 
-    const prediccion = {};
+    const pred = {};
 
     
-    prediccion.grupos = {};
-    Object.keys(GRUPOS_WC2026).forEach(g => {
-      const elecciones = [...overlay.querySelectorAll(`.wcp-equipo-btn.seleccionado[data-group="${g}"]`)]
-        .map(b => b.dataset.equipo);
-      if (elecciones.length > 0) prediccion.grupos[g] = elecciones;
+    pred.groups = {};
+    Object.keys(WC2026_GROUPS).forEach(g => {
+      const picks = [...overlay.querySelectorAll(`.wcp-team-btn.selected[data-group="${g}"]`)]
+        .map(b => b.dataset.team);
+      if (picks.length > 0) pred.groups[g] = picks;
     });
 
     
     ['round32','r16','qf','sf','final'].forEach(phaseId => {
-      prediccion[phaseId] = {};
-      const contenedor = overlay.querySelector(`#wcp-knockout-${phaseId}`);
-      if (!contenedor) return;
-      contenedor.querySelectorAll('.wcp-match-row').forEach(row => {
+      pred[phaseId] = {};
+      const container = overlay.querySelector(`#wcp-knockout-${phaseId}`);
+      if (!container) return;
+      container.querySelectorAll('.wcp-match-row').forEach(row => {
         const pair = row.dataset.pair;
-        const local = row.querySelector('.wcp-ko-pick[data-side="local"]')?.dataset.elegido2 || null;
-        const visitante = row.querySelector('.wcp-ko-pick[data-side="visitante"]')?.dataset.elegido2 || null;
-        const ganador = row.querySelector('.wcp-ganador-slot')?.dataset.elegido2 || null;
-        if (local || visitante || ganador) prediccion[phaseId][pair] = { local, visitante, ganador };
+        const home = row.querySelector('.wcp-ko-pick[data-side="home"]')?.dataset.picked || null;
+        const away = row.querySelector('.wcp-ko-pick[data-side="away"]')?.dataset.picked || null;
+        const winner = row.querySelector('.wcp-winner-slot')?.dataset.picked || null;
+        if (home || away || winner) pred[phaseId][pair] = { home, away, winner };
       });
     });
 
     
-    const btnCampeon = overlay.querySelector('.wcp-champion-btn[style*="rgba(200,160,0"]');
-    prediccion.champion = btnCampeon?.dataset.equipo || null;
+    const champBtn = overlay.querySelector('.wcp-champion-btn[style*="rgba(200,160,0"]');
+    pred.champion = champBtn?.dataset.team || null;
 
     
-    prediccion.savedAt   = new Date().toISOString();
-    prediccion.premiado  = usuario.wcPrediction?.premiado || {};
+    pred.savedAt   = new Date().toISOString();
+    pred.rewarded  = user.wcPrediction?.rewarded || {};
 
-    usuario.wcPrediction = prediccion;
-    await Auth.updateUser(usuario);
+    user.wcPrediction = pred;
+    await Auth.updateUser(user);
 
-    try { localStorage.setItem(CLAVE_LS_WC, JSON.stringify(prediccion)); } catch(_) {}
+    try { localStorage.setItem(WC_LS_KEY, JSON.stringify(pred)); } catch(_) {}
 
     Toast.success('¡Predicción del Mundial guardada! 🏆');
     overlay.remove();
@@ -513,48 +513,48 @@ const WorldCupPredictor = {
   
   async evaluatePhase(phaseId, actualResults) {
     
-    const usuario = await Auth.currentUser();
-    if (!usuario || !usuario.wcPrediction) return 0;
+    const user = await Auth.currentUser();
+    if (!user || !user.wcPrediction) return 0;
 
-    const prediccion    = usuario.wcPrediction;
-    const premiado = prediccion.premiado || {};
-    if (premiado[phaseId]) return 0;   
+    const pred    = user.wcPrediction;
+    const rewarded = pred.rewarded || {};
+    if (rewarded[phaseId]) return 0;   
 
-    const phase = FASES_WC.find(p => p.id === phaseId);
+    const phase = WC_PHASES.find(p => p.id === phaseId);
     if (!phase) return 0;
 
-    let correcto = false;
+    let correct = false;
 
-    if (phaseId === 'grupos') {
+    if (phaseId === 'groups') {
       
-      let gruposCorrectos = 0;
-      const totalGrupos = Object.keys(actualResults).length;
+      let groupsCorrect = 0;
+      const totalGroups = Object.keys(actualResults).length;
       Object.entries(actualResults).forEach(([g, realTeams]) => {
-        const predEquipos = prediccion.grupos?.[g] || [];
-        const hit = predEquipos.filter(t => realTeams.includes(t)).length;
-        if (hit === 2) gruposCorrectos++;
+        const predTeams = pred.groups?.[g] || [];
+        const hit = predTeams.filter(t => realTeams.includes(t)).length;
+        if (hit === 2) groupsCorrect++;
       });
-      correcto = gruposCorrectos >= Math.ceil(totalGrupos * 0.5); 
+      correct = groupsCorrect >= Math.ceil(totalGroups * 0.5); 
     } else if (phaseId === 'champion') {
-      correcto = prediccion.champion && actualResults === prediccion.champion;
+      correct = pred.champion && actualResults === pred.champion;
     } else {
       
-      const predGanadores = Object.values(prediccion[phaseId] || {})
-        .map(r => r.ganador).filter(Boolean);
-      const cantidadAciertos = predGanadores.filter(t => (actualResults || []).includes(t)).length;
-      correcto = cantidadAciertos >= Math.ceil(predGanadores.length * 0.5);
+      const predWinners = Object.values(pred[phaseId] || {})
+        .map(r => r.winner).filter(Boolean);
+      const hitCount = predWinners.filter(t => (actualResults || []).includes(t)).length;
+      correct = hitCount >= Math.ceil(predWinners.length * 0.5);
     }
 
-    if (correcto) {
-      premiado[phaseId] = true;
-      prediccion.premiado = premiado;
-      usuario.wcPrediction = prediccion;
-      usuario.tiradas = (usuario.tiradas || 0) + phase.recompensa;
-      await Auth.updateUser(usuario);
+    if (correct) {
+      rewarded[phaseId] = true;
+      pred.rewarded = rewarded;
+      user.wcPrediction = pred;
+      user.tiradas = (user.tiradas || 0) + phase.reward;
+      await Auth.updateUser(user);
       if (typeof DB !== 'undefined' && DB.logActivity)
-        await DB.logActivity(usuario.email, 'wc_pred_reward', `${phaseId}: +${phase.recompensa} tiradas`);
-      Toast.success(`🏆 ¡Fase acertada! +${phase.recompensa} tiradas 🎴`);
-      return phase.recompensa;
+        await DB.logActivity(user.email, 'wc_pred_reward', `${phaseId}: +${phase.reward} tiradas`);
+      Toast.success(`🏆 ¡Fase acertada! +${phase.reward} tiradas 🎴`);
+      return phase.reward;
     }
 
     return 0;
@@ -588,14 +588,14 @@ const WorldCupPredictor = {
 
   _getAllTeams() {
     const all = new Set();
-    Object.values(GRUPOS_WC2026).forEach(equipos => equipos.forEach(t => all.add(t)));
+    Object.values(WC2026_GROUPS).forEach(teams => teams.forEach(t => all.add(t)));
     return [...all].sort();
   },
 
-  _calcStatus(prediccion) {
+  _calcStatus(pred) {
     const status = {};
-    FASES_WC.forEach(etapa => {
-      status[etapa.id] = prediccion.premiado?.[etapa.id] ? 'won' : 'pendientes';
+    WC_PHASES.forEach(ph => {
+      status[ph.id] = pred.rewarded?.[ph.id] ? 'won' : 'pending';
     });
     return status;
   }

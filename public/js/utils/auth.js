@@ -1,10 +1,10 @@
 const Auth = {
   
   async hashPassword(password) {
-    const codificador = new TextEncoder();
-    const data    = codificador.encode(password);
-    const bufferHash = await crypto.subtle.digest('SHA-256', data);
-    return Array.from(new Uint8Array(bufferHash))
+    const encoder = new TextEncoder();
+    const data    = encoder.encode(password);
+    const hashBuf = await crypto.subtle.digest('SHA-256', data);
+    return Array.from(new Uint8Array(hashBuf))
       .map(b => b.toString(16).padStart(2, '0'))
       .join('');
   },
@@ -29,12 +29,12 @@ const Auth = {
     if (!this.validatePassword(password))
       return { ok: false, field: 'pass', msg: 'Contraseña mínimo 6 caracteres' };
 
-    const existente = await DB.getUser(email);
-    if (existente)
+    const existing = await DB.getUser(email);
+    if (existing)
       return { ok: false, field: 'email', msg: 'Este correo ya está registrado' };
 
     const hash = await this.hashPassword(password);
-    const usuario = {
+    const user = {
       email,
       name:             name.trim(),
       passwordHash:     hash,
@@ -46,11 +46,11 @@ const Auth = {
       favoritos:        [],
       predicciones:     [],
       aciertos:         0,
-      contadorPity:        0,
+      pityCount:        0,
       equipo_ideal:     null
     };
 
-    await DB.saveUser(usuario);
+    await DB.saveUser(user);
     return { ok: true };
   },
 
@@ -59,12 +59,12 @@ const Auth = {
     if (!this.validateEmail(email))
       return { ok: false, field: 'email', msg: 'Correo inválido' };
 
-    const usuario = await DB.getUser(email);
-    if (!usuario)
+    const user = await DB.getUser(email);
+    if (!user)
       return { ok: false, field: 'email', msg: 'No existe cuenta con ese correo' };
 
     const hash = await this.hashPassword(password);
-    if (hash !== usuario.passwordHash)
+    if (hash !== user.passwordHash)
       return { ok: false, field: 'pass', msg: 'Contraseña incorrecta' };
 
     await DB.setSession(email);
@@ -75,7 +75,7 @@ const Auth = {
       if (fresh) await DB.updateUser(email, { tiradas: (fresh.tiradas || 0) + 50 });
     }
 
-    return { ok: true, usuario };
+    return { ok: true, user };
   },
 
   
@@ -87,8 +87,8 @@ const Auth = {
   async recoverSession() {
     const email = await DB.getSession();
     if (!email) return null;
-    const usuario  = await DB.getUser(email);
-    return usuario || null;
+    const user  = await DB.getUser(email);
+    return user || null;
   },
 
   

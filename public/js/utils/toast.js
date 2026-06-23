@@ -17,12 +17,12 @@ const Toast = {
 
 const Modal = {
   open(html) {
-    const overlay = document.getElementById('modal2-overlay');
-    const content = document.getElementById('modal2-content');
+    const overlay = document.getElementById('modal-overlay');
+    const content = document.getElementById('modal-content');
     if (!overlay || !content) return;
     content.innerHTML = html;
     overlay.style.display = 'flex';
-    document.getElementById('modal2-close').addEventListener('click', () => Modal.close(), { once: true });
+    document.getElementById('modal-close').addEventListener('click', () => Modal.close(), { once: true });
     
     if (!overlay._wccClickBound) {
       overlay.addEventListener('click', (e) => {
@@ -32,7 +32,7 @@ const Modal = {
     }
   },
   close() {
-    const overlay = document.getElementById('modal2-overlay');
+    const overlay = document.getElementById('modal-overlay');
     if (overlay) overlay.style.display = 'none';
   }
 };

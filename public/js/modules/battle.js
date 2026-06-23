@@ -1,4 +1,4 @@
-const IntentosPartido = {
+const BattleAttempts = {
   MAX_DAILY: 2,
   LS_KEY_PREFIX: 'wcc_battle_attempts',
   _email: '',   
@@ -22,9 +22,9 @@ const IntentosPartido = {
     try {
       const raw = localStorage.getItem(this._lsKey());
       if (!raw) return null;
-      const analizado = JSON.parse(raw);
-      if (analizado.date !== this._todayStr()) return null; 
-      return analizado;
+      const parsed = JSON.parse(raw);
+      if (parsed.date !== this._todayStr()) return null; 
+      return parsed;
     } catch(_) { return null; }
   },
 
@@ -36,15 +36,15 @@ const IntentosPartido = {
   remaining(category) {
     const data = this._load();
     if (!data) return this.MAX_DAILY;
-    return Math.max(0, this.MAX_DAILY - (data.conteos[category] || 0));
+    return Math.max(0, this.MAX_DAILY - (data.counts[category] || 0));
   },
 
   
   consume(category) {
-    let data = this._load() || { date: this._todayStr(), conteos: {} };
-    const usado = data.conteos[category] || 0;
-    if (usado >= this.MAX_DAILY) return false;
-    data.conteos[category] = usado + 1;
+    let data = this._load() || { date: this._todayStr(), counts: {} };
+    const used = data.counts[category] || 0;
+    if (used >= this.MAX_DAILY) return false;
+    data.counts[category] = used + 1;
     this._save(data);
     return true;
   },
@@ -53,113 +53,113 @@ const IntentosPartido = {
   summaryHTML() {
     return ['classic','penalties','quiz','guess','connect'].map(cat => {
       const rem = this.remaining(cat);
-      const etiqueta = { classic:'Clásica', penalties:'Penales', quiz:'Quiz', guess:'Adivina', connect:'Conecta', rival:'Rivales' }[cat];
-      return `<span class="battle-attempts-insignia ${rem === 0 ? 'exhausted' : ''}">${etiqueta}: ${rem}/${this.MAX_DAILY}</span>`;
+      const label = { classic:'Clásica', penalties:'Penales', quiz:'Quiz', guess:'Adivina', connect:'Conecta', rival:'Rivales' }[cat];
+      return `<span class="battle-attempts-badge ${rem === 0 ? 'exhausted' : ''}">${label}: ${rem}/${this.MAX_DAILY}</span>`;
     }).join('');
   }
 };
 
-const FORMACIONES_DEF = {
+const FORMATIONS_DEF = {
   '4-3-3': {
     rows: [
-      { etiqueta:'POR', slots:['POR'] },
-      { etiqueta:'DEF', slots:['DEF','DEF','DEF','DEF'] },
-      { etiqueta:'MED', slots:['MED','MED','MED'] },
-      { etiqueta:'DEL', slots:['DEL','DEL','DEL'] }
+      { label:'POR', slots:['POR'] },
+      { label:'DEF', slots:['DEF','DEF','DEF','DEF'] },
+      { label:'MED', slots:['MED','MED','MED'] },
+      { label:'DEL', slots:['DEL','DEL','DEL'] }
     ]
   },
   '4-4-2': {
     rows: [
-      { etiqueta:'POR', slots:['POR'] },
-      { etiqueta:'DEF', slots:['DEF','DEF','DEF','DEF'] },
-      { etiqueta:'MED', slots:['MED','MED','MED','MED'] },
-      { etiqueta:'DEL', slots:['DEL','DEL'] }
+      { label:'POR', slots:['POR'] },
+      { label:'DEF', slots:['DEF','DEF','DEF','DEF'] },
+      { label:'MED', slots:['MED','MED','MED','MED'] },
+      { label:'DEL', slots:['DEL','DEL'] }
     ]
   },
   '3-5-2': {
     rows: [
-      { etiqueta:'POR', slots:['POR'] },
-      { etiqueta:'DEF', slots:['DEF','DEF','DEF'] },
-      { etiqueta:'MED', slots:['MED','MED','MED','MED','MED'] },
-      { etiqueta:'DEL', slots:['DEL','DEL'] }
+      { label:'POR', slots:['POR'] },
+      { label:'DEF', slots:['DEF','DEF','DEF'] },
+      { label:'MED', slots:['MED','MED','MED','MED','MED'] },
+      { label:'DEL', slots:['DEL','DEL'] }
     ]
   }
 };
 
-const NOMBRES_CPU = [
+const CPU_TEAM_NAMES = [
   'Los Galácticos', 'FC Tormenta', 'Atlético Rayo',
   'Real Cosmos', 'Dragones FC', 'Thunder United',
   'Los Cóndores', 'Fénix SC', 'Estrella Blanca'
 ];
 
-function generarEquipoCPU(formation = '4-3-3') {
+function generateCpuTeam(formation = '4-3-3') {
   const pool = Gacha.getPool();
-  const mezclar = arr => [...arr].sort(() => Math.random() - 0.5);
+  const shuffle = arr => [...arr].sort(() => Math.random() - 0.5);
 
-  const porPosicion = {
-    POR: mezclar(pool.filter(f => f.pos === 'POR')),
-    DEF: mezclar(pool.filter(f => f.pos === 'DEF')),
-    MED: mezclar(pool.filter(f => f.pos === 'MED')),
-    DEL: mezclar(pool.filter(f => f.pos === 'DEL')),
+  const byPos = {
+    POR: shuffle(pool.filter(f => f.pos === 'POR')),
+    DEF: shuffle(pool.filter(f => f.pos === 'DEF')),
+    MED: shuffle(pool.filter(f => f.pos === 'MED')),
+    DEL: shuffle(pool.filter(f => f.pos === 'DEL')),
   };
 
   const idx = { POR:0, DEF:0, MED:0, DEL:0 };
-  const rows = FORMACIONES_DEF[formation].rows;
-  const jugadores = [];
+  const rows = FORMATIONS_DEF[formation].rows;
+  const players = [];
 
   rows.forEach(row => {
     row.slots.forEach(pos => {
-      const p = porPosicion[pos]?.[idx[pos]] || pool[Math.floor(Math.random()*pool.length)];
+      const p = byPos[pos]?.[idx[pos]] || pool[Math.floor(Math.random()*pool.length)];
       idx[pos]++;
-      jugadores.push({ ...p });
+      players.push({ ...p });
     });
   });
 
-  const name = NOMBRES_CPU[Math.floor(Math.random() * NOMBRES_CPU.length)];
-  return { name, formation, jugadores };
+  const name = CPU_TEAM_NAMES[Math.floor(Math.random() * CPU_TEAM_NAMES.length)];
+  return { name, formation, players };
 }
 
-function generarEquipoAleatorio(coleccion, formation = '4-3-3') {
-  if (!coleccion || coleccion.length < 5) return null;
+function generateUserRandomTeam(owned, formation = '4-3-3') {
+  if (!owned || owned.length < 5) return null;
 
-  const mezclar = arr => [...arr].sort(() => Math.random() - 0.5);
-  const porPosicion = {
-    POR: mezclar(coleccion.filter(f => f.pos === 'POR')),
-    DEF: mezclar(coleccion.filter(f => f.pos === 'DEF')),
-    MED: mezclar(coleccion.filter(f => f.pos === 'MED')),
-    DEL: mezclar(coleccion.filter(f => f.pos === 'DEL')),
+  const shuffle = arr => [...arr].sort(() => Math.random() - 0.5);
+  const byPos = {
+    POR: shuffle(owned.filter(f => f.pos === 'POR')),
+    DEF: shuffle(owned.filter(f => f.pos === 'DEF')),
+    MED: shuffle(owned.filter(f => f.pos === 'MED')),
+    DEL: shuffle(owned.filter(f => f.pos === 'DEL')),
   };
 
-  const rows = FORMACIONES_DEF[formation].rows;
-  const jugadores = [];
+  const rows = FORMATIONS_DEF[formation].rows;
+  const players = [];
 
   rows.forEach(row => {
     row.slots.forEach(pos => {
-      const pool = porPosicion[pos];
+      const pool = byPos[pos];
       const p = pool?.shift();
-      if (p) jugadores.push({ ...p });
+      if (p) players.push({ ...p });
     });
   });
 
-  return { name: 'Mi Equipo', formation, jugadores };
+  return { name: 'Mi Equipo', formation, players };
 }
 
-function poderEquipo(jugadores) {
-  return jugadores.reduce((sum, p) => sum + (p.rating || 75), 0);
+function teamPower(players) {
+  return players.reduce((sum, p) => sum + (p.rating || 75), 0);
 }
 
 const Battle = {
   _state: null,
 
-  async renderizar() {
-    const usuario  = await Auth.currentUser();
+  async render() {
+    const user  = await Auth.currentUser();
     
-    IntentosPartido.setUser(usuario?.email || '');
-    const coleccion = usuario?.figuritas || [];
+    BattleAttempts.setUser(user?.email || '');
+    const owned = user?.figuritas || [];
     const el    = document.getElementById('tab-battle');
     if (!el) return;
 
-    if (coleccion.length < 5) {
+    if (owned.length < 5) {
       el.innerHTML = `
         <div class="section-header" style="justify-content:center;text-align:center"><h2><svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-4px;margin-right:6px"><rect x="2" y="6" width="20" height="12" rx="6"/><path d="M6 12h4M8 10v4"/><circle cx="15" cy="11" r="1" fill="currentColor"/><circle cx="18" cy="13" r="1" fill="currentColor"/></svg>Minijuegos</h2></div>
         <div class="battle-empty">
@@ -178,57 +178,57 @@ const Battle = {
       <div class="section-header">
         <h2 style="text-align:center;width:100%"><svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-4px;margin-right:6px"><rect x="2" y="6" width="20" height="12" rx="6"/><path d="M6 12h4M8 10v4"/><circle cx="15" cy="11" r="1" fill="currentColor"/><circle cx="18" cy="13" r="1" fill="currentColor"/></svg>Minijuegos</h2>
         <div class="battle-record" id="battle-record">
-          🏆 <span id="br-victorias">${usuario.battleWins||0}</span>V
-          💀 <span id="br-derrotas">${usuario.battleLosses||0}</span>D
+          🏆 <span id="br-wins">${user.battleWins||0}</span>V
+          💀 <span id="br-losses">${user.battleLosses||0}</span>D
         </div>
       </div>
 
       <div class="battle-modes">
-        <div class="battle-mode-card ${IntentosPartido.remaining('classic') === 0 ? 'bmode-exhausted' : ''}" id="bmode-classic">
+        <div class="battle-mode-card ${BattleAttempts.remaining('classic') === 0 ? 'bmode-exhausted' : ''}" id="bmode-classic">
           <div class="bmode-icon">⚔</div>
           <div class="bmode-title">Batalla Clásica</div>
           <div class="bmode-desc">Compara ratings con factor suerte. Rápido y emocionante.</div>
-          <div class="bmode-recompensa">+1 tirada al ganar</div>
-          <div class="bmode-attempts">Intentos hoy: ${IntentosPartido.remaining('classic')}/${IntentosPartido.MAX_DAILY}</div>
+          <div class="bmode-reward">+1 tirada al ganar</div>
+          <div class="bmode-attempts">Intentos hoy: ${BattleAttempts.remaining('classic')}/${BattleAttempts.MAX_DAILY}</div>
         </div>
-        <div class="battle-mode-card ${IntentosPartido.remaining('penalties') === 0 ? 'bmode-exhausted' : ''}" id="bmode-penalties">
+        <div class="battle-mode-card ${BattleAttempts.remaining('penalties') === 0 ? 'bmode-exhausted' : ''}" id="bmode-penalties">
           <div class="bmode-icon">🥅</div>
           <div class="bmode-title">Tanda de Penales</div>
           <div class="bmode-desc">3 penales cada uno. Minijuego de timing.</div>
-          <div class="bmode-recompensa">+2 tiradas al ganar</div>
-          <div class="bmode-attempts">Intentos hoy: ${IntentosPartido.remaining('penalties')}/${IntentosPartido.MAX_DAILY}</div>
+          <div class="bmode-reward">+2 tiradas al ganar</div>
+          <div class="bmode-attempts">Intentos hoy: ${BattleAttempts.remaining('penalties')}/${BattleAttempts.MAX_DAILY}</div>
         </div>
-        <div class="battle-mode-card ${IntentosPartido.remaining('quiz') === 0 ? 'bmode-exhausted' : ''}" id="bmode-quiz">
+        <div class="battle-mode-card ${BattleAttempts.remaining('quiz') === 0 ? 'bmode-exhausted' : ''}" id="bmode-quiz">
           <div class="bmode-icon">🧠</div>
           <div class="bmode-title">Quiz Mundialista</div>
           <div class="bmode-desc">5 preguntas sobre el Mundial. Cada acierto suma puntos.</div>
-          <div class="bmode-recompensa">+2 tiradas + monedas</div>
-          <div class="bmode-attempts">Intentos hoy: ${IntentosPartido.remaining('quiz')}/${IntentosPartido.MAX_DAILY}</div>
+          <div class="bmode-reward">+2 tiradas + monedas</div>
+          <div class="bmode-attempts">Intentos hoy: ${BattleAttempts.remaining('quiz')}/${BattleAttempts.MAX_DAILY}</div>
         </div>
-        <div class="battle-mode-card ${IntentosPartido.remaining('guess') === 0 ? 'bmode-exhausted' : ''}" id="bmode-guess">
+        <div class="battle-mode-card ${BattleAttempts.remaining('guess') === 0 ? 'bmode-exhausted' : ''}" id="bmode-guess">
           <div class="bmode-icon">🔮</div>
           <div class="bmode-title">Adivina por Emoji</div>
           <div class="bmode-desc">Mira el emoji característico e identifica al jugador entre 4 opciones. ¡Sin fallar!</div>
-          <div class="bmode-recompensa">+1 tirada por acierto</div>
-          <div class="bmode-attempts">Intentos hoy: ${IntentosPartido.remaining('guess')}/${IntentosPartido.MAX_DAILY}</div>
+          <div class="bmode-reward">+1 tirada por acierto</div>
+          <div class="bmode-attempts">Intentos hoy: ${BattleAttempts.remaining('guess')}/${BattleAttempts.MAX_DAILY}</div>
         </div>
-        <div class="battle-mode-card ${IntentosPartido.remaining('connect') === 0 ? 'bmode-exhausted' : ''}" id="bmode-connect">
+        <div class="battle-mode-card ${BattleAttempts.remaining('connect') === 0 ? 'bmode-exhausted' : ''}" id="bmode-connect">
           <div class="bmode-icon">🔗</div>
           <div class="bmode-title">Conecta Jugador</div>
           <div class="bmode-desc">Une cada jugador con su selección. ¡Un fallo y se acaba!</div>
-          <div class="bmode-recompensa">+2 tiradas si completas</div>
-          <div class="bmode-attempts">Intentos hoy: ${IntentosPartido.remaining('connect')}/${IntentosPartido.MAX_DAILY}</div>
+          <div class="bmode-reward">+2 tiradas si completas</div>
+          <div class="bmode-attempts">Intentos hoy: ${BattleAttempts.remaining('connect')}/${BattleAttempts.MAX_DAILY}</div>
         </div>
       </div>
 
-      <div class="battle-equipo-preview">
-        <div class="battle-equipo-panel" id="battle-usuario-panel">
+      <div class="battle-team-preview">
+        <div class="battle-team-panel" id="battle-user-panel">
           <div class="btp-title">👤 Tu Equipo</div>
-          <div class="btp-formation" id="btp-usuario-formation">Cargando...</div>
-          <button class="btn btn-sm" id="btn-battle-random-equipo">🎲 Alineación aleatoria</button>
+          <div class="btp-formation" id="btp-user-formation">Cargando...</div>
+          <button class="btn btn-sm" id="btn-battle-random-team">🎲 Alineación aleatoria</button>
         </div>
         <div class="battle-vs-center">VS</div>
-        <div class="battle-equipo-panel" id="battle-cpu-panel">
+        <div class="battle-team-panel" id="battle-cpu-panel">
           <div class="btp-title">🤖 CPU</div>
           <div class="btp-formation" id="btp-cpu-formation">¿?</div>
           <button class="btn btn-sm" id="btn-battle-new-rival">🔀 Nuevo rival</button>
@@ -237,205 +237,205 @@ const Battle = {
     `;
 
     
-    const idealGuardado = usuario?.equipo_ideal || {};
-    const formacionGuardada = usuario?.formacion || '4-3-3';
-    const jugadoresIdeales = Album.buildIdealTeamPlayers
-      ? Album.buildIdealTeamPlayers(coleccion, idealGuardado, formacionGuardada)
+    const savedIdeal = user?.equipo_ideal || {};
+    const savedFormation = user?.formacion || '4-3-3';
+    const idealPlayers = Album.buildIdealTeamPlayers
+      ? Album.buildIdealTeamPlayers(owned, savedIdeal, savedFormation)
       : [];
-    const tieneIdeal = jugadoresIdeales.length >= 5;
-    const equipoInicialUsuario = tieneIdeal
-      ? { name: 'Mi Equipo', formation: '4-3-3', jugadores: jugadoresIdeales }
-      : (generarEquipoAleatorio(coleccion) || { name:'Mi Equipo', jugadores:coleccion.slice(0,11), formation:'4-3-3' });
+    const hasIdeal = idealPlayers.length >= 5;
+    const userTeamInit = hasIdeal
+      ? { name: 'Mi Equipo', formation: '4-3-3', players: idealPlayers }
+      : (generateUserRandomTeam(owned) || { name:'Mi Equipo', players:owned.slice(0,11), formation:'4-3-3' });
 
     this._state = {
-      equipoUsuario: equipoInicialUsuario,
-      equipoCPU:  generarEquipoCPU(),
-      usuario, coleccion,
-      usingIdeal: tieneIdeal
+      userTeam: userTeamInit,
+      cpuTeam:  generateCpuTeam(),
+      user, owned,
+      usingIdeal: hasIdeal
     };
     this._renderTeamPanels();
 
     
     document.getElementById('bmode-classic').addEventListener('click', () => {
-      if (!IntentosPartido.consume('classic')) {
+      if (!BattleAttempts.consume('classic')) {
         Toast.warn('Ya usaste los 2 intentos de Batalla Clásica hoy. Vuelve mañana.');
         return;
       }
       this.startClassicBattle();
     });
     document.getElementById('bmode-penalties').addEventListener('click', () => {
-      if (!IntentosPartido.consume('penalties')) {
+      if (!BattleAttempts.consume('penalties')) {
         Toast.warn('Ya usaste los 2 intentos de Penales hoy. Vuelve mañana.');
         return;
       }
       this.startPenaltyBattle();
     });
     document.getElementById('bmode-quiz').addEventListener('click', () => {
-      if (!IntentosPartido.consume('quiz')) {
+      if (!BattleAttempts.consume('quiz')) {
         Toast.warn('Ya usaste los 2 intentos de Quiz hoy. Vuelve mañana.');
         return;
       }
       this.startQuizBattle();
     });
     document.getElementById('bmode-guess').addEventListener('click', () => {
-      if (!IntentosPartido.consume('guess')) {
+      if (!BattleAttempts.consume('guess')) {
         Toast.warn('Ya usaste los 2 intentos de Adivina el Jugador hoy. Vuelve mañana.');
         return;
       }
       this.startGuessPlayer();
     });
     document.getElementById('bmode-connect').addEventListener('click', () => {
-      if (!IntentosPartido.consume('connect')) {
+      if (!BattleAttempts.consume('connect')) {
         Toast.warn('Ya usaste los 2 intentos de Conecta Jugador hoy. Vuelve mañana.');
         return;
       }
       this.startConnectPlayer();
     });
-    document.getElementById('btn-battle-random-equipo').addEventListener('click', () => {
+    document.getElementById('btn-battle-random-team').addEventListener('click', () => {
       if (this._state.usingIdeal) {
         
-        const rnd = generarEquipoAleatorio(this._state.coleccion);
-        if (rnd) { this._state.equipoUsuario = rnd; this._state.usingIdeal = false; }
+        const rnd = generateUserRandomTeam(this._state.owned);
+        if (rnd) { this._state.userTeam = rnd; this._state.usingIdeal = false; }
         Toast.show('🎲 Alineación aleatoria');
       } else {
         
-        const idealGuardado = this._state.usuario?.equipo_ideal || {};
+        const savedIdeal = this._state.user?.equipo_ideal || {};
         const ip = Album.buildIdealTeamPlayers
-          ? Album.buildIdealTeamPlayers(this._state.coleccion, idealGuardado) : [];
+          ? Album.buildIdealTeamPlayers(this._state.owned, savedIdeal) : [];
         if (ip.length >= 5) {
-          this._state.equipoUsuario = { name:'Mi Equipo', formation:'4-3-3', jugadores: ip };
+          this._state.userTeam = { name:'Mi Equipo', formation:'4-3-3', players: ip };
           this._state.usingIdeal = true;
           Toast.success('✅ Equipo Ideal activo');
         } else {
-          const rnd = generarEquipoAleatorio(this._state.coleccion);
-          if (rnd) this._state.equipoUsuario = rnd;
+          const rnd = generateUserRandomTeam(this._state.owned);
+          if (rnd) this._state.userTeam = rnd;
           Toast.show('🎲 Nueva alineación aleatoria');
         }
       }
       this._renderTeamPanels();
       
-      const btn = document.getElementById('btn-battle-random-equipo');
+      const btn = document.getElementById('btn-battle-random-team');
       if (btn) btn.textContent = this._state.usingIdeal ? '🎲 Modo aleatorio' : '📋 Mi Equipo Ideal';
     });
-    const actualizarBtnRival = () => {
-      const btnRival = document.getElementById('btn-battle-new-rival');
-      if (!btnRival) return;
-      const rem = IntentosPartido.remaining('rival');
-      btnRival.textContent = `🔀 Nuevo rival (${rem}/3)`;
-      btnRival.disabled = rem === 0;
-      btnRival.style.opacity = rem === 0 ? '0.45' : '1';
+    const updateRivalBtn = () => {
+      const rivalBtn = document.getElementById('btn-battle-new-rival');
+      if (!rivalBtn) return;
+      const rem = BattleAttempts.remaining('rival');
+      rivalBtn.textContent = `🔀 Nuevo rival (${rem}/3)`;
+      rivalBtn.disabled = rem === 0;
+      rivalBtn.style.opacity = rem === 0 ? '0.45' : '1';
     };
-    actualizarBtnRival();
+    updateRivalBtn();
 
     document.getElementById('btn-battle-new-rival').addEventListener('click', () => {
-      if (!IntentosPartido.consume('rival')) {
+      if (!BattleAttempts.consume('rival')) {
         Toast.warn('Ya cambiaste el rival 3 veces hoy. Vuelve mañana.');
         return;
       }
-      this._state.equipoCPU = generarEquipoCPU();
+      this._state.cpuTeam = generateCpuTeam();
       this._renderTeamPanels();
-      actualizarBtnRival();
+      updateRivalBtn();
       Toast.show('🔀 Nuevo rival generado');
     });
   },
 
   _renderTeamPanels() {
-    const { equipoUsuario, equipoCPU } = this._state;
-    const poderUsuario = poderEquipo(equipoUsuario.jugadores);
-    const poderCPU  = poderEquipo(equipoCPU.jugadores);
+    const { userTeam, cpuTeam } = this._state;
+    const userPwr = teamPower(userTeam.players);
+    const cpuPwr  = teamPower(cpuTeam.players);
 
-    document.getElementById('btp-usuario-formation').innerHTML = `
-      <div class="btp-name">${equipoUsuario.name}</div>
-      <div class="btp-formation-tag">${equipoUsuario.formation}</div>
-      <div class="btp-jugadores">
-        ${equipoUsuario.jugadores.slice(0,5).map(p => `
+    document.getElementById('btp-user-formation').innerHTML = `
+      <div class="btp-name">${userTeam.name}</div>
+      <div class="btp-formation-tag">${userTeam.formation}</div>
+      <div class="btp-players">
+        ${userTeam.players.slice(0,5).map(p => `
           <div class="btp-player">
             <span class="btp-emoji">${Array.isArray(p.emoji) ? p.emoji.join('') : (p.emoji||'⚽')}</span>
             <span class="btp-pname">${p.name.split(' ')[0]}</span>
             <span class="btp-rating ${p.rareza}">${p.rating||75}</span>
           </div>
         `).join('')}
-        ${equipoUsuario.jugadores.length > 5 ? `<div style="font-size:0.7rem;color:var(--text-muted);text-align:center">+${equipoUsuario.jugadores.length-5} más</div>` : ''}
+        ${userTeam.players.length > 5 ? `<div style="font-size:0.7rem;color:var(--text-muted);text-align:center">+${userTeam.players.length-5} más</div>` : ''}
       </div>
-      <div class="btp-power">⚡ Poder: <strong>${poderUsuario}</strong></div>
+      <div class="btp-power">⚡ Poder: <strong>${userPwr}</strong></div>
     `;
 
     document.getElementById('btp-cpu-formation').innerHTML = `
-      <div class="btp-name">${equipoCPU.name}</div>
-      <div class="btp-formation-tag">${equipoCPU.formation}</div>
-      <div class="btp-jugadores">
-        ${equipoCPU.jugadores.slice(0,5).map(p => `
+      <div class="btp-name">${cpuTeam.name}</div>
+      <div class="btp-formation-tag">${cpuTeam.formation}</div>
+      <div class="btp-players">
+        ${cpuTeam.players.slice(0,5).map(p => `
           <div class="btp-player">
             <span class="btp-emoji">${Array.isArray(p.emoji) ? p.emoji.join('') : (p.emoji||'⚽')}</span>
             <span class="btp-pname">${p.name.split(' ')[0]}</span>
             <span class="btp-rating ${p.rareza}">${p.rating||75}</span>
           </div>
         `).join('')}
-        ${equipoCPU.jugadores.length > 5 ? `<div style="font-size:0.7rem;color:var(--text-muted);text-align:center">+${equipoCPU.jugadores.length-5} más</div>` : ''}
+        ${cpuTeam.players.length > 5 ? `<div style="font-size:0.7rem;color:var(--text-muted);text-align:center">+${cpuTeam.players.length-5} más</div>` : ''}
       </div>
-      <div class="btp-power">⚡ Poder: <strong>${poderCPU}</strong></div>
+      <div class="btp-power">⚡ Poder: <strong>${cpuPwr}</strong></div>
     `;
   },
 
   
   async startClassicBattle() {
-    const { equipoUsuario, equipoCPU } = this._state;
-    const poderUsuario = poderEquipo(equipoUsuario.jugadores) + Math.random() * 80;
-    const poderCPU  = poderEquipo(equipoCPU.jugadores)  + Math.random() * 80;
+    const { userTeam, cpuTeam } = this._state;
+    const userPwr = teamPower(userTeam.players) + Math.random() * 80;
+    const cpuPwr  = teamPower(cpuTeam.players)  + Math.random() * 80;
 
-    const vueltas = [];
-    const compararPosiciones = ['POR','DEF','MED','DEL'];
+    const rounds = [];
+    const comparePositions = ['POR','DEF','MED','DEL'];
 
-    compararPosiciones.forEach(pos => {
-      const jugadoresUsuario = equipoUsuario.jugadores.filter(p => p.pos === pos);
-      const jugadoresCPU = equipoCPU.jugadores.filter(p => p.pos === pos);
-      if (!jugadoresUsuario.length || !jugadoresCPU.length) return;
+    comparePositions.forEach(pos => {
+      const uPlayers = userTeam.players.filter(p => p.pos === pos);
+      const cPlayers = cpuTeam.players.filter(p => p.pos === pos);
+      if (!uPlayers.length || !cPlayers.length) return;
 
-      const ratingUsuario = jugadoresUsuario.reduce((s,p) => s + (p.rating||75), 0) / jugadoresUsuario.length + Math.random()*15;
-      const ratingCPU = jugadoresCPU.reduce((s,p) => s + (p.rating||75), 0) / jugadoresCPU.length + Math.random()*15;
+      const uRating = uPlayers.reduce((s,p) => s + (p.rating||75), 0) / uPlayers.length + Math.random()*15;
+      const cRating = cPlayers.reduce((s,p) => s + (p.rating||75), 0) / cPlayers.length + Math.random()*15;
 
-      vueltas.push({
+      rounds.push({
         pos,
-        userScore: Math.vuelta(ratingUsuario),
-        cpuScore:  Math.vuelta(ratingCPU),
-        ganador:    ratingUsuario > ratingCPU ? 'usuario' : 'cpu'
+        userScore: Math.round(uRating),
+        cpuScore:  Math.round(cRating),
+        winner:    uRating > cRating ? 'user' : 'cpu'
       });
     });
 
-    const victoriasUsuario = vueltas.filter(r => r.ganador === 'usuario').length;
-    const ganoCPU  = vueltas.filter(r => r.ganador === 'cpu').length;
-    const won = victoriasUsuario > ganoCPU;
-    const sorteado = victoriasUsuario === ganoCPU;
+    const userWins = rounds.filter(r => r.winner === 'user').length;
+    const cpuWins  = rounds.filter(r => r.winner === 'cpu').length;
+    const won = userWins > cpuWins;
+    const drawn = userWins === cpuWins;
 
-    let recompensa = 0;
-    if (won) recompensa = 1;
-    else if (sorteado) recompensa = 0;
+    let reward = 0;
+    if (won) reward = 1;
+    else if (drawn) reward = 0;
 
-    await this._applyBattleResult(won, sorteado, recompensa);
+    await this._applyBattleResult(won, drawn, reward);
 
     Modal.open(`
-      <div class="battle-result-modal2">
-        <div class="brm-header ${won ? 'win' : sorteado ? 'draw' : 'loss'}">
-          ${won ? '🏆 ¡VICTORIA!' : sorteado ? '🤝 EMPATE' : '💀 DERROTA'}
+      <div class="battle-result-modal">
+        <div class="brm-header ${won ? 'win' : drawn ? 'draw' : 'loss'}">
+          ${won ? '🏆 ¡VICTORIA!' : drawn ? '🤝 EMPATE' : '💀 DERROTA'}
         </div>
         <div class="brm-score">
-          <span>${equipoUsuario.name} <strong>${victoriasUsuario}</strong></span>
+          <span>${userTeam.name} <strong>${userWins}</strong></span>
           <span style="color:var(--text-muted)">vs</span>
-          <span><strong>${ganoCPU}</strong> ${equipoCPU.name}</span>
+          <span><strong>${cpuWins}</strong> ${cpuTeam.name}</span>
         </div>
-        <div class="brm-vueltas">
-          ${vueltas.map(r => `
-            <div class="brm-vuelta ${r.ganador === 'usuario' ? 'win' : 'loss'}">
+        <div class="brm-rounds">
+          ${rounds.map(r => `
+            <div class="brm-round ${r.winner === 'user' ? 'win' : 'loss'}">
               <span class="brm-pos">${r.pos}</span>
               <span class="brm-us">${r.userScore}</span>
               <span style="color:var(--text-muted)">vs</span>
               <span class="brm-cpu">${r.cpuScore}</span>
-              <span>${r.ganador === 'usuario' ? '✅' : '❌'}</span>
+              <span>${r.winner === 'user' ? '✅' : '❌'}</span>
             </div>
           `).join('')}
         </div>
-        ${recompensa > 0 ? `<div class="brm-recompensa">🎴 +${recompensa} tirada ganada</div>` : ''}
-        <button class="btn btn-primary" onclick="Modal.close();Battle.renderizar()" style="width:100%;margin-top:1rem">
+        ${reward > 0 ? `<div class="brm-reward">🎴 +${reward} tirada ganada</div>` : ''}
+        <button class="btn btn-primary" onclick="Modal.close();Battle.render()" style="width:100%;margin-top:1rem">
           Continuar
         </button>
       </div>
@@ -444,36 +444,36 @@ const Battle = {
 
   
   async startPenaltyBattle() {
-    let golesUsuario = 0, cpuGoals = 0;
-    let vuelta = 0;
-    const totalVueltas = 3; 
+    let userGoals = 0, cpuGoals = 0;
+    let round = 0;
+    const totalRounds = 3; 
 
     const DIRS = ['↖️ Izq. arriba','⬆️ Centro','↗️ Der. arriba','↙️ Izq. abajo','⬇️ Raso centro','↘️ Der. abajo'];
     const DIRS_SHORT = ['Izq. arr.','Centro','Der. arr.','Izq. abajo','Raso','Der. abajo'];
 
-    const mostrarResultado = (marcoUsuario, marcoCPU, onNext) => {
-      const fondoGol = marcoUsuario ? 'goal-flash' : '';
+    const showResult = (userScored, cpuScored, onNext) => {
+      const goalBg = userScored ? 'goal-flash' : '';
       Modal.open(`
-        <div style="text-align:center;padding:1rem 0" class="${fondoGol}">
+        <div style="text-align:center;padding:1rem 0" class="${goalBg}">
           <div style="font-size:2.5rem;margin-bottom:0.3rem">
-            <span class="${marcoUsuario ? 'ball-kick-anim' : ''}">⚽</span>
+            <span class="${userScored ? 'ball-kick-anim' : ''}">⚽</span>
           </div>
-          <div style="font-size:${marcoUsuario?'1.4rem':'1.1rem'};font-weight:900;color:${marcoUsuario?'#44ff88':'#ff4466'};font-family:'Bebas Neue',cursive;letter-spacing:1px;margin-bottom:0.3rem">
-            ${marcoUsuario ? '🥅 ¡¡GOOOL!!' : '🧤 ¡Atajado!'}
+          <div style="font-size:${userScored?'1.4rem':'1.1rem'};font-weight:900;color:${userScored?'#44ff88':'#ff4466'};font-family:'Bebas Neue',cursive;letter-spacing:1px;margin-bottom:0.3rem">
+            ${userScored ? '🥅 ¡¡GOOOL!!' : '🧤 ¡Atajado!'}
           </div>
           <div style="display:flex;justify-content:center;gap:1.5rem;margin:0.4rem 0">
             <div>
               <div style="font-size:0.7rem;color:var(--text-muted)">CPU</div>
-              <div style="font-size:0.9rem;color:${marcoCPU?'#ff8844':'#44ff88'};font-weight:700">
-                ${marcoCPU ? '⚽ Gol' : '✋ ¡Atajaste!'}
+              <div style="font-size:0.9rem;color:${cpuScored?'#ff8844':'#44ff88'};font-weight:700">
+                ${cpuScored ? '⚽ Gol' : '✋ ¡Atajaste!'}
               </div>
             </div>
           </div>
           <div style="font-size:2rem;font-family:'Bebas Neue',cursive;margin:0.5rem 0;letter-spacing:2px">
-            ${golesUsuario} — ${cpuGoals}
+            ${userGoals} — ${cpuGoals}
           </div>
           <button class="btn btn-primary" style="margin-top:1rem;width:100%" id="next-penalty-btn">
-            ${vuelta < totalVueltas ? `Ronda ${vuelta+1} →` : 'Ver resultado →'}
+            ${round < totalRounds ? `Ronda ${round+1} →` : 'Ver resultado →'}
           </button>
         </div>
       `);
@@ -486,9 +486,9 @@ const Battle = {
     };
 
     
-    const tirarCPU = (onDone) => {
-      const dirDisparoCPU = Math.floor(Math.random() * 6); 
-      const etiquetasDirCPU = ['↖️ Izq. arriba', '⬆️ Centro', '↗️ Der. arriba', '↙️ Izq. abajo', '⬇️ Raso centro', '↘️ Der. abajo'];
+    const doCpuShoot = (onDone) => {
+      const cpuShotDir = Math.floor(Math.random() * 6); 
+      const cpuDirLabels = ['↖️ Izq. arriba', '⬆️ Centro', '↗️ Der. arriba', '↙️ Izq. abajo', '⬇️ Raso centro', '↘️ Der. abajo'];
       Modal.open(`
         <div style="text-align:center;padding:0.5rem 0">
           <div style="font-size:1.8rem;margin-bottom:0.3rem">🥅</div>
@@ -497,10 +497,10 @@ const Battle = {
             Elige hacia dónde tirarte:
           </p>
           <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:0.4rem;max-width:280px;margin:0 auto">
-            ${etiquetasDirCPU.map((etiqueta, i) => `
+            ${cpuDirLabels.map((label, i) => `
               <button class="penalty-save-btn btn btn-secondary" data-dir="${i}"
                 style="padding:0.5rem 0.2rem;font-size:0.72rem">
-                ${etiqueta}
+                ${label}
               </button>
             `).join('')}
           </div>
@@ -509,32 +509,32 @@ const Battle = {
       setTimeout(() => {
         document.querySelectorAll('.penalty-save-btn').forEach(btn => {
           btn.addEventListener('click', () => {
-            const dirAtajeUsuario = parseInt(btn.dataset.dir);
-            const marcoCPU = (dirAtajeUsuario !== dirDisparoCPU); 
-            if (marcoCPU) cpuGoals++;
+            const userSaveDir = parseInt(btn.dataset.dir);
+            const cpuScored = (userSaveDir !== cpuShotDir); 
+            if (cpuScored) cpuGoals++;
             Modal.close();
-            setTimeout(() => onDone(marcoCPU), 200);
+            setTimeout(() => onDone(cpuScored), 200);
           });
         });
       }, 50);
     };
 
-    const hacerRonda = () => {
-      if (vuelta >= totalVueltas) {
-        this._endPenaltyBattle(golesUsuario, cpuGoals);
+    const doRound = () => {
+      if (round >= totalRounds) {
+        this._endPenaltyBattle(userGoals, cpuGoals);
         return;
       }
-      vuelta++;
+      round++;
 
       
       Modal.open(`
         <div style="text-align:center;padding:0.5rem 0">
           <div style="font-family:'Bebas Neue',cursive;font-size:1.2rem;color:var(--text-muted);margin-bottom:0.5rem">
-            RONDA ${vuelta} DE ${totalVueltas}
+            RONDA ${round} DE ${totalRounds}
           </div>
           <div style="font-size:2rem;margin:0.3rem 0">⚽ Tu turno de disparar</div>
           <div style="font-size:0.85rem;color:var(--text-muted);margin-bottom:0.8rem">
-            Marcador: <strong>${golesUsuario}</strong> - <strong>${cpuGoals}</strong>
+            Marcador: <strong>${userGoals}</strong> - <strong>${cpuGoals}</strong>
           </div>
           <p style="font-size:0.82rem;color:var(--text-secondary);margin-bottom:0.8rem">
             ¿Hacia dónde pateas?
@@ -553,16 +553,16 @@ const Battle = {
       setTimeout(() => {
         document.querySelectorAll('.penalty-dir-btn').forEach(btn => {
           btn.addEventListener('click', () => {
-            const dirUsuario    = parseInt(btn.dataset.dir);
-            const dirAtajeCPU = Math.floor(Math.random() * 6);
-            const marcoUsuario = (dirUsuario !== dirAtajeCPU) || Math.random() > 0.25;
-            if (marcoUsuario) golesUsuario++;
+            const userDir    = parseInt(btn.dataset.dir);
+            const cpuSaveDir = Math.floor(Math.random() * 6);
+            const userScored = (userDir !== cpuSaveDir) || Math.random() > 0.25;
+            if (userScored) userGoals++;
             Modal.close();
 
             
             setTimeout(() => {
-              tirarCPU((marcoCPU) => {
-                mostrarResultado(marcoUsuario, marcoCPU, hacerRonda);
+              doCpuShoot((cpuScored) => {
+                showResult(userScored, cpuScored, doRound);
               });
             }, 200);
           });
@@ -570,27 +570,27 @@ const Battle = {
       }, 50);
     };
 
-    hacerRonda();
+    doRound();
   },
 
-  async _endPenaltyBattle(golesUsuario, cpuGoals) {
-    const won   = golesUsuario > cpuGoals;
-    const sorteado = golesUsuario === cpuGoals;
-    const recompensa = won ? 2 : sorteado ? 1 : 0;
-    await this._applyBattleResult(won, sorteado, recompensa);
+  async _endPenaltyBattle(userGoals, cpuGoals) {
+    const won   = userGoals > cpuGoals;
+    const drawn = userGoals === cpuGoals;
+    const reward = won ? 2 : drawn ? 1 : 0;
+    await this._applyBattleResult(won, drawn, reward);
 
     setTimeout(() => {
       Modal.open(`
-        <div class="battle-result-modal2">
-          <div class="brm-header ${won ? 'win' : sorteado ? 'draw' : 'loss'}">
-            ${won ? '🏆 ¡GANASTE LA TANDA!' : sorteado ? '🤝 EMPATE' : '💀 LA PERDISTE'}
+        <div class="battle-result-modal">
+          <div class="brm-header ${won ? 'win' : drawn ? 'draw' : 'loss'}">
+            ${won ? '🏆 ¡GANASTE LA TANDA!' : drawn ? '🤝 EMPATE' : '💀 LA PERDISTE'}
           </div>
           <div class="brm-score" style="font-size:2rem;font-family:'Bebas Neue',cursive;letter-spacing:4px">
-            ${golesUsuario} — ${cpuGoals}
+            ${userGoals} — ${cpuGoals}
           </div>
           <div style="font-size:0.85rem;color:var(--text-muted);margin:0.5rem 0">Penales marcados</div>
-          ${recompensa > 0 ? `<div class="brm-recompensa">🎴 +${recompensa} tirada${recompensa>1?'s':''} ganada${recompensa>1?'s':''}</div>` : ''}
-          <button class="btn btn-primary" onclick="Modal.close();Battle.renderizar()" style="width:100%;margin-top:1rem">
+          ${reward > 0 ? `<div class="brm-reward">🎴 +${reward} tirada${reward>1?'s':''} ganada${reward>1?'s':''}</div>` : ''}
+          <button class="btn btn-primary" onclick="Modal.close();Battle.render()" style="width:100%;margin-top:1rem">
             Continuar
           </button>
         </div>
@@ -658,33 +658,33 @@ const Battle = {
   ],
 
   async startQuizBattle() {
-    const preguntas = [...this._quizQuestions].sort(() => Math.random() - 0.5).slice(0, 5);
+    const questions = [...this._quizQuestions].sort(() => Math.random() - 0.5).slice(0, 5);
     let score = 0;
     let qi = 0;
 
-    const hacerPregunta = () => {
-      if (qi >= preguntas.length) {
-        this._endQuizBattle(score, preguntas.length);
+    const doQuestion = () => {
+      if (qi >= questions.length) {
+        this._endQuizBattle(score, questions.length);
         return;
       }
-      const q = preguntas[qi];
-      const opcionesMezcladas = [...q.opts].map((o, i) => ({ text: o, orig: i }))
+      const q = questions[qi];
+      const shuffledOpts = [...q.opts].map((o, i) => ({ text: o, orig: i }))
                             .sort(() => Math.random() - 0.5);
       qi++;
 
       Modal.open(`
         <div style="padding:0.5rem 0">
           <div style="font-size:0.7rem;color:var(--text-muted);font-family:'Barlow Condensed',sans-serif;letter-spacing:2px;margin-bottom:0.5rem">
-            PREGUNTA ${qi} DE ${preguntas.length} · ${score} pts
+            PREGUNTA ${qi} DE ${questions.length} · ${score} pts
           </div>
           <div class="quiz-progress-bar">
-            <div class="quiz-progress-fill" style="width:${((qi-1)/preguntas.length)*100}%"></div>
+            <div class="quiz-progress-fill" style="width:${((qi-1)/questions.length)*100}%"></div>
           </div>
           <p style="font-size:0.95rem;font-weight:600;color:var(--text-primary);margin:0.75rem 0;line-height:1.4">
             ${q.q}
           </p>
           <div style="display:grid;grid-template-columns:1fr 1fr;gap:0.5rem;margin-top:0.75rem">
-            ${opcionesMezcladas.map(opt => `
+            ${shuffledOpts.map(opt => `
               <button class="quiz-opt-btn" data-orig="${opt.orig}" style="text-align:left;font-size:0.8rem">
                 ${opt.text}
               </button>
@@ -696,20 +696,20 @@ const Battle = {
       setTimeout(() => {
         document.querySelectorAll('.quiz-opt-btn').forEach(btn => {
           btn.addEventListener('click', () => {
-            const elegido = parseInt(btn.dataset.orig);
-            const correcto = elegido === q.ans;
-            if (correcto) score++;
+            const chosen = parseInt(btn.dataset.orig);
+            const correct = chosen === q.ans;
+            if (correct) score++;
 
             
             document.querySelectorAll('.quiz-opt-btn').forEach(b => {
-              const esCorrect = parseInt(b.dataset.orig) === q.ans;
-              b.style.background = esCorrect ? 'rgba(68,255,136,0.2)' : (b === btn && !correcto ? 'rgba(255,68,102,0.2)' : '');
-              b.style.borderColor = esCorrect ? '#44ff88' : (b === btn && !correcto ? '#ff4466' : '');
+              const isCorrect = parseInt(b.dataset.orig) === q.ans;
+              b.style.background = isCorrect ? 'rgba(68,255,136,0.2)' : (b === btn && !correct ? 'rgba(255,68,102,0.2)' : '');
+              b.style.borderColor = isCorrect ? '#44ff88' : (b === btn && !correct ? '#ff4466' : '');
               b.disabled = true;
             });
 
             
-            if (correcto) {
+            if (correct) {
               const rect = btn.getBoundingClientRect();
               const el = document.createElement('div');
               el.className = 'points-float';
@@ -721,26 +721,26 @@ const Battle = {
 
             setTimeout(() => {
               Modal.close();
-              setTimeout(hacerPregunta, 200);
+              setTimeout(doQuestion, 200);
             }, 1000);
           });
         });
       }, 50);
     };
 
-    hacerPregunta();
+    doQuestion();
   },
 
   async _endQuizBattle(score, total) {
     const won   = score >= Math.ceil(total * 0.6); 
-    const sorteado = score === Math.floor(total / 2);
+    const drawn = score === Math.floor(total / 2);
     const tiradas = score >= total ? 3 : score >= Math.ceil(total*0.6) ? 2 : score > 0 ? 1 : 0;
     const monedas = score * 5;
-    await this._applyBattleResult(won, sorteado, tiradas, monedas);
+    await this._applyBattleResult(won, drawn, tiradas, monedas);
 
     setTimeout(() => {
       Modal.open(`
-        <div class="battle-result-modal2">
+        <div class="battle-result-modal">
           <div class="brm-header ${won ? 'win' : score > 0 ? 'draw' : 'loss'}">
             ${score >= total ? '🧠 ¡PERFECTO!' : won ? '🏆 ¡MUY BIEN!' : score > 0 ? '📚 BUEN INTENTO' : '💀 A ESTUDIAR MÁS'}
           </div>
@@ -753,11 +753,11 @@ const Battle = {
               <span style="font-size:1.2rem">${i < score ? '✅' : '❌'}</span>
             `).join('')}
           </div>
-          <div class="brm-recompensa">
+          <div class="brm-reward">
             ${tiradas > 0 ? `🎴 +${tiradas} tirada${tiradas>1?'s':''}` : ''}
             ${monedas > 0 ? `&nbsp;&nbsp;💰 +${monedas} monedas` : ''}
           </div>
-          <button class="btn btn-primary" onclick="Modal.close();Battle.renderizar()" style="width:100%;margin-top:1rem">
+          <button class="btn btn-primary" onclick="Modal.close();Battle.render()" style="width:100%;margin-top:1rem">
             Continuar
           </button>
         </div>
@@ -767,35 +767,35 @@ const Battle = {
 
   
   async startGuessPlayer() {
-    const todasFiguritas = Gacha.getPool();
-    if (!todasFiguritas.length) { Toast.error('No hay jugadores disponibles'); return; }
+    const allFigs = Gacha.getPool();
+    if (!allFigs.length) { Toast.error('No hay jugadores disponibles'); return; }
 
-    const aAdivinar = [...todasFiguritas].sort(() => Math.random() - 0.5).slice(0, 5);
+    const toGuess = [...allFigs].sort(() => Math.random() - 0.5).slice(0, 5);
     let score = 0;
-    let indPregunta = 0;
+    let questionIdx = 0;
 
-    const hacerPregunta = () => {
-      if (indPregunta >= aAdivinar.length) {
-        return this._endGuessPlayer(score, aAdivinar.length);
+    const doQuestion = () => {
+      if (questionIdx >= toGuess.length) {
+        return this._endGuessPlayer(score, toGuess.length);
       }
-      const correcto = aAdivinar[indPregunta];
-      const incorrecto = todasFiguritas.filter(f => f.id !== correcto.id)
+      const correct = toGuess[questionIdx];
+      const wrong = allFigs.filter(f => f.id !== correct.id)
                             .sort(() => Math.random() - 0.5).slice(0, 3);
-      const opciones = [...incorrecto, correcto].sort(() => Math.random() - 0.5);
+      const options = [...wrong, correct].sort(() => Math.random() - 0.5);
 
-      const htmlOpciones = opciones.map(opt =>
+      const optsHtml = options.map(opt =>
         `<button class="btn guess-opt-btn" data-id="${opt.id}" style="font-size:0.78rem;padding:0.5rem">${opt.name}</button>`
       ).join('');
 
       Modal.open(`
         <div style="text-align:center;padding:0.5rem">
-          <div style="font-size:0.75rem;color:var(--text-muted);margin-bottom:0.5rem">Jugador ${indPregunta+1} de ${aAdivinar.length} · Aciertos: ${score}</div>
+          <div style="font-size:0.75rem;color:var(--text-muted);margin-bottom:0.5rem">Jugador ${questionIdx+1} de ${toGuess.length} · Aciertos: ${score}</div>
           <div class="guess-emoji-circle">
-            <span class="guess-emoji-pop">${Array.isArray(correcto.emoji) ? correcto.emoji.join(' ') : (correcto.emoji || '❓')}</span>
+            <span class="guess-emoji-pop">${Array.isArray(correct.emoji) ? correct.emoji.join(' ') : (correct.emoji || '❓')}</span>
           </div>
           <p style="margin-bottom:0.75rem;font-weight:600">¿Quién es este jugador?</p>
           <div style="display:grid;grid-template-columns:1fr 1fr;gap:0.5rem">
-            ${htmlOpciones}
+            ${optsHtml}
           </div>
         </div>
       `);
@@ -803,28 +803,28 @@ const Battle = {
       setTimeout(() => {
         document.querySelectorAll('.guess-opt-btn').forEach(btn => {
           btn.addEventListener('click', () => {
-            const esCorrect = btn.dataset.id === correcto.id;
-            if (esCorrect) score++;
+            const isCorrect = btn.dataset.id === correct.id;
+            if (isCorrect) score++;
             document.querySelectorAll('.guess-opt-btn').forEach(b => {
-              b.style.background = b.dataset.id === correcto.id
+              b.style.background = b.dataset.id === correct.id
                 ? 'rgba(68,255,136,0.25)'
-                : (b === btn && !esCorrect ? 'rgba(255,68,102,0.2)' : '');
-              b.style.borderColor = b.dataset.id === correcto.id
+                : (b === btn && !isCorrect ? 'rgba(255,68,102,0.2)' : '');
+              b.style.borderColor = b.dataset.id === correct.id
                 ? '#44ff88'
-                : (b === btn && !esCorrect ? '#ff4466' : '');
+                : (b === btn && !isCorrect ? '#ff4466' : '');
               b.disabled = true;
             });
             setTimeout(() => {
               Modal.close();
-              indPregunta++;
-              setTimeout(hacerPregunta, 200);
+              questionIdx++;
+              setTimeout(doQuestion, 200);
             }, 900);
           });
         });
       }, 50);
     };
 
-    hacerPregunta();
+    doQuestion();
   },
 
   async _endGuessPlayer(score, total) {
@@ -833,14 +833,14 @@ const Battle = {
     await this._applyBattleResult(won, false, tiradas, 0);
     setTimeout(() => {
       Modal.open(`
-        <div class="battle-result-modal2">
+        <div class="battle-result-modal">
           <div class="brm-header ${won ? 'win' : score > 0 ? 'draw' : 'loss'}">
             ${score === total ? '🎯 ¡PERFECTO!' : won ? '👤 ¡BIEN HECHO!' : score > 0 ? '👤 BUEN INTENTO' : '😅 ¡A PRACTICAR!'}
           </div>
           <div class="brm-score" style="font-size:2.5rem;font-family:'Bebas Neue',cursive">${score}/${total}</div>
           <div style="font-size:0.8rem;color:var(--text-muted);margin:0.25rem 0">jugadores adivinados</div>
-          <div class="brm-recompensa">${tiradas > 0 ? `🎴 +${tiradas} tirada${tiradas>1?'s':''}` : 'Sin recompensa esta vez'}</div>
-          <button class="btn btn-primary" onclick="Modal.close();Battle.renderizar()" style="width:100%;margin-top:1rem">Continuar</button>
+          <div class="brm-reward">${tiradas > 0 ? `🎴 +${tiradas} tirada${tiradas>1?'s':''}` : 'Sin recompensa esta vez'}</div>
+          <button class="btn btn-primary" onclick="Modal.close();Battle.render()" style="width:100%;margin-top:1rem">Continuar</button>
         </div>
       `);
     }, 200);
@@ -848,36 +848,36 @@ const Battle = {
 
   
   async startConnectPlayer() {
-    const todasFiguritas = Gacha.getPool();
-    if (!todasFiguritas.length) { Toast.error('No hay jugadores disponibles'); return; }
+    const allFigs = Gacha.getPool();
+    if (!allFigs.length) { Toast.error('No hay jugadores disponibles'); return; }
 
-    const porEquipo = {};
-    todasFiguritas.forEach(f => { (porEquipo[f.equipo] = porEquipo[f.equipo] || []).push(f); });
-    const equipos = Object.keys(porEquipo).sort(() => Math.random() - 0.5).slice(0, 6);
-    const jugadores = equipos.map(t => porEquipo[t][Math.floor(Math.random()*porEquipo[t].length)]);
+    const byTeam = {};
+    allFigs.forEach(f => { (byTeam[f.team] = byTeam[f.team] || []).push(f); });
+    const teams = Object.keys(byTeam).sort(() => Math.random() - 0.5).slice(0, 6);
+    const players = teams.map(t => byTeam[t][Math.floor(Math.random()*byTeam[t].length)]);
 
-    const jugadoresMezclados = [...jugadores].sort(() => Math.random() - 0.5).map(p => Object.assign({}, p));
-    const equiposMezclados   = [...jugadores].sort(() => Math.random() - 0.5).map(p => ({ name: p.equipo, flag: p.flag }));
+    const shuffledPlayers = [...players].sort(() => Math.random() - 0.5).map(p => Object.assign({}, p));
+    const shuffledTeams   = [...players].sort(() => Math.random() - 0.5).map(p => ({ name: p.team, flag: p.flag }));
 
-    let jugadorSeleccionado = null;
-    let coincidio = 0;
+    let selectedPlayer = null;
+    let matched = 0;
     const self = this;
 
-    const renderizar = () => {
-      const jugadoresActivos = jugadoresMezclados.filter(p => !p._matched);
-      const equiposActivos   = equiposMezclados.filter(t => !t._matched);
+    const render = () => {
+      const activePlayers = shuffledPlayers.filter(p => !p._matched);
+      const activeTeams   = shuffledTeams.filter(t => !t._matched);
 
-      const htmlJugadores = jugadoresActivos.map((p, i) =>
+      const playersHtml = activePlayers.map((p, i) =>
         `<button class="btn connect-player-btn connect-card-in" style="animation-delay:${i*0.05}s"
-           data-idx="${jugadoresMezclados.indexOf(p)}"
-           ${jugadorSeleccionado && jugadorSeleccionado.id === p.id ? 'data-seleccionado="1"' : ''}>
+           data-idx="${shuffledPlayers.indexOf(p)}"
+           ${selectedPlayer && selectedPlayer.id === p.id ? 'data-selected="1"' : ''}>
            ${p.name}
          </button>`
       ).join('');
 
-      const htmlEquipos = equiposActivos.map((t, i) =>
-        `<button class="btn connect-equipo-btn connect-card-in" style="animation-delay:${i*0.05}s"
-           data-idx="${equiposMezclados.indexOf(t)}">
+      const teamsHtml = activeTeams.map((t, i) =>
+        `<button class="btn connect-team-btn connect-card-in" style="animation-delay:${i*0.05}s"
+           data-idx="${shuffledTeams.indexOf(t)}">
            ${t.flag} ${t.name}
          </button>`
       ).join('');
@@ -885,12 +885,12 @@ const Battle = {
       Modal.open(`
         <div style="padding:0.5rem">
           <div class="connect-progress">
-            <div class="connect-progress-etiqueta">Empareja jugador con selección · ${coincidio}/${jugadores.length} correctos</div>
-            <div class="connect-progress-bar"><div class="connect-progress-fill" style="width:${(coincidio/jugadores.length)*100}%"></div></div>
+            <div class="connect-progress-label">Empareja jugador con selección · ${matched}/${players.length} correctos</div>
+            <div class="connect-progress-bar"><div class="connect-progress-fill" style="width:${(matched/players.length)*100}%"></div></div>
           </div>
           <div class="connect-grid">
-            <div>${htmlJugadores}</div>
-            <div>${htmlEquipos}</div>
+            <div>${playersHtml}</div>
+            <div>${teamsHtml}</div>
           </div>
           <div style="text-align:center;font-size:0.7rem;color:var(--text-muted);margin-top:0.5rem">
             Toca un jugador y luego su selección
@@ -899,43 +899,43 @@ const Battle = {
       `);
 
       
-      document.querySelectorAll('.connect-player-btn[data-seleccionado="1"]').forEach(b => b.classList.add('connect-seleccionado'));
+      document.querySelectorAll('.connect-player-btn[data-selected="1"]').forEach(b => b.classList.add('connect-selected'));
 
       setTimeout(() => {
         document.querySelectorAll('.connect-player-btn').forEach(btn => {
           btn.addEventListener('click', () => {
-            jugadorSeleccionado = jugadoresMezclados[parseInt(btn.dataset.idx)];
-            renderizar();
+            selectedPlayer = shuffledPlayers[parseInt(btn.dataset.idx)];
+            render();
           });
         });
 
-        document.querySelectorAll('.connect-equipo-btn').forEach(btn => {
+        document.querySelectorAll('.connect-team-btn').forEach(btn => {
           btn.addEventListener('click', () => {
-            if (!jugadorSeleccionado) { Toast.show('Selecciona un jugador primero'); return; }
-            const datosEquipo = equiposMezclados[parseInt(btn.dataset.idx)];
-            const esCorrect = jugadorSeleccionado.equipo === datosEquipo.name;
-            const btnJugador = document.querySelector(`.connect-player-btn[data-idx="${jugadoresMezclados.indexOf(jugadorSeleccionado)}"]`);
+            if (!selectedPlayer) { Toast.show('Selecciona un jugador primero'); return; }
+            const teamData = shuffledTeams[parseInt(btn.dataset.idx)];
+            const isCorrect = selectedPlayer.team === teamData.name;
+            const playerBtn = document.querySelector(`.connect-player-btn[data-idx="${shuffledPlayers.indexOf(selectedPlayer)}"]`);
 
-            if (esCorrect) {
-              jugadorSeleccionado._matched = true;
-              datosEquipo._matched = true;
-              coincidio++;
-              Toast.success(`✅ ¡Correcto! ${jugadorSeleccionado.name} → ${datosEquipo.flag} ${datosEquipo.name}`);
-              btn.classList.add('connect-correcto');
-              btnJugador?.classList.add('connect-correcto');
-              const eraUltimo = coincidio >= jugadores.length;
-              jugadorSeleccionado = null;
+            if (isCorrect) {
+              selectedPlayer._matched = true;
+              teamData._matched = true;
+              matched++;
+              Toast.success(`✅ ¡Correcto! ${selectedPlayer.name} → ${teamData.flag} ${teamData.name}`);
+              btn.classList.add('connect-correct');
+              playerBtn?.classList.add('connect-correct');
+              const wasLast = matched >= players.length;
+              selectedPlayer = null;
               setTimeout(() => {
-                if (eraUltimo) { Modal.close(); self._endConnectPlayer(true, coincidio); }
-                else renderizar();
+                if (wasLast) { Modal.close(); self._endConnectPlayer(true, matched); }
+                else render();
               }, 350);
             } else {
-              Toast.error(`❌ ¡Incorrecto! ${jugadorSeleccionado.name} no juega en ${datosEquipo.flag} ${datosEquipo.name}`);
-              btn.classList.add('connect-incorrecto');
-              btnJugador?.classList.add('connect-incorrecto');
+              Toast.error(`❌ ¡Incorrecto! ${selectedPlayer.name} no juega en ${teamData.flag} ${teamData.name}`);
+              btn.classList.add('connect-wrong');
+              playerBtn?.classList.add('connect-wrong');
               setTimeout(() => {
                 Modal.close();
-                setTimeout(() => self._endConnectPlayer(false, coincidio), 200);
+                setTimeout(() => self._endConnectPlayer(false, matched), 200);
               }, 450);
             }
           });
@@ -943,40 +943,40 @@ const Battle = {
       }, 50);
     };
 
-    renderizar();
+    render();
   },
 
-  async _endConnectPlayer(won, coincidio) {
-    const tiradas = won ? 2 : coincidio >= 3 ? 1 : 0;
+  async _endConnectPlayer(won, matched) {
+    const tiradas = won ? 2 : matched >= 3 ? 1 : 0;
     await this._applyBattleResult(won, false, tiradas, won ? 20 : 0);
     setTimeout(() => {
       Modal.open(`
-        <div class="battle-result-modal2">
-          <div class="brm-header ${won ? 'win' : coincidio > 0 ? 'draw' : 'loss'}">
-            ${won ? '🔗 ¡PERFECTO!' : coincidio >= 3 ? '🔗 BUEN INTENTO' : '💀 FALLASTE'}
+        <div class="battle-result-modal">
+          <div class="brm-header ${won ? 'win' : matched > 0 ? 'draw' : 'loss'}">
+            ${won ? '🔗 ¡PERFECTO!' : matched >= 3 ? '🔗 BUEN INTENTO' : '💀 FALLASTE'}
           </div>
-          <div class="brm-score" style="font-size:2.5rem;font-family:'Bebas Neue',cursive">${coincidio}</div>
+          <div class="brm-score" style="font-size:2.5rem;font-family:'Bebas Neue',cursive">${matched}</div>
           <div style="font-size:0.8rem;color:var(--text-muted);margin:0.25rem 0">conexiones correctas</div>
-          <div class="brm-recompensa">${tiradas > 0 ? `🎴 +${tiradas} tirada${tiradas>1?'s':''}` : 'Sin recompensa esta vez'}</div>
-          <button class="btn btn-primary" onclick="Modal.close();Battle.renderizar()" style="width:100%;margin-top:1rem">Continuar</button>
+          <div class="brm-reward">${tiradas > 0 ? `🎴 +${tiradas} tirada${tiradas>1?'s':''}` : 'Sin recompensa esta vez'}</div>
+          <button class="btn btn-primary" onclick="Modal.close();Battle.render()" style="width:100%;margin-top:1rem">Continuar</button>
         </div>
       `);
     }, 200);
   },
 
   
-  async _applyBattleResult(won, sorteado, tiradas = 0, monedas = 0) {
-    const usuario = await Auth.currentUser();
-    if (!usuario) return;
+  async _applyBattleResult(won, drawn, tiradas = 0, monedas = 0) {
+    const user = await Auth.currentUser();
+    if (!user) return;
 
-    if (won)  usuario.battleWins   = (usuario.battleWins   || 0) + 1;
-    else      usuario.battleLosses = (usuario.battleLosses || 0) + 1;
+    if (won)  user.battleWins   = (user.battleWins   || 0) + 1;
+    else      user.battleLosses = (user.battleLosses || 0) + 1;
 
-    if (tiradas > 0) usuario.tiradas = (usuario.tiradas || 0) + tiradas;
-    if (monedas > 0) usuario.monedas = (usuario.monedas || 0) + monedas;
+    if (tiradas > 0) user.tiradas = (user.tiradas || 0) + tiradas;
+    if (monedas > 0) user.monedas = (user.monedas || 0) + monedas;
 
-    await Auth.updateUser(usuario);
-    await DB.logActivity(usuario.email, 'battle', `${won?'victoria':'derrota'} +${tiradas}🎴 +${monedas}💰`);
+    await Auth.updateUser(user);
+    await DB.logActivity(user.email, 'battle', `${won?'victoria':'derrota'} +${tiradas}🎴 +${monedas}💰`);
     if (typeof App !== 'undefined') await App.refreshHeader();
     if (tiradas > 0) Toast.success(`⚔️ Batalla terminada! +${tiradas} tirada${tiradas>1?'s':''}${monedas>0?` +${monedas}💰`:''}`);
   }
