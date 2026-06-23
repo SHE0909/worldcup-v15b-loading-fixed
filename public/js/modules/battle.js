@@ -602,7 +602,7 @@ const Battle = {
   _quizQuestions: [
     { q:'¿En qué año se jugó el primer Mundial de Fútbol?',        opts:['1920','1926','1930','1934'],              ans:2 },
     { q:'¿Qué país tiene más Mundiales ganados (5)?',              opts:['Alemania','Italia','Argentina','Brasil'],  ans:3 },
-    { q:'¿Quién es el máximo goleador histórico del Mundial?',     opts:['Ronaldo','Pelé','Gerd Müller','Miroslav Klose'], ans:3 },
+    { q:'¿Quién es el máximo goleador histórico del Mundial?',     opts:['Mbappé','Klose','Ronaldo','Messi'], ans:3 },
     { q:'¿Cuántos países participan en el Mundial 2026?',          opts:['32','36','40','48'],                      ans:3 },
     { q:'¿Dónde se juega el partido inaugural del Mundial 2026?',  opts:['SoFi Stadium','MetLife','AT&T Stadium','Estadio Azteca'], ans:3 },
     { q:'¿Qué selección ganó el Mundial 2022?',                    opts:['Francia','Brasil','Croacia','Argentina'], ans:3 },
@@ -623,7 +623,7 @@ const Battle = {
     
     { q:'¿Cuántas sedes tiene el Mundial 2026?',                   opts:['12','14','16','11'],                      ans:1 },
     { q:'¿Cuál es la sede canadiense del Mundial 2026?',           opts:['Ottawa','Montreal','Toronto','Vancouver'], ans:2 },
-    { q:'¿Cuántos partidos tendrá el Mundial 2026?',               opts:['64','80','96','104'],                     ans:2 },
+    { q:'¿Cuántos partidos tendrá el Mundial 2026?',               opts:['64','80','96','104'],                     ans:3 },
     { q:'¿Qué formato de grupos usa el Mundial 2026?',             opts:['8 grupos de 6','12 grupos de 4','8 grupos de 4','16 grupos de 3'], ans:1 },
     { q:'¿Cuál es el estadio de la final del Mundial 2026?',       opts:['SoFi Stadium','Rose Bowl','MetLife Stadium','AT&T Stadium'], ans:2 },
     
