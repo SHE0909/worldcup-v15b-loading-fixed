@@ -329,6 +329,8 @@
       document.getElementById('form-login').classList.add('active');
     });
 
+    let pendingTutorialEmail = null;
+
     async function doLogin() {
       clearErrors();
       const email = document.getElementById('login-email').value.trim();
@@ -348,6 +350,12 @@
       }
 
       Toast.success(`¡Bienvenido, ${result.user.name.split(' ')[0]}! 👋`);
+
+      if (pendingTutorialEmail && pendingTutorialEmail === email) {
+        pendingTutorialEmail = null;
+        showTutorial();
+        return;
+      }
 
       const welcomeAnim  = document.getElementById('welcome-anim');
       const welcomeVideo = document.getElementById('welcome-video');
@@ -394,6 +402,7 @@
       document.getElementById('form-login').classList.add('active');
       const loginEmailInput = document.getElementById('login-email');
       if (loginEmailInput) loginEmailInput.value = email;
+      pendingTutorialEmail = email;
     }
 
     // ── Tutorial de bienvenida (solo se muestra justo después de crear una cuenta) ──
