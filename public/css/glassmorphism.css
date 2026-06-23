@@ -1,0 +1,112 @@
+:root {
+  --bg-base:        rgba(5, 8, 18, 0.0);
+  --bg-surface:     rgba(14, 21, 32, 0.52);
+  --bg-card:        rgba(16, 24, 40, 0.58);
+  --bg-card-hover:  rgba(22, 36, 60, 0.68);
+  --bg-deep:        rgba(5, 8, 18, 0.82);
+}
+
+body {
+  background: transparent !important;
+}
+#screen-app {
+  background: transparent !important;
+}
+.app-main {
+  background: transparent !important;
+}
+.tab-section {
+  background: transparent !important;
+}
+
+.app-header {
+  background: rgba(8, 12, 20, 0.68) !important;
+  backdrop-filter: blur(14px) !important;
+  -webkit-backdrop-filter: blur(14px) !important;
+}
+
+.app-nav {
+  background: rgba(8, 12, 20, 0.68) !important;
+  backdrop-filter: blur(14px) !important;
+  -webkit-backdrop-filter: blur(14px) !important;
+}
+
+.bottom-nav {
+  background: rgba(8, 12, 20, 0.78) !important;
+  backdrop-filter: blur(14px) !important;
+  -webkit-backdrop-filter: blur(14px) !important;
+}
+
+.app-drawer {
+  background: rgba(6, 10, 20, 0.88) !important;
+  backdrop-filter: blur(18px) !important;
+  -webkit-backdrop-filter: blur(18px) !important;
+}
+.drawer-overlay {
+  background: rgba(0, 0, 0, 0.48) !important;
+  backdrop-filter: blur(4px) !important;
+  -webkit-backdrop-filter: blur(4px) !important;
+}
+
+.section-card,
+.widget-card,
+.card,
+.match-card,
+.prediction-card,
+.battle-mode-card,
+.slot-pick-card,
+.exchange-coin-card,
+.exchange-option-card,
+.profile-section,
+.group-table-wrap,
+.minigame-card,
+.gacha-pity-section,
+.live-player-wrap,
+.fav-chip,
+.header-stat,
+.modal-box {
+  backdrop-filter: blur(10px) !important;
+  -webkit-backdrop-filter: blur(10px) !important;
+}
+
+.stats-table-wrap {
+  backdrop-filter: blur(8px) !important;
+  -webkit-backdrop-filter: blur(8px) !important;
+}
+
+input[type="text"],
+input[type="password"],
+input[type="email"],
+input[type="number"],
+input[type="search"],
+select,
+textarea {
+  background: rgba(14, 21, 32, 0.68) !important;
+  backdrop-filter: blur(6px) !important;
+  -webkit-backdrop-filter: blur(6px) !important;
+}
+
+.toast {
+  background: rgba(16, 24, 40, 0.86) !important;
+  backdrop-filter: blur(12px) !important;
+  -webkit-backdrop-filter: blur(12px) !important;
+}
+
+.modal-overlay {
+  background: rgba(0, 0, 0, 0.60) !important;
+  backdrop-filter: blur(6px) !important;
+  -webkit-backdrop-filter: blur(6px) !important;
+}
+
+#loading-splash {
+  background: rgba(5, 8, 18, 0.90) !important;
+  backdrop-filter: blur(8px) !important;
+  -webkit-backdrop-filter: blur(8px) !important;
+}
+
+.pwa-banner,
+.discord-banner {
+  background: rgba(16, 24, 40, 0.72) !important;
+  backdrop-filter: blur(10px) !important;
+  -webkit-backdrop-filter: blur(10px) !important;
+}
