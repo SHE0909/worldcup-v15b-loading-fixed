@@ -85,7 +85,7 @@ const App = {
       if (bar) {
         bar.style.display = 'flex';
         bar.className = 'api-status-bar api-status-mock';
-        bar.innerHTML = `<span>🔒 Usando key compartida · Límite: ${maxPerHour} consultas/hora · <strong style="cursor:pointer;text-decoration:underline" onclick="App.navigateTo('profile')">Añade tu key gratis</strong> para actualizaciones ilimitadas</span>`;
+        bar.innerHTML = `<span> Usando key compartida · Límite: ${maxPerHour} consultas/hora · <strong style="cursor:pointer;text-decoration:underline" onclick="App.navigateTo('profile')">Añade tu key gratis</strong> para actualizaciones ilimitadas</span>`;
         setTimeout(() => { bar.style.display = 'none'; }, 8000);
       }
     }
